@@ -22,7 +22,7 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandle
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "quiz_progress.sqlite3"
 
-BOT_TOKEN = "8643995860:AAGeJHU66x1uPVHFF19nZEc2N0qpt_LrWNI"
+BOT_TOKEN = "8643995860:AAF_Qs45MAbJ3H_xpN7Xv1LzoOrg-xpV3yo"
 ADMIN_IDS = {551500449}
 
 TESTS = {
