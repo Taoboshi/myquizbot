@@ -2027,6 +2027,66 @@ async def handle_admin_export_test(update: Update, context: ContextTypes.DEFAULT
 
     await query.edit_message_text("CSV-экспорт по тесту отправлен.", reply_markup=admin_test_keyboard(test_id))
 
+async def handle_text_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    upsert_user(update.effective_user)
+
+    text = update.message.text
+    state = get_state(update.effective_chat.id)
+    test_id = state.get("test_id")
+
+    if not test_id:
+        await update.message.reply_text(
+            "👋 Выбери тест:",
+            reply_markup=test_select_keyboard(),
+        )
+        return
+
+    if text == "🏠 Меню":
+        await update.message.reply_text(
+            test_main_text(update.effective_user.id, test_id),
+            reply_markup=test_main_keyboard(test_id),
+        )
+
+    elif text == "📚 Учить":
+        await update.message.reply_text(
+            "📖 Учить тест\n\nВыбери режим:",
+            reply_markup=study_menu_keyboard(test_id),
+        )
+
+    elif text == "📝 Решать":
+        await update.message.reply_text(
+            "📝 Решать тест\n\nВыбери режим:",
+            reply_markup=solve_menu_keyboard(test_id),
+        )
+
+    elif text == "⚡ Тренировка":
+        await update.message.reply_text(
+            "⚡ Мини-тренировка\n\nВыбери формат:",
+            reply_markup=mini_menu_keyboard(test_id, update.effective_user.id),
+        )
+
+    elif text == "🧠 Ошибки":
+        error_count = len(get_all_time_error_indices(update.effective_user.id, test_id))
+        await update.message.reply_text(
+            f"🧠 Работа над ошибками\n\n❌ Ошибок за всё время: {error_count}",
+            reply_markup=errors_menu_keyboard(test_id, update.effective_user.id),
+        )
+
+    elif text == "📊 Статистика":
+        await update.message.reply_text(
+            my_stats_text(update.effective_user.id, test_id),
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🏠 К меню теста", callback_data=f"test_menu:{test_id}")],
+                [InlineKeyboardButton("📝 Решать тест", callback_data=f"solve_menu:{test_id}")],
+                [InlineKeyboardButton("📚 Учить тест", callback_data=f"study_menu:{test_id}")],
+            ]),
+        )
+
+    else:
+        await update.message.reply_text(
+            test_main_text(update.effective_user.id, test_id),
+            reply_markup=test_main_keyboard(test_id),
+        )
 
 def main() -> None:
     db_connect()
