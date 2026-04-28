@@ -903,6 +903,7 @@ def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeybo
     return InlineKeyboardMarkup(rows)
 
 
+
 def answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     q = get_questions(test_id)[index]
     buttons = []
@@ -910,18 +911,11 @@ def answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
         buttons.append(InlineKeyboardButton(f"{letter}", callback_data=f"answer:{test_id}:{index}:{i}"))
 
-    if len(buttons) == 4:
-        rows = [
-            [buttons[0], buttons[2]],
-            [buttons[1], buttons[3]],
-        ]
-    else:
-        rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
+    rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
 
     rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
     rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
     return InlineKeyboardMarkup(rows)
-
 
 def next_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -1099,6 +1093,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
+
 async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1118,8 +1113,6 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
-
-
 
 async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
