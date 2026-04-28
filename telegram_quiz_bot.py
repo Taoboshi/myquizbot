@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "quiz_progress.sqlite3"
 
 # Лучше хранить токен в Render → Environment Variables → TELEGRAM_BOT_TOKEN.
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAE3hFg8u3lfpm0piNHLrfEISCzME9YnIZU").strip()
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAFyh1ELqjDRmy5kM6r2EUhQSVU2nQN9SOQ").strip()
 ADMIN_IDS = {551500449}
 
 TESTS = {
@@ -704,6 +704,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
 # ============================================================
 
 
+
 def build_question_text(
     index: int,
     state: dict[str, Any],
@@ -722,13 +723,8 @@ def build_question_text(
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
+        "···",
     ]
-
-    if show_correct and selected_index is None:
-        lines.append("👁 Показан ответ")
-        lines.append("")
-
-    lines.append("···")
 
     for i, option in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
@@ -738,6 +734,10 @@ def build_question_text(
         elif selected_index is not None and i == selected_index and i != correct_index:
             prefix = "❌ "
         lines.append(f"{prefix}{letter}) {html.escape(option)}")
+
+    if show_correct and selected_index is None:
+        lines.append("")
+        lines.append("👁 Показан ответ")
 
     return "\n".join(lines)
 
@@ -760,13 +760,8 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
+        "···",
     ]
-
-    if wrong_index is None:
-        lines.append("👁 Показан ответ")
-        lines.append("")
-
-    lines.append("···")
 
     for i, option in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
@@ -776,6 +771,10 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         elif wrong_index is not None and i == wrong_index and i != correct_index:
             prefix = "❌ "
         lines.append(f"{prefix}{letter}) {html.escape(option)}")
+
+    if wrong_index is None:
+        lines.append("")
+        lines.append("👁 Показан ответ")
 
     return "\n".join(lines)
 
