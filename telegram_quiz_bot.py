@@ -9,7 +9,7 @@ from threading import Thread
 
 from flask import Flask
 
-from telegram import BotCommand, InputFile, Update, InlineKeyboardMarkup
+from telegram import BotCommand, InputFile, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
