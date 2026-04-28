@@ -30,7 +30,7 @@ BOT_TOKEN = "8643995860:AAGeJHU66x1uPVHFF19nZEc2N0qpt_LrWNI"
 # Впиши сюда свой Telegram ID, чтобы работала админ-панель.
 # Узнать ID можно командой /myid.
 # Пример: ADMIN_IDS = {123456789}
-ADMIN_IDS = set()
+ADMIN_IDS = {551500449}
 
 # Мини-веб-сервер для Render / UptimeRobot.
 # Он нужен, чтобы внешний сервис мог пинговать бота по ссылке.
