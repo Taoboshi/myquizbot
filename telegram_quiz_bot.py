@@ -703,6 +703,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
 # FORMATTERS
 # ============================================================
 
+
 def build_question_text(
     index: int,
     state: dict[str, Any],
@@ -721,8 +722,13 @@ def build_question_text(
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "",
     ]
+
+    if show_correct and selected_index is None:
+        lines.append("👁 Показан ответ")
+        lines.append("")
+
+    lines.append("···")
 
     for i, option in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
@@ -754,8 +760,13 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "",
     ]
+
+    if wrong_index is None:
+        lines.append("👁 Показан ответ")
+        lines.append("")
+
+    lines.append("···")
 
     for i, option in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
@@ -767,7 +778,6 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         lines.append(f"{prefix}{letter}) {html.escape(option)}")
 
     return "\n".join(lines)
-
 
 def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = False) -> str:
     total = int(state.get("total", 0))
@@ -1110,6 +1120,7 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
+
 async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1118,7 +1129,11 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     order = get_all_time_error_indices(query.from_user.id, test_id)
     if not order:
-        await query.edit_message_text("Ошибок за всё время нет.", reply_markup=test_main_keyboard(test_id))
+        await query.answer("Ошибок для разбора нет")
+        await query.edit_message_text(
+            test_main_text(query.from_user.id, test_id),
+            reply_markup=test_main_keyboard(test_id),
+        )
         return
 
     state = get_state(query.message.chat_id)
@@ -1130,7 +1145,6 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
-
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1486,18 +1500,19 @@ async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await query.edit_message_text(my_stats_text(query.from_user.id, test_id), reply_markup=stats_keyboard(test_id))
 
 
+
 async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
-    await query.answer()
+    await query.answer("Ошибки сброшены")
+
     _, test_id = query.data.split(":")
     clear_all_time_errors(query.from_user.id, test_id)
-    await query.edit_message_text("✅ Ошибки сброшены.", reply_markup=test_main_keyboard(test_id))
 
-
-# ============================================================
-# ADMIN
-# ============================================================
+    await query.edit_message_text(
+        test_main_text(query.from_user.id, test_id),
+        reply_markup=test_main_keyboard(test_id),
+    )
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
