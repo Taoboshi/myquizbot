@@ -26,12 +26,12 @@ DB_PATH = BASE_DIR / "quiz_progress.sqlite3"
 # ----------------------------
 # Токен вставлен прямо в код для удобства.
 # Если перевыпустишь токен в BotFather, замени его здесь.
-BOT_TOKEN = "8643995860:AAF_Qs45MAbJ3H_xpN7Xv1LzoOrg-xpV3yo"
+BOT_TOKEN = "8643995860:AAGeJHU66x1uPVHFF19nZEc2N0qpt_LrWNI"
 
 # Впиши сюда свой Telegram ID, чтобы работала админ-панель.
 # Узнать ID можно командой /myid.
 # Пример: ADMIN_IDS = {551500449}
-ADMIN_IDS = {551500449}
+ADMIN_IDS = set()
 
 # Мини-веб-сервер для Render / UptimeRobot.
 # Он нужен, чтобы внешний сервис мог пинговать бота по ссылке.
@@ -2154,26 +2154,52 @@ async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
+
 async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
 
-    _, test_id, index_str = query.data.split(":")
-    index = int(index_str)
+    _, test_id, _index_str = query.data.split(":")
     state = get_state(query.message.chat_id)
 
-    if state.get("awaiting_next"):
-        await query.edit_message_reply_markup(
-            reply_markup=next_after_pause_keyboard(test_id, index),
+    if state.get("test_id") != test_id or not state.get("order"):
+        await query.edit_message_text(
+            "Незавершённой попытки нет.",
+            reply_markup=solve_menu_keyboard(test_id, query.message.chat_id),
         )
         return
 
-    await query.edit_message_reply_markup(
-        reply_markup=build_answer_keyboard(test_id, index),
+    state["active"] = True
+
+    if state.get("pos", 0) >= len(state.get("order", [])):
+        await query.edit_message_text(
+            "Незавершённой попытки нет.",
+            reply_markup=solve_menu_keyboard(test_id, query.message.chat_id),
+        )
+        return
+
+    current_index = state["order"][state["pos"]]
+
+    if state.get("awaiting_next"):
+        wrong_index = None
+        for item in reversed(state.get("wrong_answers", [])):
+            if item.get("question_index") == current_index:
+                wrong_index = item.get("wrong_answer_index")
+                break
+
+        await query.edit_message_text(
+            build_question_text(current_index, state, selected_index=wrong_index, show_correct=True),
+            reply_markup=next_after_pause_keyboard(test_id, current_index),
+            parse_mode="HTML",
+        )
+        return
+
+    await query.edit_message_text(
+        build_question_text(current_index, state),
+        reply_markup=build_answer_keyboard(test_id, current_index),
+        parse_mode="HTML",
     )
-
-
 
 async def handle_question_previous(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
