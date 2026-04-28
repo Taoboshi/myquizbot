@@ -98,7 +98,7 @@ def main_reply_keyboard() -> ReplyKeyboardMarkup:
 TESTS = {
     "first_test": {
         "title": "ОЗИЗ модуль 2",
-        "file": "tests/questions_first_test_corrected.json",
+        "file": "tests/oziz_module_2.json",
     },
 }
 
