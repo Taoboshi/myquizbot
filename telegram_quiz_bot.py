@@ -703,7 +703,6 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
 # FORMATTERS
 # ============================================================
 
-
 def build_question_text(
     index: int,
     state: dict[str, Any],
@@ -722,7 +721,7 @@ def build_question_text(
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "···",
+        "",
     ]
 
     for i, option in enumerate(q["options"]):
@@ -755,7 +754,7 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "···",
+        "",
     ]
 
     for i, option in enumerate(q["options"]):
@@ -768,6 +767,7 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         lines.append(f"{prefix}{letter}) {html.escape(option)}")
 
     return "\n".join(lines)
+
 
 def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = False) -> str:
     total = int(state.get("total", 0))
@@ -898,7 +898,7 @@ def answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     buttons = []
     for i, _ in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        buttons.append(InlineKeyboardButton(f"Ответ {letter}", callback_data=f"answer:{test_id}:{index}:{i}"))
+        buttons.append(InlineKeyboardButton(f"{letter}", callback_data=f"answer:{test_id}:{index}:{i}"))
 
     if len(buttons) == 4:
         rows = [
@@ -948,20 +948,16 @@ def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboard
     return InlineKeyboardMarkup(rows)
 
 
+
 def session_error_keyboard(test_id: str, pos: int, total: int) -> InlineKeyboardMarkup:
     rows = []
-    nav = []
-    if pos > 0:
-        nav.append(InlineKeyboardButton("↩️ Предыдущий", callback_data=f"session_error_show:{test_id}:{pos - 1}"))
+
     if pos + 1 < total:
-        nav.append(InlineKeyboardButton(BTN_NEXT, callback_data=f"session_error_show:{test_id}:{pos + 1}"))
-    if nav:
-        rows.append(nav)
+        rows.append([InlineKeyboardButton(BTN_NEXT, callback_data=f"session_error_show:{test_id}:{pos + 1}")])
 
     rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result:{test_id}")])
     rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")])
     return InlineKeyboardMarkup(rows)
-
 
 def stats_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")]])
@@ -1401,14 +1397,18 @@ async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
 
+
 async def handle_session_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
+
     _, test_id, pos_str = query.data.split(":")
+    pos = int(pos_str)
 
     state = get_state(query.message.chat_id)
     items = state.get("wrong_answers", [])
+
     if not items:
         items = get_attempt_wrong_answers(query.from_user.id, test_id, state.get("attempt_id"))
 
@@ -1416,8 +1416,13 @@ async def handle_session_error_show(update: Update, context: ContextTypes.DEFAUL
         await query.edit_message_text("Ошибок в этом решении нет.", reply_markup=test_main_keyboard(test_id))
         return
 
-    pos = max(0, min(int(pos_str), len(items) - 1))
-    await query.edit_message_text(
+    pos = max(0, min(pos, len(items) - 1))
+
+    # Оставляем старое сообщение в чате, но убираем у него кнопки.
+    await query.edit_message_reply_markup(reply_markup=None)
+
+    # Новую ошибку отправляем отдельным сообщением ниже.
+    await query.message.reply_text(
         format_session_error_card(test_id, pos, items),
         reply_markup=session_error_keyboard(test_id, pos, len(items)),
         parse_mode="HTML",
@@ -1428,6 +1433,7 @@ async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
+
     _, test_id = query.data.split(":")
     state = get_state(query.message.chat_id)
 
@@ -1435,8 +1441,11 @@ async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await query.edit_message_text("Результат недоступен.", reply_markup=test_main_keyboard(test_id))
         return
 
-    await query.edit_message_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
-
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(
+        result_text(state, query.from_user.id),
+        reply_markup=after_finish_keyboard(query.from_user.id, state),
+    )
 
 async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
