@@ -703,6 +703,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
 # FORMATTERS
 # ============================================================
 
+
 def build_question_text(
     index: int,
     state: dict[str, Any],
@@ -721,7 +722,7 @@ def build_question_text(
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "",
+        "···",
     ]
 
     for i, option in enumerate(q["options"]):
@@ -754,7 +755,7 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "",
+        "···",
     ]
 
     for i, option in enumerate(q["options"]):
@@ -767,7 +768,6 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
         lines.append(f"{prefix}{letter}) {html.escape(option)}")
 
     return "\n".join(lines)
-
 
 def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = False) -> str:
     total = int(state.get("total", 0))
