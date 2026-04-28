@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: oziz-module-2-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python telegram_quiz_bot.py
