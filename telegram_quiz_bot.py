@@ -399,6 +399,21 @@ def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> No
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def save_active_session(user_id: int, state: dict) -> None:
     test_id = state.get("test_id")
     if not test_id or not state.get("order"):
@@ -628,6 +643,7 @@ def get_hard_count(user_id: int, test_id: str) -> int:
 
 
 
+
 def get_state(chat_id: int) -> dict:
     if chat_id not in USER_STATE:
         USER_STATE[chat_id] = {
@@ -703,6 +719,7 @@ def hard_menu_keyboard(test_id: str, hard_count: int) -> InlineKeyboardMarkup:
 
 
 
+
 def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeyboardMarkup:
     rows = []
 
@@ -731,6 +748,7 @@ def errors_menu_keyboard(test_id: str, user_id: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
         [InlineKeyboardButton("Назад", callback_data=f"test_menu:{test_id}")],
     ])
+
 
 
 
@@ -787,6 +805,7 @@ def build_study_text(index: int, state: dict, shown: bool = False) -> str:
     if shown:
         text += f"\n\nОтвет:\n{correct_answer_text(test_id, index)}"
     return text
+
 
 
 
@@ -866,6 +885,7 @@ async def send_current_study_card(message, state: dict) -> None:
 
 
 
+
 def start_quiz_mode(state: dict, user_id: int, test_id: str, mode: str, order: list[int]) -> None:
     state["test_id"] = test_id
     state["order"] = order
@@ -932,6 +952,7 @@ def result_text(state: dict, user_id: int, finished_by_user: bool = False) -> st
         f"Ошибок в этом решении: {wrong_count}\n\n"
         f"Ошибок за всё время: {all_time_count}"
     )
+
 
 
 
@@ -1688,6 +1709,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Сначала выбери тест через /start.")
 
 
+
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     state = get_state(update.effective_chat.id)
@@ -1858,6 +1880,7 @@ async def handle_study_mark(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 
+
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1901,6 +1924,7 @@ async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 
+
 async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1934,6 +1958,7 @@ async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"Ошибок за всё время: {error_count}"
     )
     await query.edit_message_text(text, reply_markup=errors_menu_keyboard(test_id, query.from_user.id))
+
 
 
 
@@ -1986,6 +2011,7 @@ async def handle_all_errors_show(update: Update, context: ContextTypes.DEFAULT_T
 
 
 
+
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -2030,6 +2056,7 @@ def add_session_wrong_answer(state: dict, question_index: int, wrong_answer_inde
 
 
 
+
 def next_after_pause_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("➡️ Следующий", callback_data=f"next_question:{test_id}:{index}")],
@@ -2063,10 +2090,9 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     q = get_questions(test_id)[index]
     correct_index = q["correct_index"]
-
     is_correct = selected == correct_index
-    record_answer(query.from_user.id, test_id, is_correct)
 
+    record_answer(query.from_user.id, test_id, is_correct)
     state["total"] += 1
 
     if is_correct:
@@ -2314,6 +2340,11 @@ async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFA
         "Ошибки сброшены.",
         reply_markup=test_main_keyboard(test_id),
     )
+
+
+
+
+
 
 
 async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
