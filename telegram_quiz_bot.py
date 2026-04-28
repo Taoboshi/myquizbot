@@ -9,14 +9,12 @@ from threading import Thread
 
 from flask import Flask
 
-from telegram import InputFile, Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram import BotCommand, InputFile, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
-    MessageHandler,
-    filters,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -53,42 +51,22 @@ def keep_alive():
 
 LETTERS = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З"]
 
-SEP = "━━━━━━━━━━━━━━"
+def sep() -> str:
+    return "────────────────"
 
+def mode_title(mode: str | None) -> str:
+    return {
+        "normal": "По порядку",
+        "random": "Вразброс",
+        "mini": "Тренировка",
+        "errors": "Разбор ошибок",
+    }.get(mode or "", "Тест")
 
-def progress_bar(current: int, total: int, width: int = 10) -> str:
-    if total <= 0:
-        return "▱" * width + " 0%"
-    ratio = max(0, min(current / total, 1))
-    filled = round(ratio * width)
-    percent = round(ratio * 100)
-    return "▰" * filled + "▱" * (width - filled) + f" {percent}%"
-
-
-def percent_text(correct: int, answered: int) -> str:
-    if not answered:
-        return "—"
-    return f"{round(correct / answered * 100, 1)}%"
-
-
-def attempt_result_line(attempt) -> str:
-    if not attempt:
+def format_attempt_short(attempt) -> str:
+    if not attempt or not attempt["answered"]:
         return "пока нет"
-    pct = percent_text(attempt["correct"], attempt["answered"])
-    time = seconds_to_text(attempt["duration_seconds"])
-    return f"{pct} · {time}"
-
-
-def main_reply_keyboard() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        [
-            ["🏠 Меню", "📚 Учить"],
-            ["📝 Решать", "⚡ Тренировка"],
-            ["🧠 Ошибки", "📊 Статистика"],
-        ],
-        resize_keyboard=True,
-        is_persistent=True,
-    )
+    percent = round(attempt["correct"] / attempt["answered"] * 100, 1)
+    return f"{percent}% · {seconds_to_text(attempt['duration_seconds'])}"
 
 
 # Чтобы потом добавить новый тест:
@@ -235,6 +213,11 @@ def db_connect() -> sqlite3.Connection:
         """
     )
 
+    try:
+        conn.execute("ALTER TABLE all_time_errors ADD COLUMN last_wrong_answer_index INTEGER")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     return conn
 
@@ -362,21 +345,22 @@ def record_answer(user_id: int, test_id: str, is_correct: bool) -> None:
         conn.commit()
 
 
-def add_all_time_error(user_id: int, test_id: str, question_index: int) -> None:
+
+def add_all_time_error(user_id: int, test_id: str, question_index: int, wrong_answer_index: int | None = None) -> None:
     with db_connect() as conn:
         conn.execute(
             """
-            INSERT INTO all_time_errors (user_id, test_id, question_index, wrong_count, last_wrong_at)
-            VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
+            INSERT INTO all_time_errors (user_id, test_id, question_index, wrong_count, last_wrong_at, last_wrong_answer_index)
+            VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(user_id, test_id, question_index)
             DO UPDATE SET
                 wrong_count = wrong_count + 1,
-                last_wrong_at = CURRENT_TIMESTAMP
+                last_wrong_at = CURRENT_TIMESTAMP,
+                last_wrong_answer_index = excluded.last_wrong_answer_index
             """,
-            (user_id, test_id, question_index),
+            (user_id, test_id, question_index, wrong_answer_index),
         )
         conn.commit()
-
 
 def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> None:
     with db_connect() as conn:
@@ -469,6 +453,7 @@ def get_hard_count(user_id: int, test_id: str) -> int:
     return row["c"] or 0
 
 
+
 def get_state(chat_id: int) -> dict:
     if chat_id not in USER_STATE:
         USER_STATE[chat_id] = {
@@ -478,15 +463,14 @@ def get_state(chat_id: int) -> dict:
             "correct": 0,
             "total": 0,
             "wrong_indices": [],
+            "wrong_answers": [],
             "mode": None,
             "active": False,
             "finish_recorded": False,
             "attempt_id": None,
-            "study_answer_shown": False,
+            "awaiting_next": False,
         }
     return USER_STATE[chat_id]
-
-
 
 def test_select_keyboard() -> InlineKeyboardMarkup:
     rows = []
@@ -494,7 +478,7 @@ def test_select_keyboard() -> InlineKeyboardMarkup:
         count = len(get_questions(test_id))
         rows.append([
             InlineKeyboardButton(
-                f"📘 {info['title']} — {count} вопросов",
+                f"{info['title']} — {count} вопросов",
                 callback_data=f"test_menu:{test_id}",
             )
         ])
@@ -504,91 +488,66 @@ def test_select_keyboard() -> InlineKeyboardMarkup:
 
 def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📖 Учить тест", callback_data=f"study_menu:{test_id}")],
-        [InlineKeyboardButton("📝 Решать тест", callback_data=f"solve_menu:{test_id}")],
-        [InlineKeyboardButton("⚡ Мини-тренировка", callback_data=f"mini_menu:{test_id}")],
-        [InlineKeyboardButton("🧠 Работа над ошибками", callback_data=f"errors_menu:{test_id}")],
-        [InlineKeyboardButton("📊 Моя статистика", callback_data=f"my_stats:{test_id}")],
-        [InlineKeyboardButton("⬅️ Назад к тестам", callback_data="tests:menu")],
+        [InlineKeyboardButton("📝 Решать", callback_data=f"solve_menu:{test_id}")],
+        [InlineKeyboardButton("⚡ Тренировка", callback_data=f"mini_start:{test_id}:10")],
+        [InlineKeyboardButton("🧠 Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
+        [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
+        [InlineKeyboardButton("⬅️ Назад", callback_data="tests:menu")],
     ])
-
 
 
 def test_main_text(user_id: int, test_id: str) -> str:
     title = TESTS[test_id]["title"]
     questions_count = len(get_questions(test_id))
     errors_count = len(get_all_time_error_indices(user_id, test_id))
-    hard_count = get_hard_count(user_id, test_id)
 
     return (
-        f"📚 {title}\n\n"
-        f"{SEP}\n"
-        f"📌 Вопросов: {questions_count}\n"
-        f"❌ Ошибок: {errors_count}\n"
-        f"🟡 Сложных: {hard_count}\n"
-        f"{SEP}\n\n"
+        f"{title}\n\n"
+        f"Вопросов: {questions_count}\n"
+        f"Ошибок: {errors_count}\n\n"
         f"Выбери режим:"
     )
 
-
-
 def study_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📖 Учить все вопросы", callback_data=f"study_start:{test_id}:all")],
-        [InlineKeyboardButton("🟡 Сложные вопросы", callback_data=f"hard_menu:{test_id}")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")],
+        [InlineKeyboardButton("Учить все вопросы", callback_data=f"study_start:{test_id}:all")],
+        [InlineKeyboardButton("Сложные вопросы", callback_data=f"hard_menu:{test_id}")],
+        [InlineKeyboardButton("Назад", callback_data=f"test_menu:{test_id}")],
     ])
-
 
 
 def hard_menu_keyboard(test_id: str, hard_count: int) -> InlineKeyboardMarkup:
     rows = []
     if hard_count:
-        rows.append([InlineKeyboardButton("📖 Учить сложные вопросы", callback_data=f"study_start:{test_id}:hard")])
-        rows.append([InlineKeyboardButton("🧹 Сбросить сложные", callback_data=f"hard_clear:{test_id}")])
+        rows.append([InlineKeyboardButton("Учить сложные вопросы", callback_data=f"study_start:{test_id}:hard")])
+        rows.append([InlineKeyboardButton("Сбросить сложные", callback_data=f"hard_clear:{test_id}")])
     else:
-        rows.append([InlineKeyboardButton("📖 Учить все вопросы", callback_data=f"study_start:{test_id}:all")])
-    rows.append([InlineKeyboardButton("⬅️ Назад к учёбе", callback_data=f"study_menu:{test_id}")])
+        rows.append([InlineKeyboardButton("Учить все вопросы", callback_data=f"study_start:{test_id}:all")])
+    rows.append([InlineKeyboardButton("Назад к учёбе", callback_data=f"study_menu:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
 
 
 def solve_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔢 По порядку", callback_data=f"start:{test_id}:normal")],
-        [InlineKeyboardButton("🔀 Вразброс", callback_data=f"start:{test_id}:random")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")],
+        [InlineKeyboardButton("По порядку", callback_data=f"start:{test_id}:normal")],
+        [InlineKeyboardButton("Вразброс", callback_data=f"start:{test_id}:random")],
+        [InlineKeyboardButton("Назад", callback_data=f"test_menu:{test_id}")],
     ])
-
 
 
 def mini_menu_keyboard(test_id: str, user_id: int) -> InlineKeyboardMarkup:
-    hard_count = get_hard_count(user_id, test_id)
-    error_count = len(get_all_time_error_indices(user_id, test_id))
-
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⚡ 10 случайных вопросов", callback_data=f"mini_start:{test_id}:10")],
-        [InlineKeyboardButton("⚡ 20 случайных вопросов", callback_data=f"mini_start:{test_id}:20")],
-        [InlineKeyboardButton("⚡ 50 случайных вопросов", callback_data=f"mini_start:{test_id}:50")],
-        [InlineKeyboardButton(f"🟡 Только сложные — {hard_count}", callback_data=f"mini_start:{test_id}:hard")],
-        [InlineKeyboardButton(f"❌ Только ошибки — {error_count}", callback_data=f"mini_start:{test_id}:errors")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")],
+        [InlineKeyboardButton("10 случайных вопросов", callback_data=f"mini_start:{test_id}:10")],
+        [InlineKeyboardButton("Назад", callback_data=f"test_menu:{test_id}")],
     ])
 
 
-
 def errors_menu_keyboard(test_id: str, user_id: int) -> InlineKeyboardMarkup:
-    error_count = len(get_all_time_error_indices(user_id, test_id))
-    rows = []
-    if error_count:
-        rows.append([InlineKeyboardButton("🧠 Решать ошибки за всё время", callback_data=f"errors_solve:{test_id}")])
-        rows.append([InlineKeyboardButton("👁 Показать ошибки: вопрос → ответ", callback_data=f"all_errors:show:{test_id}")])
-        rows.append([InlineKeyboardButton("🧹 Сбросить мои ошибки", callback_data=f"errors_clear:{test_id}")])
-    else:
-        rows.append([InlineKeyboardButton("📝 Решать тест", callback_data=f"solve_menu:{test_id}")])
-    rows.append([InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")])
-    return InlineKeyboardMarkup(rows)
-
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
+        [InlineKeyboardButton("Назад", callback_data=f"test_menu:{test_id}")],
+    ])
 
 
 def after_finish_keyboard(user_id: int, state: dict) -> InlineKeyboardMarkup:
@@ -596,27 +555,24 @@ def after_finish_keyboard(user_id: int, state: dict) -> InlineKeyboardMarkup:
     rows = []
 
     if test_id:
-        rows.append([InlineKeyboardButton("🧠 Разобрать ошибки", callback_data=f"errors_menu:{test_id}")])
-        rows.append([InlineKeyboardButton("🔁 Решить ещё раз", callback_data=f"solve_menu:{test_id}")])
-        rows.append([InlineKeyboardButton("📊 Моя статистика", callback_data=f"my_stats:{test_id}")])
-        rows.append([InlineKeyboardButton("🏠 Меню теста", callback_data=f"test_menu:{test_id}")])
+        if state.get("wrong_answers"):
+            rows.append([InlineKeyboardButton("Показать ошибки", callback_data=f"session_error_show:{test_id}:0")])
+        rows.append([InlineKeyboardButton("Повторить тест", callback_data=f"solve_menu:{test_id}")])
+        rows.append([InlineKeyboardButton("К меню теста", callback_data=f"test_menu:{test_id}")])
+        rows.append([InlineKeyboardButton("Статистика", callback_data=f"my_stats:{test_id}")])
 
-    rows.append([InlineKeyboardButton("📚 Выбрать другой тест", callback_data="tests:menu")])
+    rows.append([InlineKeyboardButton("Выбрать другой тест", callback_data="tests:menu")])
     return InlineKeyboardMarkup(rows)
-
-
 
 def study_keyboard(test_id: str, index: int, shown: bool) -> InlineKeyboardMarkup:
     rows = []
     if not shown:
-        rows.append([InlineKeyboardButton("👁 Показать ответ", callback_data=f"study_show:{test_id}:{index}")])
+        rows.append([InlineKeyboardButton("Показать ответ", callback_data=f"study_show:{test_id}:{index}")])
     rows.append([
-        InlineKeyboardButton("✅ Знаю", callback_data=f"study_know:{test_id}:{index}"),
-        InlineKeyboardButton("🟡 Не знаю", callback_data=f"study_dont:{test_id}:{index}"),
+        InlineKeyboardButton("Знаю", callback_data=f"study_know:{test_id}:{index}"),
+        InlineKeyboardButton("Не знаю", callback_data=f"study_dont:{test_id}:{index}"),
     ])
-    if shown:
-        rows.append([InlineKeyboardButton("➡️ Следующий без отметки", callback_data=f"study_next:{test_id}:{index}")])
-    rows.append([InlineKeyboardButton("⏹ Закончить", callback_data="finish")])
+    rows.append([InlineKeyboardButton("Закончить", callback_data="finish")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -627,70 +583,48 @@ def correct_answer_text(test_id: str, index: int) -> str:
     return f"{letter}) {q['options'][ci]}"
 
 
-
 def build_study_text(index: int, state: dict, shown: bool = False) -> str:
     test_id = state["test_id"]
     q = get_questions(test_id)[index]
     title = TESTS[test_id]["title"]
-    total = len(state["order"])
-    current = state["pos"] + 1
 
     if state.get("mode") == "study_hard":
-        mode_title = "Учить сложные"
+        header = f"{title} | Учить сложные: {state['pos'] + 1}/{len(state['order'])}"
     else:
-        mode_title = "Учить"
+        header = f"{title} | Учить: {state['pos'] + 1}/{len(state['order'])}"
 
-    text = (
-        f"📖 {title}\n"
-        f"{mode_title}: {current} из {total}\n"
-        f"{progress_bar(current, total)}\n\n"
-        f"{SEP}\n"
-        f"Вопрос:\n{q['question']}\n"
-        f"{SEP}"
-    )
-
+    text = f"{header}\n\nВопрос:\n{q['question']}"
     if shown:
-        text += f"\n\n✅ Правильный ответ:\n{correct_answer_text(test_id, index)}"
+        text += f"\n\nОтвет:\n{correct_answer_text(test_id, index)}"
     return text
 
 
 
 def build_question_text(index: int, state: dict) -> str:
     test_id = state["test_id"]
-    questions = get_questions(test_id)
-    q = questions[index]
+    q = get_questions(test_id)[index]
     test_title = TESTS[test_id]["title"]
-    total = len(state["order"])
-    current = state["pos"] + 1
 
-    mode = state.get("mode")
-    if mode == "errors":
-        mode_title = "Ошибки"
-    elif mode == "mini":
-        mode_title = "Мини-тренировка"
-    elif mode == "random":
-        mode_title = "Вразброс"
-    else:
-        mode_title = "По порядку"
+    header = f"{test_title}\n{mode_title(state.get('mode'))} · {state['pos'] + 1} из {len(state['order'])}"
 
     lines = [
-        f"📝 {test_title}",
-        f"Режим: {mode_title}",
-        f"Вопрос {current} из {total}",
-        progress_bar(current, total),
+        header,
         "",
-        SEP,
+        sep(),
+        "",
         "Вопрос:",
+        "",
         q["question"],
-        SEP,
+        "",
+        "Варианты:",
         "",
     ]
 
     for i, opt in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
         lines.append(f"{letter}) {opt}")
-    return "\n".join(lines)
 
+    return "\n".join(lines)
 
 
 def build_answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
@@ -699,11 +633,11 @@ def build_answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
 
     for i, _ in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        rows.append([InlineKeyboardButton(f"🅐 Ответ А" if letter == "А" else f"🅑 Ответ Б" if letter == "Б" else f"🅒 Ответ В" if letter == "В" else f"🅓 Ответ Г" if letter == "Г" else f"Ответ {letter}", callback_data=f"answer:{test_id}:{index}:{i}")])
+        rows.append([InlineKeyboardButton(f"Ответ {letter}", callback_data=f"answer:{test_id}:{index}:{i}")])
 
-    rows.append([InlineKeyboardButton("⏹ Закончить", callback_data="finish")])
+    rows.append([InlineKeyboardButton("Показать ответ", callback_data=f"show_answer:{test_id}:{index}")])
+    rows.append([InlineKeyboardButton("Закончить", callback_data="finish")])
     return InlineKeyboardMarkup(rows)
-
 
 async def send_current_question(message, state: dict) -> None:
     test_id = state["test_id"]
@@ -724,6 +658,7 @@ async def send_current_study_card(message, state: dict) -> None:
     )
 
 
+
 def start_quiz_mode(state: dict, user_id: int, test_id: str, mode: str, order: list[int]) -> None:
     state["test_id"] = test_id
     state["order"] = order
@@ -731,12 +666,12 @@ def start_quiz_mode(state: dict, user_id: int, test_id: str, mode: str, order: l
     state["correct"] = 0
     state["total"] = 0
     state["wrong_indices"] = []
+    state["wrong_answers"] = []
     state["mode"] = mode
     state["active"] = True
     state["finish_recorded"] = False
-    state["study_answer_shown"] = False
     state["attempt_id"] = record_attempt_start(user_id, test_id, mode)
-
+    state["awaiting_next"] = False
 
 def start_study_mode(state: dict, test_id: str, mode: str, order: list[int]) -> None:
     state["test_id"] = test_id
@@ -771,61 +706,61 @@ def result_text(state: dict, user_id: int, finished_by_user: bool = False) -> st
     total = state["total"]
     correct = state["correct"]
     percent = round(correct / total * 100, 1) if total else 0
-    wrong_count = len(set(state["wrong_indices"]))
+    wrong_count = len(state.get("wrong_answers", []))
 
     if state.get("test_id"):
         test_title = TESTS[state["test_id"]]["title"]
-        questions_count = len(get_questions(state["test_id"]))
         all_time_count = len(get_all_time_error_indices(user_id, state["test_id"]))
-        hard_count = get_hard_count(user_id, state["test_id"])
     else:
         test_title = "тест не выбран"
-        questions_count = 0
         all_time_count = 0
-        hard_count = 0
 
-    if state.get("mode") in {"study", "study_hard"}:
-        return (
-            f"📖 Учёба завершена\n\n"
-            f"📚 {test_title}\n"
-            f"{SEP}\n"
-            f"👁 Просмотрено: {state['pos']} из {len(state['order'])}\n"
-            f"🟡 Сложных вопросов: {hard_count}\n"
-            f"{SEP}"
-        )
-
-    title = "⏹ Решение завершено" if finished_by_user else "✅ Тест завершён"
+    title = "Решение завершено" if finished_by_user else "Тест завершён"
     return (
         f"{title}\n\n"
-        f"📚 {test_title}\n"
-        f"{SEP}\n"
-        f"📝 Решено: {total} из {questions_count}\n"
-        f"✅ Результат: {percent}%\n"
-        f"❌ Ошибок в этом решении: {wrong_count}\n"
-        f"{SEP}\n"
-        f"❌ Ошибок за всё время: {all_time_count}\n"
-        f"🟡 Сложных вопросов: {hard_count}"
+        f"{test_title}\n\n"
+        f"Результат: {percent}%\n"
+        f"Решено: {total}\n"
+        f"Ошибок в этом решении: {wrong_count}\n\n"
+        f"Ошибок за всё время: {all_time_count}"
     )
 
 
 def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
-    indices = get_all_time_error_indices(user_id, test_id)
     title = TESTS[test_id]["title"]
-    questions_count = len(get_questions(test_id))
 
-    if not indices:
-        return [f"Ошибок за всё время по тесту «{title}» нет ✅\nВсего вопросов в тесте: {questions_count}"]
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT question_index, last_wrong_answer_index
+            FROM all_time_errors
+            WHERE user_id = ? AND test_id = ?
+            ORDER BY last_wrong_at DESC
+            """,
+            (user_id, test_id),
+        ).fetchall()
+
+    if not rows:
+        return [f"Ошибок по тесту «{title}» нет."]
 
     chunks = []
-    current = f"Ошибки за всё время — {title}\nВсего вопросов в тесте: {questions_count}\nОшибок: {len(indices)}\n\n"
+    current = f"Ошибки — {title}\n\n"
 
-    for n, index in enumerate(indices, start=1):
+    for n, row in enumerate(rows, start=1):
+        index = row["question_index"]
+        wrong_index = row["last_wrong_answer_index"]
         q = get_questions(test_id)[index]
+
+        if wrong_index is not None and 0 <= wrong_index < len(q["options"]):
+            wrong_letter = LETTERS[wrong_index] if wrong_index < len(LETTERS) else str(wrong_index + 1)
+            your_answer = f"{wrong_letter}) {q['options'][wrong_index]}"
+        else:
+            your_answer = "Показан ответ"
+
         item = (
-            f"{n}. Вопрос:\n"
-            f"{q['question']}\n\n"
-            f"Ответ:\n"
-            f"{correct_answer_text(test_id, index)}\n\n"
+            f"{n}. {q['question']}\n\n"
+            f"Ваш ответ: {your_answer}\n"
+            f"Правильный ответ: {correct_answer_text(test_id, index)}\n\n"
         )
 
         if len(current) + len(item) > 3900:
@@ -838,6 +773,47 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
         chunks.append(current.rstrip())
 
     return chunks
+
+
+def format_session_error_card(state: dict, test_id: str, pos: int) -> str:
+    items = state.get("wrong_answers", [])
+    title = TESTS[test_id]["title"]
+
+    if not items:
+        return f"Ошибок в этом решении по тесту «{title}» нет."
+
+    item = items[pos]
+    index = item["question_index"]
+    wrong_index = item.get("wrong_answer_index")
+    q = get_questions(test_id)[index]
+
+    if wrong_index is not None and 0 <= wrong_index < len(q["options"]):
+        wrong_letter = LETTERS[wrong_index] if wrong_index < len(LETTERS) else str(wrong_index + 1)
+        your_answer = f"{wrong_letter}) {q['options'][wrong_index]}"
+    else:
+        your_answer = "Показан ответ"
+
+    return (
+        f"Ошибки этого решения\n"
+        f"{title}\n"
+        f"{pos + 1} из {len(items)}\n\n"
+        f"{sep()}\n\n"
+        f"Вопрос:\n\n"
+        f"{q['question']}\n\n"
+        f"Ваш ответ:\n"
+        f"{your_answer}\n\n"
+        f"Правильный ответ:\n"
+        f"{correct_answer_text(test_id, index)}"
+    )
+
+
+def session_error_keyboard(test_id: str, pos: int, total: int) -> InlineKeyboardMarkup:
+    rows = []
+    if pos + 1 < total:
+        rows.append([InlineKeyboardButton("Следующий", callback_data=f"session_error_show:{test_id}:{pos + 1}")])
+    rows.append([InlineKeyboardButton("К результату", callback_data=f"show_result:{test_id}")])
+    rows.append([InlineKeyboardButton("К меню теста", callback_data=f"test_menu:{test_id}")])
+    return InlineKeyboardMarkup(rows)
 
 
 async def send_all_errors_list(context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_id: int, test_id: str) -> None:
@@ -883,41 +859,24 @@ def my_stats_text(user_id: int, test_id: str) -> str:
         ).fetchone()
 
     errors_count = len(get_all_time_error_indices(user_id, test_id))
-    hard_count = get_hard_count(user_id, test_id)
-
-    if best_full_attempt:
-        best_line = attempt_result_line(best_full_attempt)
-    else:
-        best_line = "пока нет — пройди тест до конца"
-
-    if last_attempt:
-        last_line = attempt_result_line(last_attempt)
-        if not last_attempt["completed_full_test"]:
-            last_line += f" · {last_attempt['answered']} вопросов"
-    else:
-        last_line = "пока нет"
 
     return (
-        f"📊 Моя статистика\n"
+        f"📊 Статистика\n"
         f"{title}\n\n"
-        f"{SEP}\n"
-        f"🏆 Лучший результат\n"
-        f"{best_line}\n\n"
-        f"🕘 Последний результат\n"
-        f"{last_line}\n"
-        f"{SEP}\n\n"
-        f"❌ Ошибок: {errors_count}\n"
-        f"🟡 Сложных вопросов: {hard_count}\n"
-        f"{SEP}"
+        f"{sep()}\n\n"
+        f"Лучший результат:\n"
+        f"{format_attempt_short(best_full_attempt)}\n\n"
+        f"Последний результат:\n"
+        f"{format_attempt_short(last_attempt)}\n\n"
+        f"{sep()}\n\n"
+        f"Ошибок: {errors_count}"
     )
-
-
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📚 Выбрать тест", callback_data="admin:tests")],
-        [InlineKeyboardButton("📊 Общая сводка", callback_data="admin:summary")],
-        [InlineKeyboardButton("📤 Экспорт всех данных", callback_data="admin:export_all")],
+        [InlineKeyboardButton("Выбрать тест", callback_data="admin:tests")],
+        [InlineKeyboardButton("Общая сводка", callback_data="admin:summary")],
+        [InlineKeyboardButton("Экспорт всех данных", callback_data="admin:export_all")],
     ])
 
 
@@ -934,15 +893,14 @@ def admin_test_select_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-
 def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Статистика по тесту", callback_data=f"admin:test_stats:{test_id}")],
-        [InlineKeyboardButton("🏆 Рейтинг топ-10", callback_data=f"admin:rating:{test_id}")],
-        [InlineKeyboardButton("👥 Пользователи", callback_data=f"admin:test_users:{test_id}")],
-        [InlineKeyboardButton("🔥 Частые ошибки", callback_data=f"admin:frequent_errors:{test_id}")],
-        [InlineKeyboardButton("📤 Экспорт по тесту", callback_data=f"admin:export_test:{test_id}")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data="admin:tests")],
+        [InlineKeyboardButton("Статистика по тесту", callback_data=f"admin:test_stats:{test_id}")],
+        [InlineKeyboardButton("Рейтинг топ-10", callback_data=f"admin:rating:{test_id}")],
+        [InlineKeyboardButton("Пользователи", callback_data=f"admin:test_users:{test_id}")],
+        [InlineKeyboardButton("Частые ошибки", callback_data=f"admin:frequent_errors:{test_id}")],
+        [InlineKeyboardButton("Экспорт по тесту", callback_data=f"admin:export_test:{test_id}")],
+        [InlineKeyboardButton("Назад", callback_data="admin:tests")],
     ])
 
 
@@ -987,72 +945,94 @@ def admin_test_users_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
-
 def admin_summary_text() -> str:
     with db_connect() as conn:
         total_users = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
+        total_answered = conn.execute("SELECT COALESCE(SUM(total_answered), 0) AS c FROM user_stats").fetchone()["c"]
+        total_correct = conn.execute("SELECT COALESCE(SUM(total_correct), 0) AS c FROM user_stats").fetchone()["c"]
         total_errors = conn.execute("SELECT COUNT(*) AS c FROM all_time_errors").fetchone()["c"]
         total_hard = conn.execute("SELECT COUNT(*) AS c FROM hard_questions").fetchone()["c"]
         total_tests = len(TESTS)
-        completed = conn.execute("SELECT COUNT(*) AS c FROM attempts WHERE completed_full_test = 1").fetchone()["c"]
+
+    percent = round(total_correct / total_answered * 100, 1) if total_answered else 0
 
     return (
-        f"📊 Общая сводка\n\n"
-        f"{SEP}\n"
-        f"👥 Пользователей: {total_users}\n"
-        f"📚 Тестов: {total_tests}\n"
-        f"🏁 Полных результатов: {completed}\n"
-        f"❌ Активных ошибок: {total_errors}\n"
-        f"🟡 Сложных вопросов: {total_hard}\n"
-        f"{SEP}"
+        "Общая сводка\n\n"
+        f"Всего пользователей: {total_users}\n"
+        f"Всего тестов: {total_tests}\n"
+        f"Всего ответов: {total_answered}\n"
+        f"Правильных ответов: {total_correct}\n"
+        f"Общий процент: {percent}%\n"
+        f"Активных ошибок за всё время: {total_errors}\n"
+        f"Сложных вопросов у пользователей: {total_hard}"
     )
-
 
 
 def admin_test_stats_text(test_id: str) -> str:
     title = TESTS[test_id]["title"]
+    questions_count = len(get_questions(test_id))
 
     with db_connect() as conn:
-        participants = conn.execute(
-            "SELECT COUNT(DISTINCT user_id) AS c FROM user_stats WHERE test_id = ?",
-            (test_id,),
-        ).fetchone()["c"]
-
-        full = conn.execute(
+        stats = conn.execute(
             """
-            SELECT COUNT(*) AS c,
-                   AVG(duration_seconds) AS avg_time,
-                   AVG(CAST(correct AS REAL) / NULLIF(answered, 0) * 100) AS avg_percent
-            FROM attempts
-            WHERE test_id = ? AND completed_full_test = 1 AND answered > 0
+            SELECT COUNT(DISTINCT user_id) AS users,
+                   COALESCE(SUM(attempts_started), 0) AS attempts_started,
+                   COALESCE(SUM(attempts_finished), 0) AS attempts_finished,
+                   COALESCE(SUM(total_answered), 0) AS answered,
+                   COALESCE(SUM(total_correct), 0) AS correct
+            FROM user_stats
+            WHERE test_id = ?
             """,
             (test_id,),
         ).fetchone()
 
         errors = conn.execute(
-            "SELECT COUNT(*) AS c FROM all_time_errors WHERE test_id = ?",
+            """
+            SELECT COUNT(*) AS active_errors,
+                   COALESCE(SUM(wrong_count), 0) AS wrong_clicks
+            FROM all_time_errors
+            WHERE test_id = ?
+            """,
             (test_id,),
-        ).fetchone()["c"]
+        ).fetchone()
 
         hard = conn.execute(
-            "SELECT COUNT(*) AS c FROM hard_questions WHERE test_id = ?",
+            """
+            SELECT COUNT(*) AS hard_count
+            FROM hard_questions
+            WHERE test_id = ?
+            """,
             (test_id,),
-        ).fetchone()["c"]
+        ).fetchone()
 
-    avg_percent = "—" if full["avg_percent"] is None else f"{round(full['avg_percent'], 1)}%"
+        completed_attempts = conn.execute(
+            """
+            SELECT COUNT(*) AS c,
+                   AVG(duration_seconds) AS avg_time
+            FROM attempts
+            WHERE test_id = ? AND completed_full_test = 1
+            """,
+            (test_id,),
+        ).fetchone()
+
+    answered = stats["answered"] or 0
+    correct = stats["correct"] or 0
+    percent = round(correct / answered * 100, 1) if answered else 0
 
     return (
-        f"📊 Статистика по тесту\n"
-        f"{title}\n\n"
-        f"{SEP}\n"
-        f"👥 Участников: {participants or 0}\n"
-        f"🏁 Полных результатов: {full['c'] or 0}\n"
-        f"📈 Средний результат: {avg_percent}\n"
-        f"⏱ Среднее время: {seconds_to_text(full['avg_time'])}\n"
-        f"{SEP}\n"
-        f"❌ Активных ошибок: {errors or 0}\n"
-        f"🟡 Сложных вопросов: {hard or 0}\n"
-        f"{SEP}"
+        f"Статистика по тесту — {title}\n\n"
+        f"Количество вопросов: {questions_count}\n"
+        f"Пользователей решали: {stats['users'] or 0}\n"
+        f"Попыток начато: {stats['attempts_started'] or 0}\n"
+        f"Попыток завершено: {stats['attempts_finished'] or 0}\n"
+        f"Полных прохождений: {completed_attempts['c'] or 0}\n"
+        f"Среднее время полного прохождения: {seconds_to_text(completed_attempts['avg_time'])}\n"
+        f"Всего ответов: {answered}\n"
+        f"Правильных ответов: {correct}\n"
+        f"Средний процент: {percent}%\n"
+        f"Активных ошибок за всё время: {errors['active_errors'] or 0}\n"
+        f"Сложных вопросов у пользователей: {hard['hard_count'] or 0}\n"
+        f"Всего ошибочных ответов: {errors['wrong_clicks'] or 0}"
     )
 
 
@@ -1113,18 +1093,47 @@ def admin_test_users_text(test_id: str) -> str:
     return f"Пользователи — {title}\n\nВыбери пользователя:"
 
 
-
 def admin_user_detail_text(test_id: str, user_id: int) -> str:
     with db_connect() as conn:
         user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
 
+        stats = conn.execute(
+            """
+            SELECT *
+            FROM user_stats
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (user_id, test_id),
+        ).fetchone()
+
         errors = conn.execute(
-            "SELECT COUNT(*) AS active_errors FROM all_time_errors WHERE user_id = ? AND test_id = ?",
+            """
+            SELECT COUNT(*) AS active_errors, COALESCE(SUM(wrong_count), 0) AS wrong_clicks
+            FROM all_time_errors
+            WHERE user_id = ? AND test_id = ?
+            """,
             (user_id, test_id),
         ).fetchone()
 
         hard = conn.execute(
-            "SELECT COUNT(*) AS hard_count FROM hard_questions WHERE user_id = ? AND test_id = ?",
+            """
+            SELECT COUNT(*) AS hard_count
+            FROM hard_questions
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (user_id, test_id),
+        ).fetchone()
+
+        best_attempt = conn.execute(
+            """
+            SELECT *
+            FROM attempts
+            WHERE user_id = ? AND test_id = ? AND answered > 0 AND finished_at IS NOT NULL
+            ORDER BY
+                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
+                duration_seconds ASC
+            LIMIT 1
+            """,
             (user_id, test_id),
         ).fetchone()
 
@@ -1145,7 +1154,7 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
             """
             SELECT *
             FROM attempts
-            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL
             ORDER BY finished_at DESC
             LIMIT 1
             """,
@@ -1156,23 +1165,72 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
         return "Пользователь не найден."
 
     title = TESTS[test_id]["title"]
-    best_line = attempt_result_line(best_full_attempt) if best_full_attempt else "пока нет"
-    last_line = attempt_result_line(last_attempt) if last_attempt else "пока нет"
-    if last_attempt and not last_attempt["completed_full_test"]:
-        last_line += f" · {last_attempt['answered']} вопросов"
 
-    return (
-        f"👤 Пользователь\n"
-        f"{user_display_name(user)}\n\n"
-        f"📚 {title}\n\n"
-        f"{SEP}\n"
-        f"🏆 Лучший результат\n{best_line}\n\n"
-        f"🕘 Последний результат\n{last_line}\n"
-        f"{SEP}\n\n"
-        f"❌ Ошибок: {errors['active_errors'] or 0}\n"
-        f"🟡 Сложных вопросов: {hard['hard_count'] or 0}\n"
-        f"{SEP}"
-    )
+    if not stats:
+        return (
+            f"Пользователь: {user_display_name(user)}\n"
+            f"Тест: {title}\n\n"
+            "Этот пользователь ещё не решал выбранный тест."
+        )
+
+    answered = stats["total_answered"] or 0
+    correct = stats["total_correct"] or 0
+    percent = round(correct / answered * 100, 1) if answered else 0
+
+    lines = [
+        "Карточка пользователя",
+        "",
+        f"Имя: {user_display_name(user)}",
+        f"Telegram ID: {user_id}",
+        f"Тест: {title}",
+        "",
+        f"Попыток начато: {stats['attempts_started']}",
+        f"Попыток завершено: {stats['attempts_finished']}",
+        f"Всего ответов: {answered}",
+        f"Правильно: {correct}",
+        f"Процент по всем ответам: {percent}%",
+        f"Активных ошибок: {errors['active_errors'] or 0}",
+        f"Сложных вопросов: {hard['hard_count'] or 0}",
+        f"Всего ошибочных ответов: {errors['wrong_clicks'] or 0}",
+        f"Последняя активность: {stats['last_activity_at']}",
+    ]
+
+    if best_attempt:
+        best_percent = round(best_attempt["correct"] / best_attempt["answered"] * 100, 1) if best_attempt["answered"] else 0
+        full_mark = "да" if best_attempt["completed_full_test"] else "нет"
+        finish_type = "закончил сам" if best_attempt["finished_by_user"] else "дошёл до конца"
+
+        lines.extend([
+            "",
+            "Лучшая попытка:",
+            f"Результат: {best_attempt['correct']}/{best_attempt['answered']} — {best_percent}%",
+            f"Время: {seconds_to_text(best_attempt['duration_seconds'])}",
+            f"Полный тест: {full_mark}",
+            f"Завершение: {finish_type}",
+            f"Дата: {best_attempt['finished_at']}",
+        ])
+
+    if best_full_attempt:
+        full_percent = round(best_full_attempt["correct"] / best_full_attempt["answered"] * 100, 1) if best_full_attempt["answered"] else 0
+        lines.extend([
+            "",
+            "Лучшее полное прохождение:",
+            f"Результат: {best_full_attempt['correct']}/{best_full_attempt['answered']} — {full_percent}%",
+            f"Время: {seconds_to_text(best_full_attempt['duration_seconds'])}",
+            f"Дата: {best_full_attempt['finished_at']}",
+        ])
+
+    if last_attempt:
+        last_percent = round(last_attempt["correct"] / last_attempt["answered"] * 100, 1) if last_attempt["answered"] else 0
+        lines.extend([
+            "",
+            "Последняя попытка:",
+            f"Результат: {last_attempt['correct']}/{last_attempt['answered']} — {last_percent}%",
+            f"Время: {seconds_to_text(last_attempt['duration_seconds'])}",
+            f"Дата: {last_attempt['finished_at']}",
+        ])
+
+    return "\n".join(lines)
 
 
 def admin_frequent_errors_text(test_id: str) -> str:
@@ -1357,17 +1415,11 @@ def create_test_stats_csv(test_id: str) -> Path:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
-    await update.message.reply_text(
-        "✅ Нижнее меню включено. Можно быстро вернуться к нужному разделу.",
-        reply_markup=main_reply_keyboard(),
-    )
-    await update.message.reply_text("👋 Выбери тест:", reply_markup=test_select_keyboard())
-
-
+    await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
 
 async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
-    await update.message.reply_text("📚 Выбери тест:", reply_markup=test_select_keyboard())
+    await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
 
 
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1389,6 +1441,7 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await update.message.reply_text("Админ-панель:", reply_markup=admin_main_keyboard())
 
 
+
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     state = get_state(update.effective_chat.id)
@@ -1397,16 +1450,14 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text("Сначала выбери тест через /start.")
 
-
-
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     USER_STATE.pop(update.effective_chat.id, None)
     await update.message.reply_text(
         "Текущее действие сброшено. Ошибки и сложные вопросы не удалены.",
-        reply_markup=main_reply_keyboard(),
+        reply_markup=test_select_keyboard(),
     )
-    await update.message.reply_text("📚 Выбери тест:", reply_markup=test_select_keyboard())
+
 
 
 async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1416,18 +1467,14 @@ async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Сейчас нет активного режима.", reply_markup=test_select_keyboard())
         return
 
-    completed_full_test = False
-    finished_by_user = True
     state["active"] = False
-    mark_finished_if_needed(update.effective_user.id, state, completed_full_test, finished_by_user)
+    state["awaiting_next"] = False
+    mark_finished_if_needed(update.effective_user.id, state, completed_full_test=False, finished_by_user=True)
 
     await update.message.reply_text(
         result_text(state, update.effective_user.id, finished_by_user=True),
         reply_markup=after_finish_keyboard(update.effective_user.id, state),
     )
-
-
-# ---------- User callbacks ----------
 
 async def handle_tests_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1450,7 +1497,6 @@ async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         test_main_text(query.from_user.id, test_id),
         reply_markup=test_main_keyboard(test_id),
     )
-
 
 async def handle_study_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1521,13 +1567,12 @@ async def handle_study_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
 
 
-
 async def handle_study_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
-    await query.answer("Ответ показан")
+    await query.answer()
 
-    _, test_id, index_str = query.data.split(":")
+    _, _, test_id, index_str = query.data.split(":")
     index = int(index_str)
     state = get_state(query.message.chat_id)
     state["study_answer_shown"] = True
@@ -1538,7 +1583,6 @@ async def handle_study_show(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
-
 async def handle_study_mark(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1547,15 +1591,6 @@ async def handle_study_mark(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     action, test_id, index_str = query.data.split(":")
     index = int(index_str)
     state = get_state(query.message.chat_id)
-
-    if not state.get("active") or state.get("pos") >= len(state.get("order", [])):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=test_select_keyboard())
-        return
-
-    current_index = state["order"][state["pos"]]
-    if index != current_index:
-        await query.answer("Эта карточка уже обработана", show_alert=False)
-        return
 
     if action == "study_know":
         remove_hard_question(query.from_user.id, test_id, index)
@@ -1580,37 +1615,6 @@ async def handle_study_mark(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await send_current_study_card(query.message, state)
 
 
-async def handle_study_next(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id, index_str = query.data.split(":")
-    index = int(index_str)
-    state = get_state(query.message.chat_id)
-
-    if not state.get("active") or state.get("pos") >= len(state.get("order", [])):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=test_select_keyboard())
-        return
-
-    current_index = state["order"][state["pos"]]
-    if index != current_index:
-        await query.answer("Эта карточка уже обработана", show_alert=False)
-        return
-
-    await query.edit_message_text(build_study_text(index, state, shown=True) + "\n\n➡️ Перехожу дальше.")
-    state["pos"] += 1
-
-    if state["pos"] >= len(state["order"]):
-        state["active"] = False
-        await query.message.reply_text(
-            result_text(state, query.from_user.id),
-            reply_markup=after_finish_keyboard(query.from_user.id, state),
-        )
-        return
-
-    await send_current_study_card(query.message, state)
-
 
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1618,8 +1622,7 @@ async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.answer()
 
     _, test_id = query.data.split(":")
-    await query.edit_message_text("Решать тест\n\nВыбери режим:", reply_markup=solve_menu_keyboard(test_id))
-
+    await query.edit_message_text("📝 Решать\n\nВыбери режим:", reply_markup=solve_menu_keyboard(test_id))
 
 async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1642,6 +1645,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
+
 async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1649,7 +1653,7 @@ async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     _, test_id = query.data.split(":")
     await query.edit_message_text(
-        "Мини-тренировка\n\nВыбери формат:",
+        "⚡ Тренировка\n\n10 случайных вопросов.",
         reply_markup=mini_menu_keyboard(test_id, query.from_user.id),
     )
 
@@ -1659,36 +1663,20 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     upsert_user(query.from_user)
     await query.answer()
 
-    _, test_id, mini_type = query.data.split(":")
+    _, test_id, _mini_type = query.data.split(":")
     questions = get_questions(test_id)
 
-    if mini_type == "hard":
-        pool = get_hard_question_indices(query.from_user.id, test_id)
-        empty_text = "Сложных вопросов пока нет."
-    elif mini_type == "errors":
-        pool = get_all_time_error_indices(query.from_user.id, test_id)
-        empty_text = "Ошибок за всё время пока нет."
-    else:
-        pool = list(range(len(questions)))
-        random.shuffle(pool)
-        pool = pool[:min(int(mini_type), len(pool))]
-        empty_text = ""
-
-    if not pool:
-        await query.edit_message_text(empty_text, reply_markup=mini_menu_keyboard(test_id, query.from_user.id))
-        return
-
-    if mini_type in {"hard", "errors"}:
-        random.shuffle(pool)
+    order = list(range(len(questions)))
+    random.shuffle(order)
+    order = order[:min(10, len(order))]
 
     state = get_state(query.message.chat_id)
-    start_quiz_mode(state, query.from_user.id, test_id, "mini", pool)
+    start_quiz_mode(state, query.from_user.id, test_id, "mini", order)
     index = state["order"][state["pos"]]
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
     )
-
 
 async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1704,6 +1692,7 @@ async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text(text, reply_markup=errors_menu_keyboard(test_id, query.from_user.id))
 
 
+
 async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1712,7 +1701,10 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
     _, test_id = query.data.split(":")
     order = get_all_time_error_indices(query.from_user.id, test_id)
     if not order:
-        await query.edit_message_text("Ошибок за всё время нет ✅", reply_markup=errors_menu_keyboard(test_id, query.from_user.id))
+        await query.edit_message_text(
+            "Ошибок за всё время нет.",
+            reply_markup=test_main_keyboard(test_id),
+        )
         return
 
     state = get_state(query.message.chat_id)
@@ -1722,7 +1714,6 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
     )
-
 
 async def handle_errors_clear(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1757,9 +1748,9 @@ async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await query.edit_message_text(
         my_stats_text(query.from_user.id, test_id),
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🧠 Работа над ошибками", callback_data=f"errors_menu:{test_id}")],
-            [InlineKeyboardButton("📖 Учить сложные", callback_data=f"hard_menu:{test_id}")],
-            [InlineKeyboardButton("🏠 Меню теста", callback_data=f"test_menu:{test_id}")],
+            [InlineKeyboardButton("К меню теста", callback_data=f"test_menu:{test_id}")],
+            [InlineKeyboardButton("Решать", callback_data=f"solve_menu:{test_id}")],
+            [InlineKeyboardButton("Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
         ]),
     )
 
@@ -1775,12 +1766,29 @@ async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     state["active"] = False
+    state["awaiting_next"] = False
     mark_finished_if_needed(query.from_user.id, state, completed_full_test=False, finished_by_user=True)
 
     await query.edit_message_text(
         result_text(state, query.from_user.id, finished_by_user=True),
         reply_markup=after_finish_keyboard(query.from_user.id, state),
     )
+
+
+def add_session_wrong_answer(state: dict, question_index: int, wrong_answer_index: int | None) -> None:
+    state.setdefault("wrong_answers", []).append({
+        "question_index": question_index,
+        "wrong_answer_index": wrong_answer_index,
+    })
+    if question_index not in state["wrong_indices"]:
+        state["wrong_indices"].append(question_index)
+
+
+def next_after_pause_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Следующий", callback_data=f"next_question:{test_id}:{index}")],
+        [InlineKeyboardButton("Закончить", callback_data="finish")],
+    ])
 
 
 
@@ -1799,17 +1807,15 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     index = int(index_str)
     selected = int(answer_str)
 
-    if state.get("pos") >= len(state.get("order", [])):
-        await query.answer("Этот вопрос уже обработан", show_alert=False)
+    if state.get("awaiting_next"):
+        await query.answer("Нажми «Следующий»")
         return
 
-    current_index = state["order"][state["pos"]]
-    if index != current_index:
-        await query.answer("Этот вопрос уже обработан", show_alert=False)
+    if state.get("pos", 0) >= len(state.get("order", [])) or state["order"][state["pos"]] != index:
+        await query.answer("Этот вопрос уже обработан")
         return
 
-    questions = get_questions(test_id)
-    q = questions[index]
+    q = get_questions(test_id)[index]
     correct_index = q["correct_index"]
 
     is_correct = selected == correct_index
@@ -1819,21 +1825,112 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if is_correct:
         state["correct"] += 1
-        result = "✅ Правильно!"
         remove_all_time_error(query.from_user.id, test_id, index)
-    else:
-        if index not in state["wrong_indices"]:
-            state["wrong_indices"].append(index)
 
-        add_all_time_error(query.from_user.id, test_id, index)
+        await query.edit_message_text(
+            text=build_question_text(index, state) + "\n\n" + sep() + "\n\n✅ Правильно"
+        )
 
-        correct_letter = LETTERS[correct_index] if correct_index < len(LETTERS) else str(correct_index + 1)
-        result = f"❌ Неправильно.\nПравильный ответ: {correct_letter}) {q['options'][correct_index]}"
+        state["pos"] += 1
+
+        if state["pos"] >= len(state["order"]):
+            state["active"] = False
+            completed_full_test = state.get("mode") in {"normal", "random"} and state["total"] == len(get_questions(test_id))
+            mark_finished_if_needed(
+                query.from_user.id,
+                state,
+                completed_full_test=completed_full_test,
+                finished_by_user=False,
+            )
+
+            await query.message.reply_text(
+                result_text(state, query.from_user.id),
+                reply_markup=after_finish_keyboard(query.from_user.id, state),
+            )
+            return
+
+        next_index = state["order"][state["pos"]]
+        await query.message.reply_text(
+            build_question_text(next_index, state),
+            reply_markup=build_answer_keyboard(test_id, next_index),
+        )
+        return
+
+    add_session_wrong_answer(state, index, selected)
+    add_all_time_error(query.from_user.id, test_id, index, selected)
+    state["awaiting_next"] = True
+
+    correct_letter = LETTERS[correct_index] if correct_index < len(LETTERS) else str(correct_index + 1)
+    result = f"❌ Неправильно\n\nПравильный ответ:\n{correct_letter}) {q['options'][correct_index]}"
 
     await query.edit_message_text(
-        text=build_question_text(index, state) + f"\n\n{SEP}\n" + result
+        text=build_question_text(index, state) + "\n\n" + sep() + "\n\n" + result,
+        reply_markup=next_after_pause_keyboard(test_id, index),
     )
 
+
+async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    state = get_state(query.message.chat_id)
+
+    if not state.get("active"):
+        await query.edit_message_text("Этот режим уже завершён.", reply_markup=test_select_keyboard())
+        return
+
+    _, test_id, index_str = query.data.split(":")
+    index = int(index_str)
+
+    if state.get("awaiting_next"):
+        await query.answer("Нажми «Следующий»")
+        return
+
+    if state.get("pos", 0) >= len(state.get("order", [])) or state["order"][state["pos"]] != index:
+        await query.answer("Этот вопрос уже обработан")
+        return
+
+    q = get_questions(test_id)[index]
+    correct_index = q["correct_index"]
+    correct_letter = LETTERS[correct_index] if correct_index < len(LETTERS) else str(correct_index + 1)
+
+    record_answer(query.from_user.id, test_id, False)
+    state["total"] += 1
+    add_session_wrong_answer(state, index, None)
+    add_all_time_error(query.from_user.id, test_id, index, None)
+    state["awaiting_next"] = True
+
+    result = f"Ответ показан\n\nПравильный ответ:\n{correct_letter}) {q['options'][correct_index]}"
+
+    await query.edit_message_text(
+        text=build_question_text(index, state) + "\n\n" + sep() + "\n\n" + result,
+        reply_markup=next_after_pause_keyboard(test_id, index),
+    )
+
+
+async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    _, test_id, index_str = query.data.split(":")
+    index = int(index_str)
+    state = get_state(query.message.chat_id)
+
+    if not state.get("active"):
+        await query.edit_message_text("Этот режим уже завершён.", reply_markup=after_finish_keyboard(query.from_user.id, state))
+        return
+
+    if not state.get("awaiting_next"):
+        await query.answer("Следующий вопрос уже открыт")
+        return
+
+    if state.get("pos", 0) >= len(state.get("order", [])) or state["order"][state["pos"]] != index:
+        await query.answer("Этот вопрос уже обработан")
+        return
+
+    state["awaiting_next"] = False
     state["pos"] += 1
 
     if state["pos"] >= len(state["order"]):
@@ -1846,18 +1943,108 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             finished_by_user=False,
         )
 
-        await query.message.reply_text(
+        await query.edit_message_text(
             result_text(state, query.from_user.id),
             reply_markup=after_finish_keyboard(query.from_user.id, state),
         )
         return
 
     next_index = state["order"][state["pos"]]
-    await query.message.reply_text(
+    await query.edit_message_text(
         build_question_text(next_index, state),
         reply_markup=build_answer_keyboard(test_id, next_index),
     )
 
+
+async def handle_session_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    _, _, test_id, pos_str = query.data.split(":")
+    pos = int(pos_str)
+    state = get_state(query.message.chat_id)
+    items = state.get("wrong_answers", [])
+
+    if not items:
+        await query.edit_message_text("Ошибок в этом решении нет.", reply_markup=after_finish_keyboard(query.from_user.id, state))
+        return
+
+    pos = max(0, min(pos, len(items) - 1))
+    await query.edit_message_text(
+        format_session_error_card(state, test_id, pos),
+        reply_markup=session_error_keyboard(test_id, pos, len(items)),
+    )
+
+
+async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    _, test_id = query.data.split(":")
+    state = get_state(query.message.chat_id)
+    if not state.get("test_id"):
+        state["test_id"] = test_id
+
+    await query.edit_message_text(
+        result_text(state, query.from_user.id),
+        reply_markup=after_finish_keyboard(query.from_user.id, state),
+    )
+
+
+
+def reset_errors_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Да, сбросить ошибки", callback_data=f"reset_errors_confirm:{test_id}")],
+        [InlineKeyboardButton("Отмена", callback_data=f"test_menu:{test_id}")],
+    ])
+
+
+async def reset_errors_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    upsert_user(update.effective_user)
+
+    state = get_state(update.effective_chat.id)
+    test_id = state.get("test_id")
+
+    if not test_id:
+        await update.message.reply_text(
+            "Сначала выбери тест через /start.",
+            reply_markup=test_select_keyboard(),
+        )
+        return
+
+    error_count = len(get_all_time_error_indices(update.effective_user.id, test_id))
+    title = TESTS[test_id]["title"]
+
+    if not error_count:
+        await update.message.reply_text(
+            f"Ошибок по тесту «{title}» нет.",
+            reply_markup=test_main_keyboard(test_id),
+        )
+        return
+
+    await update.message.reply_text(
+        f"Сброс ошибок\n\n"
+        f"{title}\n\n"
+        f"Ошибок сейчас: {error_count}\n\n"
+        f"Точно сбросить ошибки по этому тесту?",
+        reply_markup=reset_errors_keyboard(test_id),
+    )
+
+
+async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    _, test_id = query.data.split(":")
+    clear_all_time_errors(query.from_user.id, test_id)
+
+    await query.edit_message_text(
+        "Ошибки сброшены.",
+        reply_markup=test_main_keyboard(test_id),
+    )
 
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2027,66 +2214,18 @@ async def handle_admin_export_test(update: Update, context: ContextTypes.DEFAULT
 
     await query.edit_message_text("CSV-экспорт по тесту отправлен.", reply_markup=admin_test_keyboard(test_id))
 
-async def handle_text_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
 
-    text = update.message.text
-    state = get_state(update.effective_chat.id)
-    test_id = state.get("test_id")
 
-    if not test_id:
-        await update.message.reply_text(
-            "👋 Выбери тест:",
-            reply_markup=test_select_keyboard(),
-        )
-        return
+async def setup_bot_commands(application) -> None:
+    await application.bot.set_my_commands([
+        BotCommand("start", "открыть бота"),
+        BotCommand("stats", "моя статистика"),
+        BotCommand("myid", "узнать Telegram ID"),
+        BotCommand("admin", "админ-панель"),
+        BotCommand("reset", "сбросить текущее действие"),
+        BotCommand("reset_errors", "сбросить ошибки"),
+    ])
 
-    if text == "🏠 Меню":
-        await update.message.reply_text(
-            test_main_text(update.effective_user.id, test_id),
-            reply_markup=test_main_keyboard(test_id),
-        )
-
-    elif text == "📚 Учить":
-        await update.message.reply_text(
-            "📖 Учить тест\n\nВыбери режим:",
-            reply_markup=study_menu_keyboard(test_id),
-        )
-
-    elif text == "📝 Решать":
-        await update.message.reply_text(
-            "📝 Решать тест\n\nВыбери режим:",
-            reply_markup=solve_menu_keyboard(test_id),
-        )
-
-    elif text == "⚡ Тренировка":
-        await update.message.reply_text(
-            "⚡ Мини-тренировка\n\nВыбери формат:",
-            reply_markup=mini_menu_keyboard(test_id, update.effective_user.id),
-        )
-
-    elif text == "🧠 Ошибки":
-        error_count = len(get_all_time_error_indices(update.effective_user.id, test_id))
-        await update.message.reply_text(
-            f"🧠 Работа над ошибками\n\n❌ Ошибок за всё время: {error_count}",
-            reply_markup=errors_menu_keyboard(test_id, update.effective_user.id),
-        )
-
-    elif text == "📊 Статистика":
-        await update.message.reply_text(
-            my_stats_text(update.effective_user.id, test_id),
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 К меню теста", callback_data=f"test_menu:{test_id}")],
-                [InlineKeyboardButton("📝 Решать тест", callback_data=f"solve_menu:{test_id}")],
-                [InlineKeyboardButton("📚 Учить тест", callback_data=f"study_menu:{test_id}")],
-            ]),
-        )
-
-    else:
-        await update.message.reply_text(
-            test_main_text(update.effective_user.id, test_id),
-            reply_markup=test_main_keyboard(test_id),
-        )
 
 def main() -> None:
     db_connect()
@@ -2098,37 +2237,33 @@ def main() -> None:
             "Не найден токен. Впиши его в BOT_TOKEN в начале файла telegram_quiz_bot.py."
         )
 
-    app = ApplicationBuilder().token(token).build()
+    app = ApplicationBuilder().token(token).post_init(setup_bot_commands).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("tests", tests_command))
     app.add_handler(CommandHandler("finish", finish_command))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(CommandHandler("reset_errors", reset_errors_command))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(CommandHandler("admin", admin_command))
 
     # User navigation
     app.add_handler(CallbackQueryHandler(handle_tests_menu, pattern=r"^tests:menu$"))
     app.add_handler(CallbackQueryHandler(handle_test_menu, pattern=r"^test_menu:"))
-    app.add_handler(CallbackQueryHandler(handle_study_menu, pattern=r"^study_menu:"))
-    app.add_handler(CallbackQueryHandler(handle_hard_menu, pattern=r"^hard_menu:"))
-    app.add_handler(CallbackQueryHandler(handle_hard_clear, pattern=r"^hard_clear:"))
-    app.add_handler(CallbackQueryHandler(handle_study_start, pattern=r"^study_start:"))
-    app.add_handler(CallbackQueryHandler(handle_study_show, pattern=r"^study_show:"))
-    app.add_handler(CallbackQueryHandler(handle_study_next, pattern=r"^study_next:"))
-    app.add_handler(CallbackQueryHandler(handle_study_mark, pattern=r"^study_(know|dont):"))
     app.add_handler(CallbackQueryHandler(handle_solve_menu, pattern=r"^solve_menu:"))
     app.add_handler(CallbackQueryHandler(handle_start_quiz, pattern=r"^start:"))
     app.add_handler(CallbackQueryHandler(handle_mini_menu, pattern=r"^mini_menu:"))
     app.add_handler(CallbackQueryHandler(handle_mini_start, pattern=r"^mini_start:"))
-    app.add_handler(CallbackQueryHandler(handle_errors_menu, pattern=r"^errors_menu:"))
     app.add_handler(CallbackQueryHandler(handle_errors_solve, pattern=r"^errors_solve:"))
-    app.add_handler(CallbackQueryHandler(handle_errors_clear, pattern=r"^errors_clear:"))
-    app.add_handler(CallbackQueryHandler(handle_all_errors_show, pattern=r"^all_errors:show:"))
     app.add_handler(CallbackQueryHandler(handle_my_stats, pattern=r"^my_stats:"))
     app.add_handler(CallbackQueryHandler(handle_finish_button, pattern=r"^finish$"))
     app.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer:"))
+    app.add_handler(CallbackQueryHandler(handle_show_answer, pattern=r"^show_answer:"))
+    app.add_handler(CallbackQueryHandler(handle_next_question, pattern=r"^next_question:"))
+    app.add_handler(CallbackQueryHandler(handle_session_error_show, pattern=r"^session_error_show:"))
+    app.add_handler(CallbackQueryHandler(handle_show_result, pattern=r"^show_result:"))
+    app.add_handler(CallbackQueryHandler(handle_reset_errors_confirm, pattern=r"^reset_errors_confirm:"))
 
     # Admin navigation
     app.add_handler(CallbackQueryHandler(handle_admin_menu, pattern=r"^admin:menu$"))
@@ -2142,8 +2277,6 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_admin_frequent_errors, pattern=r"^admin:frequent_errors:"))
     app.add_handler(CallbackQueryHandler(handle_admin_export_all, pattern=r"^admin:export_all$"))
     app.add_handler(CallbackQueryHandler(handle_admin_export_test, pattern=r"^admin:export_test:"))
-
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_menu))
 
     print("Bot is running...")
     app.run_polling()
