@@ -67,7 +67,7 @@ if __name__ == "__main__":
     keep_alive()
     
     # Затем запускаем самого бота
-    TOKEN = "8643995860:AAFLNEOyxmZ_6pW189R59A8vI8D73pS0Z9A"
+    TOKEN = "8643995860:AAGhHqeSRbkXZa0exYVNe2orrpVJ3HGbeps"
     print("Запуск Telegram бота...")
     application = ApplicationBuilder().token(TOKEN).build()
     
