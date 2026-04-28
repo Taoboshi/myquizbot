@@ -26,7 +26,7 @@ DB_PATH = BASE_DIR / "quiz_progress.sqlite3"
 # ----------------------------
 # Токен вставлен прямо в код для удобства.
 # Если перевыпустишь токен в BotFather, замени его здесь.
-BOT_TOKEN = "8643995860:AAGeJHU66x1uPVHFF19nZEc2N0qpt_LrWNI"
+BOT_TOKEN = "8643995860:AAF_Qs45MAbJ3H_xpN7Xv1LzoOrg-xpV3yo"
 
 # Впиши сюда свой Telegram ID, чтобы работала админ-панель.
 # Узнать ID можно командой /myid.
