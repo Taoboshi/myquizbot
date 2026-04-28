@@ -1,4 +1,5 @@
 import csv
+import html
 import json
 import os
 import random
@@ -703,17 +704,19 @@ def hard_menu_keyboard(test_id: str, hard_count: int) -> InlineKeyboardMarkup:
 
 
 def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton("🧭 По порядку", callback_data=f"start:{test_id}:normal")],
-        [InlineKeyboardButton("🔀 Вразброс", callback_data=f"start:{test_id}:random")],
-    ]
+    rows = []
 
     if user_id is not None:
         continue_text = active_session_button_text(user_id, test_id)
         if continue_text:
             rows.append([InlineKeyboardButton(f"▶️ {continue_text}", callback_data=f"continue_session:{test_id}")])
 
-    rows.append([InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")])
+    rows.extend([
+        [InlineKeyboardButton("🧭 По порядку", callback_data=f"start:{test_id}:normal")],
+        [InlineKeyboardButton("🔀 Вразброс", callback_data=f"start:{test_id}:random")],
+        [InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")],
+    ])
+
     return InlineKeyboardMarkup(rows)
 
 def mini_menu_keyboard(test_id: str, user_id: int) -> InlineKeyboardMarkup:
@@ -788,6 +791,7 @@ def build_study_text(index: int, state: dict, shown: bool = False) -> str:
 
 
 
+
 def build_question_text(
     index: int,
     state: dict,
@@ -796,17 +800,21 @@ def build_question_text(
 ) -> str:
     test_id = state["test_id"]
     q = get_questions(test_id)[index]
-    test_title = TESTS[test_id]["title"]
+    test_title = html.escape(TESTS[test_id]["title"])
     correct_index = q["correct_index"]
 
-    header = f"{test_title}\n{mode_title(state.get('mode'))} · {state['pos'] + 1} из {len(state['order'])}"
+    header = f"{test_title}\n{html.escape(mode_title(state.get('mode')))} · {state['pos'] + 1} из {len(state['order'])}"
 
     lines = [
         header,
         "",
-        f"❓ {q['question']}",
+        "🟦 Вопрос",
+        "",
+        f"<b>{html.escape(str(q['question']))}</b>",
         "",
         sep(),
+        "",
+        "⬜ Ответы",
         "",
     ]
 
@@ -819,7 +827,7 @@ def build_question_text(
         elif selected_index is not None and i == selected_index and i != correct_index:
             prefix = "❌ "
 
-        lines.append(f"{prefix}{letter}) {opt}")
+        lines.append(f"{prefix}{letter}) {html.escape(str(opt))}")
 
     return "\n".join(lines)
 
@@ -836,14 +844,15 @@ def build_answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton("🏠 К меню теста", callback_data=f"pause_to_menu:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
+
 async def send_current_question(message, state: dict) -> None:
     test_id = state["test_id"]
     index = state["order"][state["pos"]]
     await message.reply_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
+        parse_mode="HTML",
     )
-
 
 async def send_current_study_card(message, state: dict) -> None:
     test_id = state["test_id"]
@@ -927,7 +936,7 @@ def result_text(state: dict, user_id: int, finished_by_user: bool = False) -> st
 
 
 def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
-    title = TESTS[test_id]["title"]
+    title = html.escape(TESTS[test_id]["title"])
 
     with db_connect() as conn:
         rows = conn.execute(
@@ -953,9 +962,13 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
         correct_index = q["correct_index"]
 
         lines = [
-            f"{n}. ❓ {q['question']}",
+            f"{n}. 🟦 Вопрос",
+            "",
+            f"<b>{html.escape(str(q['question']))}</b>",
             "",
             sep(),
+            "",
+            "⬜ Ответы",
             "",
         ]
 
@@ -968,7 +981,7 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
             elif wrong_index is not None and i == wrong_index and i != correct_index:
                 prefix = "❌ "
 
-            lines.append(f"{prefix}{letter}) {opt}")
+            lines.append(f"{prefix}{letter}) {html.escape(str(opt))}")
 
         item = "\n".join(lines) + "\n\n"
 
@@ -987,7 +1000,7 @@ def format_session_error_card(state: dict, test_id: str, pos: int, items: list[d
     if items is None:
         items = state.get("wrong_answers", [])
 
-    title = TESTS[test_id]["title"]
+    title = html.escape(TESTS[test_id]["title"])
 
     if not items:
         return f"Ошибок в этом решении по тесту «{title}» нет."
@@ -1003,9 +1016,13 @@ def format_session_error_card(state: dict, test_id: str, pos: int, items: list[d
         title,
         f"{pos + 1} из {len(items)}",
         "",
-        f"❓ {q['question']}",
+        "🟦 Вопрос",
+        "",
+        f"<b>{html.escape(str(q['question']))}</b>",
         "",
         sep(),
+        "",
+        "⬜ Ответы",
         "",
     ]
 
@@ -1018,7 +1035,7 @@ def format_session_error_card(state: dict, test_id: str, pos: int, items: list[d
         elif wrong_index is not None and i == wrong_index and i != correct_index:
             prefix = "❌ "
 
-        lines.append(f"{prefix}{letter}) {opt}")
+        lines.append(f"{prefix}{letter}) {html.escape(str(opt))}")
 
     return "\n".join(lines)
 
@@ -1040,7 +1057,7 @@ async def send_all_errors_list(context: ContextTypes.DEFAULT_TYPE, chat_id: int,
     chunks = build_all_errors_text(user_id, test_id)
 
     for chunk in chunks:
-        await context.bot.send_message(chat_id=chat_id, text=chunk)
+        await context.bot.send_message(chat_id=chat_id, text=chunk, parse_mode="HTML")
 
     await context.bot.send_message(
         chat_id=chat_id,
@@ -1868,6 +1885,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
+        parse_mode="HTML",
     )
 
 async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1880,6 +1898,7 @@ async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "⚡ Тренировка\n\n10 случайных вопросов.",
         reply_markup=mini_menu_keyboard(test_id, query.from_user.id),
     )
+
 
 
 async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1900,6 +1919,7 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
+        parse_mode="HTML",
     )
 
 async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1914,6 +1934,7 @@ async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"Ошибок за всё время: {error_count}"
     )
     await query.edit_message_text(text, reply_markup=errors_menu_keyboard(test_id, query.from_user.id))
+
 
 
 
@@ -1937,6 +1958,7 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
+        parse_mode="HTML",
     )
 
 async def handle_errors_clear(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2052,7 +2074,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         remove_all_time_error(query.from_user.id, test_id, index)
 
         await query.edit_message_text(
-            text=build_question_text(index, state, selected_index=selected, show_correct=True)
+            text=build_question_text(index, state, selected_index=selected, show_correct=True),
+            parse_mode="HTML",
         )
 
         state["pos"] += 1
@@ -2079,6 +2102,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await query.message.reply_text(
             build_question_text(next_index, state),
             reply_markup=build_answer_keyboard(test_id, next_index),
+            parse_mode="HTML",
         )
         return
 
@@ -2091,6 +2115,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.edit_message_text(
         text=build_question_text(index, state, selected_index=selected, show_correct=True),
         reply_markup=next_after_pause_keyboard(test_id, index),
+        parse_mode="HTML",
     )
 
 
@@ -2127,6 +2152,7 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.edit_message_text(
         text=build_question_text(index, state, selected_index=None, show_correct=True),
         reply_markup=next_after_pause_keyboard(test_id, index),
+        parse_mode="HTML",
     )
 
 
@@ -2176,10 +2202,10 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
 
     save_active_session(query.from_user.id, state)
     next_index = state["order"][state["pos"]]
-
     await query.edit_message_text(
         build_question_text(next_index, state),
         reply_markup=build_answer_keyboard(test_id, next_index),
+        parse_mode="HTML",
     )
 
 
@@ -2217,6 +2243,7 @@ async def handle_session_error_show(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(
         format_session_error_card(state, test_id, pos, items=items),
         reply_markup=session_error_keyboard(test_id, pos, len(items), attempt_id=attempt_id),
+        parse_mode="HTML",
     )
 
 async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2344,12 +2371,14 @@ async def handle_continue_session(update: Update, context: ContextTypes.DEFAULT_
         await query.edit_message_text(
             build_question_text(index, state, selected_index=wrong_index, show_correct=True),
             reply_markup=next_after_pause_keyboard(test_id, index),
+            parse_mode="HTML",
         )
         return
 
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
+        parse_mode="HTML",
     )
 
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
