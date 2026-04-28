@@ -624,10 +624,17 @@ def build_study_text(index: int, state: dict, shown: bool = False) -> str:
 
 
 
-def build_question_text(index: int, state: dict) -> str:
+
+def build_question_text(
+    index: int,
+    state: dict,
+    selected_index: int | None = None,
+    show_correct: bool = False,
+) -> str:
     test_id = state["test_id"]
     q = get_questions(test_id)[index]
     test_title = TESTS[test_id]["title"]
+    correct_index = q["correct_index"]
 
     header = f"{test_title}\n{mode_title(state.get('mode'))} · {state['pos'] + 1} из {len(state['order'])}"
 
@@ -642,7 +649,14 @@ def build_question_text(index: int, state: dict) -> str:
 
     for i, opt in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        lines.append(f"{letter}) {opt}")
+        prefix = ""
+
+        if show_correct and i == correct_index:
+            prefix = "✅ "
+        elif selected_index is not None and i == selected_index and i != correct_index:
+            prefix = "❌ "
+
+        lines.append(f"{prefix}{letter}) {opt}")
 
     return "\n".join(lines)
 
@@ -745,6 +759,7 @@ def result_text(state: dict, user_id: int, finished_by_user: bool = False) -> st
     )
 
 
+
 def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
     title = TESTS[test_id]["title"]
 
@@ -769,18 +784,27 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
         index = row["question_index"]
         wrong_index = row["last_wrong_answer_index"]
         q = get_questions(test_id)[index]
+        correct_index = q["correct_index"]
 
-        if wrong_index is not None and 0 <= wrong_index < len(q["options"]):
-            wrong_letter = LETTERS[wrong_index] if wrong_index < len(LETTERS) else str(wrong_index + 1)
-            your_answer = f"{wrong_letter}) {q['options'][wrong_index]}"
-        else:
-            your_answer = "Показан ответ"
+        lines = [
+            f"{n}. ❓ {q['question']}",
+            "",
+            sep(),
+            "",
+        ]
 
-        item = (
-            f"{n}. {q['question']}\n\n"
-            f"Ваш ответ: {your_answer}\n"
-            f"Правильный ответ: {correct_answer_text(test_id, index)}\n\n"
-        )
+        for i, opt in enumerate(q["options"]):
+            letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
+            prefix = ""
+
+            if i == correct_index:
+                prefix = "✅ "
+            elif wrong_index is not None and i == wrong_index and i != correct_index:
+                prefix = "❌ "
+
+            lines.append(f"{prefix}{letter}) {opt}")
+
+        item = "\n".join(lines) + "\n\n"
 
         if len(current) + len(item) > 3900:
             chunks.append(current.rstrip())
@@ -792,8 +816,6 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
         chunks.append(current.rstrip())
 
     return chunks
-
-
 
 def format_session_error_card(state: dict, test_id: str, pos: int, items: list[dict] | None = None) -> str:
     if items is None:
@@ -808,26 +830,31 @@ def format_session_error_card(state: dict, test_id: str, pos: int, items: list[d
     index = item["question_index"]
     wrong_index = item.get("wrong_answer_index")
     q = get_questions(test_id)[index]
+    correct_index = q["correct_index"]
 
-    if wrong_index is not None and 0 <= wrong_index < len(q["options"]):
-        wrong_letter = LETTERS[wrong_index] if wrong_index < len(LETTERS) else str(wrong_index + 1)
-        your_answer = f"{wrong_letter}) {q['options'][wrong_index]}"
-    else:
-        your_answer = "Показан ответ"
+    lines = [
+        "Ошибки этого решения",
+        title,
+        f"{pos + 1} из {len(items)}",
+        "",
+        f"❓ {q['question']}",
+        "",
+        sep(),
+        "",
+    ]
 
-    return (
-        f"Ошибки этого решения\n"
-        f"{title}\n"
-        f"{pos + 1} из {len(items)}\n\n"
-        f"{sep()}\n\n"
-        f"Вопрос:\n\n"
-        f"{q['question']}\n\n"
-        f"Ваш ответ:\n"
-        f"{your_answer}\n\n"
-        f"Правильный ответ:\n"
-        f"{correct_answer_text(test_id, index)}"
-    )
+    for i, opt in enumerate(q["options"]):
+        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
+        prefix = ""
 
+        if i == correct_index:
+            prefix = "✅ "
+        elif wrong_index is not None and i == wrong_index and i != correct_index:
+            prefix = "❌ "
+
+        lines.append(f"{prefix}{letter}) {opt}")
+
+    return "\n".join(lines)
 
 def session_error_keyboard(test_id: str, pos: int, total: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
     rows = []
@@ -1862,6 +1889,7 @@ def next_after_pause_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("⏹ Закончить", callback_data="finish")],
     ])
 
+
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1898,7 +1926,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         remove_all_time_error(query.from_user.id, test_id, index)
 
         await query.edit_message_text(
-            text=build_question_text(index, state) + "\n\n" + sep() + "\n\n✅ Правильно"
+            text=build_question_text(index, state, selected_index=selected, show_correct=True)
         )
 
         state["pos"] += 1
@@ -1931,11 +1959,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     add_all_time_error(query.from_user.id, test_id, index, selected)
     state["awaiting_next"] = True
 
-    correct_letter = LETTERS[correct_index] if correct_index < len(LETTERS) else str(correct_index + 1)
-    result = f"❌ Неправильно\n\nПравильный ответ:\n{correct_letter}) {q['options'][correct_index]}"
-
     await query.edit_message_text(
-        text=build_question_text(index, state) + "\n\n" + sep() + "\n\n" + result,
+        text=build_question_text(index, state, selected_index=selected, show_correct=True),
         reply_markup=next_after_pause_keyboard(test_id, index),
     )
 
@@ -1962,10 +1987,6 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await query.answer("Этот вопрос уже обработан")
         return
 
-    q = get_questions(test_id)[index]
-    correct_index = q["correct_index"]
-    correct_letter = LETTERS[correct_index] if correct_index < len(LETTERS) else str(correct_index + 1)
-
     record_answer(query.from_user.id, test_id, False)
     state["total"] += 1
     add_session_wrong_answer(state, index, None)
@@ -1973,14 +1994,10 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     add_all_time_error(query.from_user.id, test_id, index, None)
     state["awaiting_next"] = True
 
-    result = f"Правильный ответ:\n{correct_letter}) {q['options'][correct_index]}"
-
     await query.edit_message_text(
-        text=build_question_text(index, state) + "\n\n" + sep() + "\n\n" + result,
+        text=build_question_text(index, state, selected_index=None, show_correct=True),
         reply_markup=next_after_pause_keyboard(test_id, index),
     )
-
-
 
 async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
