@@ -858,7 +858,7 @@ def build_answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
         rows.append([InlineKeyboardButton(f"Ответ {letter}", callback_data=f"answer:{test_id}:{index}:{i}")])
 
-    rows.append([InlineKeyboardButton("👁 Показать ответ", callback_data=f"show_answer:{test_id}:{index}")])
+    rows.append([InlineKeyboardButton("Показать ответ", callback_data=f"show_answer:{test_id}:{index}")])
     rows.append([InlineKeyboardButton("⏹ Закончить", callback_data="finish")])
     rows.append([InlineKeyboardButton("🏠 К меню теста", callback_data=f"pause_to_menu:{test_id}")])
     return InlineKeyboardMarkup(rows)
