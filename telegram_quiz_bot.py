@@ -712,7 +712,6 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
 # ============================================================
 
 
-
 def build_question_text(
     index: int,
     state: dict[str, Any],
@@ -724,21 +723,20 @@ def build_question_text(
     title = html.escape(TESTS[test_id]["title"])
     mode = html.escape(mode_title(state.get("mode")))
     correct_index = int(q["correct_index"])
-    total_questions = len(get_questions(test_id))
-
-    if state.get("mode") in {"from_number", "reverse", "view"}:
-        progress = f"{index + 1} из {total_questions}"
-    else:
-        progress = f"{state['pos'] + 1} из {len(state['order'])}"
 
     lines = [
         title,
-        f"{mode} · {progress}",
+        f"{mode} · {state['pos'] + 1} из {len(state['order'])}",
         "",
         f"<b>{html.escape(q['question'])}</b>",
         "",
-        "···",
     ]
+
+    if show_correct and selected_index is None:
+        lines.append("👁 Показан ответ")
+        lines.append("")
+
+    lines.append("···")
 
     for i, option in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
@@ -749,11 +747,8 @@ def build_question_text(
             prefix = "❌ "
         lines.append(f"{prefix}{letter}) {html.escape(option)}")
 
-    if show_correct and selected_index is None:
-        lines.append("")
-        lines.append("👁 Показан ответ")
-
     return "\n".join(lines)
+
 
 def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int | None]]) -> str:
     title = html.escape(TESTS[test_id]["title"])
@@ -792,6 +787,7 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
 
     return "\n".join(lines)
 
+
 def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = False) -> str:
     total = int(state.get("total", 0))
     correct = int(state.get("correct", 0))
@@ -802,7 +798,13 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
     if test_id:
         title = TESTS[test_id]["title"]
         all_errors = len(get_all_time_error_indices(user_id, test_id))
-        total_questions = len(get_questions(test_id))
+
+        # В тренировке результат должен считаться от размера тренировки,
+        # например 10 из 10, а не 10 из полного теста.
+        if state.get("mode") == "mini":
+            total_questions = len(state.get("order", [])) or total
+        else:
+            total_questions = len(get_questions(test_id))
     else:
         title = "тест не выбран"
         all_errors = 0
@@ -817,7 +819,6 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
         f"❌ Ошибок в этом решении: {wrong_count}\n\n"
         f"🧠 Ошибок за всё время: {all_errors}"
     )
-
 
 def format_attempt_short(attempt: sqlite3.Row | None, test_id: str | None = None) -> str:
     if not attempt or not attempt["answered"]:
