@@ -1,5 +1,4 @@
 import csv
-import html
 import json
 import os
 import random
@@ -16,8 +15,6 @@ from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
-    MessageHandler,
-    filters,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,7 +25,7 @@ DB_PATH = BASE_DIR / "quiz_progress.sqlite3"
 # ----------------------------
 # Токен вставлен прямо в код для удобства.
 # Если перевыпустишь токен в BotFather, замени его здесь.
-BOT_TOKEN = "8643995860:AAFBWoosiTPSuEaImeSTEZOYpqQhwYI47Vo"
+BOT_TOKEN = "8643995860:AAE8SRutqJKGUyldcnvULGAFfWkjoNCNhUc"
 
 # Впиши сюда свой Telegram ID, чтобы работала админ-панель.
 # Узнать ID можно командой /myid.
@@ -57,13 +54,10 @@ LETTERS = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З"]
 def sep() -> str:
     return "────────────────"
 
-
 def mode_title(mode: str | None) -> str:
     return {
         "normal": "По порядку",
         "random": "Вразброс",
-        "reverse": "С конца",
-        "from_number": "С номера",
         "mini": "Тренировка",
         "errors": "Разбор ошибок",
     }.get(mode or "", "Тест")
@@ -93,7 +87,6 @@ for test_id, info in TESTS.items():
 
 
 USER_STATE = {}
-LAST_START_AT = {}
 
 
 def get_questions(test_id: str) -> list[dict]:
@@ -204,6 +197,20 @@ def db_connect() -> sqlite3.Connection:
 
     conn.execute(
         """
+        CREATE TABLE IF NOT EXISTS attempt_wrong_answers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            attempt_id INTEGER,
+            user_id INTEGER NOT NULL,
+            test_id TEXT NOT NULL,
+            question_index INTEGER NOT NULL,
+            wrong_answer_index INTEGER,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS attempts (
             attempt_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -216,32 +223,6 @@ def db_connect() -> sqlite3.Connection:
             correct INTEGER NOT NULL DEFAULT 0,
             completed_full_test INTEGER NOT NULL DEFAULT 0,
             finished_by_user INTEGER NOT NULL DEFAULT 0
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS active_sessions (
-            user_id INTEGER NOT NULL,
-            test_id TEXT NOT NULL,
-            state_json TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (user_id, test_id)
-        )
-        """
-    )
-
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS attempt_wrong_answers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            attempt_id INTEGER,
-            user_id INTEGER NOT NULL,
-            test_id TEXT NOT NULL,
-            question_index INTEGER NOT NULL,
-            wrong_answer_index INTEGER,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
@@ -404,107 +385,6 @@ def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> No
         conn.commit()
 
 
-
-def save_active_session(user_id: int, state: dict) -> None:
-    test_id = state.get("test_id")
-    if not test_id or not state.get("order"):
-        return
-
-    data = {
-        "test_id": test_id,
-        "order": state.get("order", []),
-        "pos": state.get("pos", 0),
-        "correct": state.get("correct", 0),
-        "total": state.get("total", 0),
-        "wrong_indices": state.get("wrong_indices", []),
-        "wrong_answers": state.get("wrong_answers", []),
-        "mode": state.get("mode"),
-        "finish_recorded": state.get("finish_recorded", False),
-        "attempt_id": state.get("attempt_id"),
-        "awaiting_next": state.get("awaiting_next", False),
-    }
-
-    with db_connect() as conn:
-        conn.execute(
-            """
-            INSERT INTO active_sessions (user_id, test_id, state_json, updated_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id, test_id)
-            DO UPDATE SET
-                state_json = excluded.state_json,
-                updated_at = CURRENT_TIMESTAMP
-            """,
-            (user_id, test_id, json.dumps(data, ensure_ascii=False)),
-        )
-        conn.commit()
-
-
-def load_active_session(user_id: int, test_id: str) -> dict | None:
-    with db_connect() as conn:
-        row = conn.execute(
-            """
-            SELECT state_json
-            FROM active_sessions
-            WHERE user_id = ? AND test_id = ?
-            """,
-            (user_id, test_id),
-        ).fetchone()
-
-    if not row:
-        return None
-
-    try:
-        data = json.loads(row["state_json"])
-    except json.JSONDecodeError:
-        return None
-
-    if not data.get("order"):
-        return None
-
-    return data
-
-
-def delete_active_session(user_id: int, test_id: str | None) -> None:
-    if not test_id:
-        return
-
-    with db_connect() as conn:
-        conn.execute(
-            "DELETE FROM active_sessions WHERE user_id = ? AND test_id = ?",
-            (user_id, test_id),
-        )
-        conn.commit()
-
-
-def restore_state_from_session(chat_id: int, session: dict) -> dict:
-    state = get_state(chat_id)
-    state["test_id"] = session["test_id"]
-    state["order"] = session.get("order", [])
-    state["pos"] = session.get("pos", 0)
-    state["correct"] = session.get("correct", 0)
-    state["total"] = session.get("total", 0)
-    state["wrong_indices"] = session.get("wrong_indices", [])
-    state["wrong_answers"] = session.get("wrong_answers", [])
-    state["mode"] = session.get("mode")
-    state["active"] = True
-    state["finish_recorded"] = session.get("finish_recorded", False)
-    state["attempt_id"] = session.get("attempt_id")
-    state["awaiting_next"] = session.get("awaiting_next", False)
-    return state
-
-
-def active_session_button_text(user_id: int, test_id: str) -> str | None:
-    session = load_active_session(user_id, test_id)
-    if not session:
-        return None
-
-    order = session.get("order", [])
-    pos = session.get("pos", 0)
-    if not order or pos >= len(order):
-        return None
-
-    return f"Продолжить: вопрос {pos + 1} из {len(order)}"
-
 def get_all_time_error_indices(user_id: int, test_id: str) -> list[int]:
     with db_connect() as conn:
         rows = conn.execute(
@@ -588,7 +468,6 @@ def get_hard_count(user_id: int, test_id: str) -> int:
 
 
 
-
 def get_state(chat_id: int) -> dict:
     if chat_id not in USER_STATE:
         USER_STATE[chat_id] = {
@@ -664,29 +543,12 @@ def hard_menu_keyboard(test_id: str, hard_count: int) -> InlineKeyboardMarkup:
 
 
 
-
-
-def solve_menu_keyboard(test_id: str, chat_id: int | None = None) -> InlineKeyboardMarkup:
-    rows = []
-
-    if chat_id is not None:
-        continue_text = saved_session_button_text(chat_id, test_id)
-        if continue_text:
-            rows.append([InlineKeyboardButton(f"▶️ {continue_text}", callback_data=f"continue_session:{test_id}")])
-
-    rows.extend([
-        [
-            InlineKeyboardButton("📋 По порядку", callback_data=f"start:{test_id}:normal"),
-            InlineKeyboardButton("🎲 Вразброс", callback_data=f"start:{test_id}:random"),
-        ],
-        [
-            InlineKeyboardButton("👨🏿‍🦳 С конца", callback_data=f"start:{test_id}:reverse"),
-            InlineKeyboardButton("🦷 С номера", callback_data=f"start_from_number:{test_id}"),
-        ],
+def solve_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🧭 По порядку", callback_data=f"start:{test_id}:normal")],
+        [InlineKeyboardButton("🔀 Вразброс", callback_data=f"start:{test_id}:random")],
         [InlineKeyboardButton("⬅️ Назад", callback_data=f"test_menu:{test_id}")],
     ])
-
-    return InlineKeyboardMarkup(rows)
 
 def mini_menu_keyboard(test_id: str, user_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -771,21 +633,17 @@ def build_question_text(
 ) -> str:
     test_id = state["test_id"]
     q = get_questions(test_id)[index]
-    test_title = html.escape(TESTS[test_id]["title"])
+    test_title = TESTS[test_id]["title"]
     correct_index = q["correct_index"]
 
-    header = f"{test_title}\n{html.escape(mode_title(state.get('mode')))} · {state['pos'] + 1} из {len(state['order'])}"
+    header = f"{test_title}\n{mode_title(state.get('mode'))} · {state['pos'] + 1} из {len(state['order'])}"
 
     lines = [
         header,
         "",
-        "🟦 Вопрос",
-        "",
-        f"<b>{html.escape(str(q['question']))}</b>",
+        f"❓ {q['question']}",
         "",
         sep(),
-        "",
-        "⬜ Ответы",
         "",
     ]
 
@@ -798,24 +656,20 @@ def build_question_text(
         elif selected_index is not None and i == selected_index and i != correct_index:
             prefix = "❌ "
 
-        lines.append(f"{prefix}{letter}) {html.escape(str(opt))}")
+        lines.append(f"{prefix}{letter}) {opt}")
 
     return "\n".join(lines)
 
-
 def build_answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     q = get_questions(test_id)[index]
-    answer_buttons = []
+    rows = []
 
     for i, _ in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        answer_buttons.append(
-            InlineKeyboardButton(f"Ответ {letter}", callback_data=f"answer:{test_id}:{index}:{i}")
-        )
+        rows.append([InlineKeyboardButton(f"Ответ {letter}", callback_data=f"answer:{test_id}:{index}:{i}")])
 
-    rows = [answer_buttons[i:i + 2] for i in range(0, len(answer_buttons), 2)]
     rows.append([InlineKeyboardButton("Показать ответ", callback_data=f"show_answer:{test_id}:{index}")])
-    rows.append([InlineKeyboardButton("Меню", callback_data=f"question_menu:{test_id}:{index}")])
+    rows.append([InlineKeyboardButton("Закончить", callback_data="finish")])
     return InlineKeyboardMarkup(rows)
 
 async def send_current_question(message, state: dict) -> None:
@@ -838,7 +692,6 @@ async def send_current_study_card(message, state: dict) -> None:
 
 
 
-
 def start_quiz_mode(state: dict, user_id: int, test_id: str, mode: str, order: list[int]) -> None:
     state["test_id"] = test_id
     state["order"] = order
@@ -852,7 +705,6 @@ def start_quiz_mode(state: dict, user_id: int, test_id: str, mode: str, order: l
     state["finish_recorded"] = False
     state["attempt_id"] = record_attempt_start(user_id, test_id, mode)
     state["awaiting_next"] = False
-    save_active_session(user_id, state)
 
 def start_study_mode(state: dict, test_id: str, mode: str, order: list[int]) -> None:
     state["test_id"] = test_id
@@ -907,6 +759,7 @@ def result_text(state: dict, user_id: int, finished_by_user: bool = False) -> st
     )
 
 
+
 def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
     title = TESTS[test_id]["title"]
 
@@ -931,18 +784,27 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
         index = row["question_index"]
         wrong_index = row["last_wrong_answer_index"]
         q = get_questions(test_id)[index]
+        correct_index = q["correct_index"]
 
-        if wrong_index is not None and 0 <= wrong_index < len(q["options"]):
-            wrong_letter = LETTERS[wrong_index] if wrong_index < len(LETTERS) else str(wrong_index + 1)
-            your_answer = f"{wrong_letter}) {q['options'][wrong_index]}"
-        else:
-            your_answer = "Показан ответ"
+        lines = [
+            f"{n}. ❓ {q['question']}",
+            "",
+            sep(),
+            "",
+        ]
 
-        item = (
-            f"{n}. {q['question']}\n\n"
-            f"Ваш ответ: {your_answer}\n"
-            f"Правильный ответ: {correct_answer_text(test_id, index)}\n\n"
-        )
+        for i, opt in enumerate(q["options"]):
+            letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
+            prefix = ""
+
+            if i == correct_index:
+                prefix = "✅ "
+            elif wrong_index is not None and i == wrong_index and i != correct_index:
+                prefix = "❌ "
+
+            lines.append(f"{prefix}{letter}) {opt}")
+
+        item = "\n".join(lines) + "\n\n"
 
         if len(current) + len(item) > 3900:
             chunks.append(current.rstrip())
@@ -955,9 +817,10 @@ def build_all_errors_text(user_id: int, test_id: str) -> list[str]:
 
     return chunks
 
+def format_session_error_card(state: dict, test_id: str, pos: int, items: list[dict] | None = None) -> str:
+    if items is None:
+        items = state.get("wrong_answers", [])
 
-def format_session_error_card(state: dict, test_id: str, pos: int) -> str:
-    items = state.get("wrong_answers", [])
     title = TESTS[test_id]["title"]
 
     if not items:
@@ -967,32 +830,41 @@ def format_session_error_card(state: dict, test_id: str, pos: int) -> str:
     index = item["question_index"]
     wrong_index = item.get("wrong_answer_index")
     q = get_questions(test_id)[index]
+    correct_index = q["correct_index"]
 
-    if wrong_index is not None and 0 <= wrong_index < len(q["options"]):
-        wrong_letter = LETTERS[wrong_index] if wrong_index < len(LETTERS) else str(wrong_index + 1)
-        your_answer = f"{wrong_letter}) {q['options'][wrong_index]}"
-    else:
-        your_answer = "Показан ответ"
+    lines = [
+        "Ошибки этого решения",
+        title,
+        f"{pos + 1} из {len(items)}",
+        "",
+        f"❓ {q['question']}",
+        "",
+        sep(),
+        "",
+    ]
 
-    return (
-        f"Ошибки этого решения\n"
-        f"{title}\n"
-        f"{pos + 1} из {len(items)}\n\n"
-        f"{sep()}\n\n"
-        f"Вопрос:\n\n"
-        f"{q['question']}\n\n"
-        f"Ваш ответ:\n"
-        f"{your_answer}\n\n"
-        f"Правильный ответ:\n"
-        f"{correct_answer_text(test_id, index)}"
-    )
+    for i, opt in enumerate(q["options"]):
+        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
+        prefix = ""
 
+        if i == correct_index:
+            prefix = "✅ "
+        elif wrong_index is not None and i == wrong_index and i != correct_index:
+            prefix = "❌ "
 
+        lines.append(f"{prefix}{letter}) {opt}")
 
-def session_error_keyboard(test_id: str, pos: int, total: int) -> InlineKeyboardMarkup:
+    return "\n".join(lines)
+
+def session_error_keyboard(test_id: str, pos: int, total: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
     rows = []
+
     if pos + 1 < total:
-        rows.append([InlineKeyboardButton("➡️ Следующий", callback_data=f"session_error_show:{test_id}:{pos + 1}")])
+        if attempt_id is not None:
+            rows.append([InlineKeyboardButton("➡️ Следующий", callback_data=f"session_error_show:{test_id}:{attempt_id}:{pos + 1}")])
+        else:
+            rows.append([InlineKeyboardButton("➡️ Следующий", callback_data=f"session_error_show:{test_id}:{pos + 1}")])
+
     rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result:{test_id}")])
     rows.append([InlineKeyboardButton("🏠 К меню теста", callback_data=f"test_menu:{test_id}")])
     return InlineKeyboardMarkup(rows)
@@ -1274,6 +1146,7 @@ def admin_test_users_text(test_id: str) -> str:
     return f"Пользователи — {title}\n\nВыбери пользователя:"
 
 
+
 def admin_user_detail_text(test_id: str, user_id: int) -> str:
     with db_connect() as conn:
         user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
@@ -1296,34 +1169,13 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
             (user_id, test_id),
         ).fetchone()
 
-        hard = conn.execute(
-            """
-            SELECT COUNT(*) AS hard_count
-            FROM hard_questions
-            WHERE user_id = ? AND test_id = ?
-            """,
-            (user_id, test_id),
-        ).fetchone()
-
         best_attempt = conn.execute(
             """
             SELECT *
             FROM attempts
             WHERE user_id = ? AND test_id = ? AND answered > 0 AND finished_at IS NOT NULL
             ORDER BY
-                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
-                duration_seconds ASC
-            LIMIT 1
-            """,
-            (user_id, test_id),
-        ).fetchone()
-
-        best_full_attempt = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ? AND test_id = ? AND completed_full_test = 1 AND answered > 0
-            ORDER BY
+                answered DESC,
                 (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
                 duration_seconds ASC
             LIMIT 1
@@ -1342,77 +1194,76 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
             (user_id, test_id),
         ).fetchone()
 
-    if not user:
-        return "Пользователь не найден."
-
     title = TESTS[test_id]["title"]
 
+    if user:
+        display_name = user_display_name(user)
+        first_activity = user["first_seen_at"] or "—"
+        last_activity = stats["last_activity_at"] if stats else (user["last_seen_at"] or "—")
+    else:
+        display_name = f"ID {user_id}"
+        first_activity = "—"
+        last_activity = stats["last_activity_at"] if stats else "—"
+
+    lines = [
+        "👤 Пользователь",
+        "",
+        f"Имя: {display_name}",
+        f"ID: {user_id}",
+        "",
+        title,
+        "",
+        "🕒 Активность:",
+        f"Первая: {first_activity}",
+        f"Последняя: {last_activity}",
+    ]
+
     if not stats:
-        return (
-            f"Пользователь: {user_display_name(user)}\n"
-            f"Тест: {title}\n\n"
-            "Этот пользователь ещё не решал выбранный тест."
-        )
+        lines.extend([
+            "",
+            "Этот пользователь ещё не решал выбранный тест.",
+        ])
+        return "\n".join(lines)
 
     answered = stats["total_answered"] or 0
     correct = stats["total_correct"] or 0
     percent = round(correct / answered * 100, 1) if answered else 0
 
-    lines = [
-        "Карточка пользователя",
+    lines.extend([
         "",
-        f"Имя: {user_display_name(user)}",
-        f"Telegram ID: {user_id}",
-        f"Тест: {title}",
-        "",
+        "📊 Общая статистика:",
         f"Попыток начато: {stats['attempts_started']}",
         f"Попыток завершено: {stats['attempts_finished']}",
         f"Всего ответов: {answered}",
         f"Правильно: {correct}",
-        f"Процент по всем ответам: {percent}%",
+        f"Процент: {percent}%",
+        "",
+        "🧠 Ошибки:",
         f"Активных ошибок: {errors['active_errors'] or 0}",
-        f"Сложных вопросов: {hard['hard_count'] or 0}",
         f"Всего ошибочных ответов: {errors['wrong_clicks'] or 0}",
-        f"Последняя активность: {stats['last_activity_at']}",
-    ]
+    ])
 
     if best_attempt:
         best_percent = round(best_attempt["correct"] / best_attempt["answered"] * 100, 1) if best_attempt["answered"] else 0
-        full_mark = "да" if best_attempt["completed_full_test"] else "нет"
-        finish_type = "закончил сам" if best_attempt["finished_by_user"] else "дошёл до конца"
-
         lines.extend([
             "",
-            "Лучшая попытка:",
-            f"Результат: {best_attempt['correct']}/{best_attempt['answered']} — {best_percent}%",
+            "🏆 Лучший результат:",
+            f"{best_attempt['correct']}/{best_attempt['answered']} — {best_percent}%",
             f"Время: {seconds_to_text(best_attempt['duration_seconds'])}",
-            f"Полный тест: {full_mark}",
-            f"Завершение: {finish_type}",
             f"Дата: {best_attempt['finished_at']}",
-        ])
-
-    if best_full_attempt:
-        full_percent = round(best_full_attempt["correct"] / best_full_attempt["answered"] * 100, 1) if best_full_attempt["answered"] else 0
-        lines.extend([
-            "",
-            "Лучшее полное прохождение:",
-            f"Результат: {best_full_attempt['correct']}/{best_full_attempt['answered']} — {full_percent}%",
-            f"Время: {seconds_to_text(best_full_attempt['duration_seconds'])}",
-            f"Дата: {best_full_attempt['finished_at']}",
         ])
 
     if last_attempt:
         last_percent = round(last_attempt["correct"] / last_attempt["answered"] * 100, 1) if last_attempt["answered"] else 0
         lines.extend([
             "",
-            "Последняя попытка:",
-            f"Результат: {last_attempt['correct']}/{last_attempt['answered']} — {last_percent}%",
+            "🕘 Последний результат:",
+            f"{last_attempt['correct']}/{last_attempt['answered']} — {last_percent}%",
             f"Время: {seconds_to_text(last_attempt['duration_seconds'])}",
             f"Дата: {last_attempt['finished_at']}",
         ])
 
     return "\n".join(lines)
-
 
 def admin_frequent_errors_text(test_id: str) -> str:
     title = TESTS[test_id]["title"]
@@ -1594,17 +1445,8 @@ def create_test_stats_csv(test_id: str) -> Path:
 # ---------- User commands ----------
 
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
-
-    chat_id = update.effective_chat.id
-    now_ts = datetime.now().timestamp()
-    last_ts = LAST_START_AT.get(chat_id, 0)
-    if now_ts - last_ts < 1.5:
-        return
-    LAST_START_AT[chat_id] = now_ts
-
     await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
 
 async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1806,77 +1648,13 @@ async def handle_study_mark(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 
-
-
-def start_from_number_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⬅️ Назад", callback_data=f"solve_menu:{test_id}")],
-        [InlineKeyboardButton("🏠 К меню теста", callback_data=f"test_menu:{test_id}")],
-    ])
-
-
-async def handle_start_from_number_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    state = get_state(query.message.chat_id)
-    state["pending_start_from_number_test_id"] = test_id
-
-    await query.edit_message_text(
-        f"🦷 С номера\n\nВведи номер вопроса от 1 до {len(get_questions(test_id))}.",
-        reply_markup=start_from_number_keyboard(test_id),
-    )
-
-
-async def handle_start_from_number_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
-
-    state = get_state(update.effective_chat.id)
-    test_id = state.get("pending_start_from_number_test_id")
-    if not test_id:
-        return
-
-    text = (update.message.text or "").strip()
-    total_questions = len(get_questions(test_id))
-
-    if not text.isdigit():
-        await update.message.reply_text(
-            f"Введи номер вопроса числом от 1 до {total_questions}.",
-            reply_markup=start_from_number_keyboard(test_id),
-        )
-        return
-
-    start_number = int(text)
-    if start_number < 1 or start_number > total_questions:
-        await update.message.reply_text(
-            f"Номер должен быть от 1 до {total_questions}.",
-            reply_markup=start_from_number_keyboard(test_id),
-        )
-        return
-
-    state.pop("pending_start_from_number_test_id", None)
-
-    order = list(range(start_number - 1, total_questions))
-    start_quiz_mode(state, update.effective_user.id, test_id, "from_number", order)
-    index = state["order"][state["pos"]]
-
-    await update.message.reply_text(
-        build_question_text(index, state),
-        reply_markup=build_answer_keyboard(test_id, index),
-        parse_mode="HTML",
-    )
-
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
 
     _, test_id = query.data.split(":")
-    await query.edit_message_text("📝 Решать\n\nВыбери режим:", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
-
-
+    await query.edit_message_text("📝 Решать\n\nВыбери режим:", reply_markup=solve_menu_keyboard(test_id))
 
 async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1886,23 +1664,19 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     _, test_id, mode = query.data.split(":")
     questions = get_questions(test_id)
     order = list(range(len(questions)))
-
     if mode == "random":
         random.shuffle(order)
-    elif mode == "reverse":
-        order = list(reversed(order))
 
     state = get_state(query.message.chat_id)
-    state.pop("pending_start_from_number_test_id", None)
-
     start_quiz_mode(state, query.from_user.id, test_id, mode, order)
     index = state["order"][state["pos"]]
 
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
-        parse_mode="HTML",
     )
+
+
 
 async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1914,7 +1688,6 @@ async def handle_mini_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         "⚡ Тренировка\n\n10 случайных вопросов.",
         reply_markup=mini_menu_keyboard(test_id, query.from_user.id),
     )
-
 
 
 async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1935,7 +1708,6 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
-        parse_mode="HTML",
     )
 
 async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1950,7 +1722,6 @@ async def handle_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"Ошибок за всё время: {error_count}"
     )
     await query.edit_message_text(text, reply_markup=errors_menu_keyboard(test_id, query.from_user.id))
-
 
 
 
@@ -1974,7 +1745,6 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.edit_message_text(
         build_question_text(index, state),
         reply_markup=build_answer_keyboard(test_id, index),
-        parse_mode="HTML",
     )
 
 async def handle_errors_clear(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2002,6 +1772,7 @@ async def handle_all_errors_show(update: Update, context: ContextTypes.DEFAULT_T
 
 
 
+
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -2012,11 +1783,8 @@ async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         my_stats_text(query.from_user.id, test_id),
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🏠 К меню теста", callback_data=f"test_menu:{test_id}")],
-            [InlineKeyboardButton("📝 Решать", callback_data=f"solve_menu:{test_id}")],
-            [InlineKeyboardButton("🧠 Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
         ]),
     )
-
 
 async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2028,16 +1796,61 @@ async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text("Сейчас нет активного режима.", reply_markup=test_select_keyboard())
         return
 
-    test_id = state.get("test_id")
     state["active"] = False
     state["awaiting_next"] = False
     mark_finished_if_needed(query.from_user.id, state, completed_full_test=False, finished_by_user=True)
-    delete_active_session(query.from_user.id, test_id)
 
     await query.edit_message_text(
         result_text(state, query.from_user.id, finished_by_user=True),
         reply_markup=after_finish_keyboard(query.from_user.id, state),
     )
+
+
+
+def record_attempt_wrong_answer(
+    user_id: int,
+    test_id: str,
+    attempt_id: int | None,
+    question_index: int,
+    wrong_answer_index: int | None,
+) -> None:
+    if attempt_id is None:
+        return
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO attempt_wrong_answers (attempt_id, user_id, test_id, question_index, wrong_answer_index)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (attempt_id, user_id, test_id, question_index, wrong_answer_index),
+        )
+        conn.commit()
+
+
+def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None) -> list[dict]:
+    if attempt_id is None:
+        return []
+
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT question_index, wrong_answer_index
+            FROM attempt_wrong_answers
+            WHERE user_id = ? AND test_id = ? AND attempt_id = ?
+            ORDER BY id ASC
+            """,
+            (user_id, test_id, attempt_id),
+        ).fetchall()
+
+    return [
+        {
+            "question_index": row["question_index"],
+            "wrong_answer_index": row["wrong_answer_index"],
+        }
+        for row in rows
+    ]
+
 
 def add_session_wrong_answer(state: dict, question_index: int, wrong_answer_index: int | None) -> None:
     state.setdefault("wrong_answers", []).append({
@@ -2049,13 +1862,12 @@ def add_session_wrong_answer(state: dict, question_index: int, wrong_answer_inde
 
 
 
-
-
 def next_after_pause_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("➡️ Следующий", callback_data=f"next_question:{test_id}:{index}")],
-        [InlineKeyboardButton("Меню", callback_data=f"question_menu:{test_id}:{index}")],
+        [InlineKeyboardButton("⏹ Закончить", callback_data="finish")],
     ])
+
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2082,9 +1894,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     q = get_questions(test_id)[index]
     correct_index = q["correct_index"]
-    is_correct = selected == correct_index
 
+    is_correct = selected == correct_index
     record_answer(query.from_user.id, test_id, is_correct)
+
     state["total"] += 1
 
     if is_correct:
@@ -2092,8 +1905,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         remove_all_time_error(query.from_user.id, test_id, index)
 
         await query.edit_message_text(
-            text=build_question_text(index, state, selected_index=selected, show_correct=True),
-            parse_mode="HTML",
+            text=build_question_text(index, state, selected_index=selected, show_correct=True)
         )
 
         state["pos"] += 1
@@ -2107,7 +1919,6 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 completed_full_test=completed_full_test,
                 finished_by_user=False,
             )
-            delete_active_session(query.from_user.id, test_id)
 
             await query.message.reply_text(
                 result_text(state, query.from_user.id),
@@ -2115,12 +1926,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             )
             return
 
-        save_active_session(query.from_user.id, state)
         next_index = state["order"][state["pos"]]
         await query.message.reply_text(
             build_question_text(next_index, state),
             reply_markup=build_answer_keyboard(test_id, next_index),
-            parse_mode="HTML",
         )
         return
 
@@ -2128,12 +1937,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     record_attempt_wrong_answer(query.from_user.id, test_id, state.get("attempt_id"), index, selected)
     add_all_time_error(query.from_user.id, test_id, index, selected)
     state["awaiting_next"] = True
-    save_active_session(query.from_user.id, state)
 
     await query.edit_message_text(
         text=build_question_text(index, state, selected_index=selected, show_correct=True),
         reply_markup=next_after_pause_keyboard(test_id, index),
-        parse_mode="HTML",
     )
 
 
@@ -2165,14 +1972,11 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     record_attempt_wrong_answer(query.from_user.id, test_id, state.get("attempt_id"), index, None)
     add_all_time_error(query.from_user.id, test_id, index, None)
     state["awaiting_next"] = True
-    save_active_session(query.from_user.id, state)
 
     await query.edit_message_text(
         text=build_question_text(index, state, selected_index=None, show_correct=True),
         reply_markup=next_after_pause_keyboard(test_id, index),
-        parse_mode="HTML",
     )
-
 
 async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2210,7 +2014,6 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
             completed_full_test=completed_full_test,
             finished_by_user=False,
         )
-        delete_active_session(query.from_user.id, test_id)
 
         await query.edit_message_text(
             result_text(state, query.from_user.id),
@@ -2218,34 +2021,57 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
 
-    save_active_session(query.from_user.id, state)
     next_index = state["order"][state["pos"]]
-    await query.edit_message_text(
+
+    # Надёжнее отправлять следующий вопрос отдельным сообщением:
+    # Telegram иногда неудачно редактирует старое сообщение после длинного вопроса/результата,
+    # из-за чего пользователю кажется, что вопрос пропал.
+    await query.edit_message_text("Следующий вопрос:")
+    await query.message.reply_text(
         build_question_text(next_index, state),
         reply_markup=build_answer_keyboard(test_id, next_index),
-        parse_mode="HTML",
     )
+
 
 async def handle_session_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
 
-    _, _, test_id, pos_str = query.data.split(":")
-    pos = int(pos_str)
+    parts = query.data.split(":")
     state = get_state(query.message.chat_id)
-    items = state.get("wrong_answers", [])
+
+    # Новый формат:
+    # session_error_show:test_id:attempt_id:pos
+    if len(parts) == 4:
+        _, test_id, attempt_id_str, pos_str = parts
+        attempt_id = int(attempt_id_str)
+        pos = int(pos_str)
+        items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    # Старый формат:
+    # session_error_show:test_id:pos
+    else:
+        _, test_id, pos_str = parts
+        attempt_id = state.get("attempt_id")
+        pos = int(pos_str)
+        items = state.get("wrong_answers", [])
+        if not items and attempt_id is not None:
+            items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
 
     if not items:
-        await query.edit_message_text("Ошибок в этом решении нет.", reply_markup=after_finish_keyboard(query.from_user.id, state))
+        if not state.get("test_id"):
+            state["test_id"] = test_id
+        await query.edit_message_text(
+            "Ошибок в этом решении нет.",
+            reply_markup=after_finish_keyboard(query.from_user.id, state),
+        )
         return
 
     pos = max(0, min(pos, len(items) - 1))
     await query.edit_message_text(
-        format_session_error_card(state, test_id, pos),
-        reply_markup=session_error_keyboard(test_id, pos, len(items)),
+        format_session_error_card(state, test_id, pos, items=items),
+        reply_markup=session_error_keyboard(test_id, pos, len(items), attempt_id=attempt_id),
     )
-
 
 async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2314,228 +2140,6 @@ async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFA
     await query.edit_message_text(
         "Ошибки сброшены.",
         reply_markup=test_main_keyboard(test_id),
-    )
-
-
-async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    state = get_state(query.message.chat_id)
-
-    if state.get("test_id") == test_id and state.get("order"):
-        save_active_session(query.from_user.id, state)
-        state["active"] = False
-
-    await query.edit_message_text(
-        test_main_text(query.from_user.id, test_id),
-        reply_markup=test_main_keyboard(test_id),
-    )
-
-
-async def handle_continue_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    session = load_active_session(query.from_user.id, test_id)
-
-    if not session:
-        await query.edit_message_text(
-            "Незавершённой попытки нет.",
-            reply_markup=solve_menu_keyboard(test_id, query.from_user.id),
-        )
-        return
-
-    state = restore_state_from_session(query.message.chat_id, session)
-
-    if state["pos"] >= len(state["order"]):
-        delete_active_session(query.from_user.id, test_id)
-        await query.edit_message_text(
-            "Незавершённой попытки нет.",
-            reply_markup=solve_menu_keyboard(test_id, query.from_user.id),
-        )
-        return
-
-    index = state["order"][state["pos"]]
-
-    if state.get("awaiting_next"):
-        wrong_index = None
-        for item in reversed(state.get("wrong_answers", [])):
-            if item.get("question_index") == index:
-                wrong_index = item.get("wrong_answer_index")
-                break
-
-        await query.edit_message_text(
-            build_question_text(index, state, selected_index=wrong_index, show_correct=True),
-            reply_markup=next_after_pause_keyboard(test_id, index),
-            parse_mode="HTML",
-        )
-        return
-
-    await query.edit_message_text(
-        build_question_text(index, state),
-        reply_markup=build_answer_keyboard(test_id, index),
-        parse_mode="HTML",
-    )
-
-
-def question_menu_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Продолжить", callback_data=f"question_continue:{test_id}:{index}")],
-        [InlineKeyboardButton("Предыдущий", callback_data=f"question_previous:{test_id}:{index}")],
-        [InlineKeyboardButton("Сохранить и выйти", callback_data=f"pause_to_menu:{test_id}")],
-        [InlineKeyboardButton("Завершить", callback_data="finish")],
-    ])
-
-
-def previous_question_keyboard(test_id: str, current_index: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("К текущему вопросу", callback_data=f"question_continue:{test_id}:{current_index}")],
-        [InlineKeyboardButton("Сохранить и выйти", callback_data=f"pause_to_menu:{test_id}")],
-    ])
-
-
-
-async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id, index_str = query.data.split(":")
-    index = int(index_str)
-    state = get_state(query.message.chat_id)
-
-    if not state.get("active"):
-        session = load_active_session(query.from_user.id, test_id)
-        if session:
-            state = restore_state_from_session(query.message.chat_id, session)
-        else:
-            await query.edit_message_text(
-                "Незавершённой попытки нет.",
-                reply_markup=solve_menu_keyboard(test_id, query.from_user.id),
-            )
-            return
-
-    if state.get("test_id") == test_id and state.get("order"):
-        save_active_session(query.from_user.id, state)
-
-    if state.get("awaiting_next"):
-        wrong_index = None
-        for item in reversed(state.get("wrong_answers", [])):
-            if item.get("question_index") == index:
-                wrong_index = item.get("wrong_answer_index")
-                break
-
-        text = build_question_text(index, state, selected_index=wrong_index, show_correct=True)
-    else:
-        if state.get("pos", 0) < len(state.get("order", [])):
-            current_index = state["order"][state["pos"]]
-        else:
-            current_index = index
-        text = build_question_text(current_index, state)
-
-    await query.edit_message_text(
-        text,
-        reply_markup=question_menu_keyboard(test_id, index),
-        parse_mode="HTML",
-    )
-
-async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id, index_str = query.data.split(":")
-    index = int(index_str)
-    state = get_state(query.message.chat_id)
-
-    if not state.get("active"):
-        session = load_active_session(query.from_user.id, test_id)
-        if session:
-            state = restore_state_from_session(query.message.chat_id, session)
-        else:
-            await query.edit_message_text(
-                "Незавершённой попытки нет.",
-                reply_markup=solve_menu_keyboard(test_id, query.from_user.id),
-            )
-            return
-
-    if state.get("awaiting_next"):
-        wrong_index = None
-        for item in reversed(state.get("wrong_answers", [])):
-            if item.get("question_index") == index:
-                wrong_index = item.get("wrong_answer_index")
-                break
-
-        await query.edit_message_text(
-            build_question_text(index, state, selected_index=wrong_index, show_correct=True),
-            reply_markup=next_after_pause_keyboard(test_id, index),
-            parse_mode="HTML",
-        )
-        return
-
-    if state.get("pos", 0) < len(state.get("order", [])):
-        current_index = state["order"][state["pos"]]
-    else:
-        current_index = index
-
-    await query.edit_message_text(
-        build_question_text(current_index, state),
-        reply_markup=build_answer_keyboard(test_id, current_index),
-        parse_mode="HTML",
-    )
-
-
-async def handle_question_previous(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id, index_str = query.data.split(":")
-    current_index = int(index_str)
-    state = get_state(query.message.chat_id)
-
-    if not state.get("active"):
-        session = load_active_session(query.from_user.id, test_id)
-        if session:
-            state = restore_state_from_session(query.message.chat_id, session)
-        else:
-            await query.edit_message_text(
-                "Незавершённой попытки нет.",
-                reply_markup=solve_menu_keyboard(test_id, query.from_user.id),
-            )
-            return
-
-    pos = state.get("pos", 0)
-    if pos <= 0:
-        await query.answer("Это первый вопрос")
-        await query.edit_message_text(
-            build_question_text(current_index, state),
-            reply_markup=build_answer_keyboard(test_id, current_index),
-            parse_mode="HTML",
-        )
-        return
-
-    prev_index = state["order"][pos - 1]
-    preview_state = dict(state)
-    preview_state["pos"] = pos - 1
-
-    selected_index = None
-    show_correct = False
-    for item in reversed(state.get("wrong_answers", [])):
-        if item.get("question_index") == prev_index:
-            selected_index = item.get("wrong_answer_index")
-            show_correct = True
-            break
-
-    await query.edit_message_text(
-        build_question_text(prev_index, preview_state, selected_index=selected_index, show_correct=show_correct),
-        reply_markup=previous_question_keyboard(test_id, current_index),
-        parse_mode="HTML",
     )
 
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2739,14 +2343,12 @@ def main() -> None:
     app.add_handler(CommandHandler("reset_errors", reset_errors_command))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(CommandHandler("admin", admin_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_start_from_number_input))
 
     # User navigation
     app.add_handler(CallbackQueryHandler(handle_tests_menu, pattern=r"^tests:menu$"))
     app.add_handler(CallbackQueryHandler(handle_test_menu, pattern=r"^test_menu:"))
     app.add_handler(CallbackQueryHandler(handle_solve_menu, pattern=r"^solve_menu:"))
     app.add_handler(CallbackQueryHandler(handle_start_quiz, pattern=r"^start:"))
-    app.add_handler(CallbackQueryHandler(handle_start_from_number_menu, pattern=r"^start_from_number:"))
     app.add_handler(CallbackQueryHandler(handle_mini_menu, pattern=r"^mini_menu:"))
     app.add_handler(CallbackQueryHandler(handle_mini_start, pattern=r"^mini_start:"))
     app.add_handler(CallbackQueryHandler(handle_errors_solve, pattern=r"^errors_solve:"))
@@ -2755,11 +2357,6 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer:"))
     app.add_handler(CallbackQueryHandler(handle_show_answer, pattern=r"^show_answer:"))
     app.add_handler(CallbackQueryHandler(handle_next_question, pattern=r"^next_question:"))
-    app.add_handler(CallbackQueryHandler(handle_question_menu, pattern=r"^question_menu:"))
-    app.add_handler(CallbackQueryHandler(handle_question_continue, pattern=r"^question_continue:"))
-    app.add_handler(CallbackQueryHandler(handle_question_previous, pattern=r"^question_previous:"))
-    app.add_handler(CallbackQueryHandler(handle_pause_to_menu, pattern=r"^pause_to_menu:"))
-    app.add_handler(CallbackQueryHandler(handle_continue_session, pattern=r"^continue_session:"))
     app.add_handler(CallbackQueryHandler(handle_session_error_show, pattern=r"^session_error_show:"))
     app.add_handler(CallbackQueryHandler(handle_show_result, pattern=r"^show_result:"))
     app.add_handler(CallbackQueryHandler(handle_reset_errors_confirm, pattern=r"^reset_errors_confirm:"))
