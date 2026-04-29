@@ -11,7 +11,7 @@ from typing import Any
 
 from flask import Flask
 from telegram import BotCommand, InputFile, InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
 
 
 # ============================================================
@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "quiz_progress.sqlite3"
 
 # Лучше хранить токен в Render → Environment Variables → TELEGRAM_BOT_TOKEN.
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAFYvW4k2NCZJcb5QnTVE1Aw3MGuleyDRb4").strip()
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAFyh1ELqjDRmy5kM6r2EUhQSVU2nQN9SOQ").strip()
 ADMIN_IDS = {551500449}
 
 TESTS = {
@@ -39,9 +39,11 @@ BTN_MENU = "☰ Меню"
 BTN_NEXT = "➡️ Следующий"
 BTN_CONTINUE = "▶️ Продолжить"
 BTN_SAVE_EXIT = "💾 Сохранить и выйти"
-BTN_FINISH = "⏹ Завершить"
+BTN_FINISH = "🎯 Завершить"
 BTN_TEST_MENU = "🏠 К меню теста"
 BTN_BACK = "⬅️ Назад"
+
+RESUMABLE_MODES = {"normal", "random", "reverse", "from_number"}
 
 WEB_APP = Flask(__name__)
 
@@ -83,7 +85,6 @@ def mode_title(mode: str | None) -> str:
         "random": "Вразброс",
         "mini": "Тренировка",
         "errors": "Разбор ошибок",
-        "view": "Просмотр",
     }.get(mode or "", "Тест")
 
 
@@ -576,12 +577,14 @@ def restore_state(chat_id: int, data: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
+
 def save_active_session(user_id: int, state: dict[str, Any]) -> None:
     test_id = state.get("test_id")
     mode = state.get("mode")
 
-    # Работу над ошибками не сохраняем как продолжение в обычном меню "Решать".
-    if not test_id or mode not in {"normal", "random"}:
+    # Сохраняем только последнюю попытку из кнопки "Решать".
+    # Работа над ошибками и тренировка не должны её перезаписывать.
+    if not test_id or mode not in RESUMABLE_MODES:
         return
     if state.get("finish_recorded") or not state.get("order"):
         return
@@ -600,7 +603,6 @@ def save_active_session(user_id: int, state: dict[str, Any]) -> None:
         )
         conn.commit()
 
-
 def delete_active_session(user_id: int, test_id: str | None) -> None:
     if not test_id:
         return
@@ -610,6 +612,7 @@ def delete_active_session(user_id: int, test_id: str | None) -> None:
             (user_id, test_id),
         )
         conn.commit()
+
 
 
 def load_active_session(user_id: int, test_id: str) -> dict[str, Any] | None:
@@ -631,7 +634,7 @@ def load_active_session(user_id: int, test_id: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
 
-    if data.get("mode") not in {"normal", "random"}:
+    if data.get("mode") not in RESUMABLE_MODES:
         return None
     if not data.get("order") or data.get("pos", 0) >= len(data.get("order", [])):
         return None
@@ -642,11 +645,21 @@ def active_session_button_text(user_id: int, test_id: str) -> str | None:
     data = load_active_session(user_id, test_id)
     if not data:
         return None
-    return f"Продолжить: вопрос {data.get('pos', 0) + 1} из {len(data.get('order', []))}"
 
+    order = data.get("order", [])
+    pos = data.get("pos", 0)
+    mode = data.get("mode")
+
+    if mode in {"from_number", "reverse"} and order and pos < len(order):
+        current_question = int(order[pos]) + 1
+        return f"Продолжить: вопрос {current_question} из {len(get_questions(test_id))}"
+
+    return f"Продолжить: вопрос {pos + 1} из {len(order)}"
 
 def start_quiz_mode(state: dict[str, Any], user_id: int, test_id: str, mode: str, order: list[int]) -> None:
-    delete_active_session(user_id, test_id)
+    if mode in RESUMABLE_MODES:
+        delete_active_session(user_id, test_id)
+
     state.update({
         "test_id": test_id,
         "mode": mode,
@@ -662,7 +675,6 @@ def start_quiz_mode(state: dict[str, Any], user_id: int, test_id: str, mode: str
     })
     save_active_session(user_id, state)
 
-
 def add_session_wrong_answer(state: dict[str, Any], question_index: int, wrong_answer_index: int | None) -> None:
     state.setdefault("wrong_answers", []).append({
         "question_index": question_index,
@@ -677,6 +689,7 @@ def wrong_index_for_question(state: dict[str, Any], question_index: int) -> int 
     return None
 
 
+
 def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_user: bool = False) -> None:
     if state.get("finish_recorded"):
         return
@@ -685,7 +698,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
     if not test_id:
         return
 
-    completed_full = state.get("mode") in {"normal", "random"} and state.get("total", 0) == len(get_questions(test_id))
+    completed_full = state.get("mode") in RESUMABLE_MODES and state.get("total", 0) == len(get_questions(test_id))
 
     record_attempt_finish(
         user_id=user_id,
@@ -697,12 +710,9 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
         finished_by_user=finished_by_user,
     )
     state["finish_recorded"] = True
-    delete_active_session(user_id, test_id)
 
-
-# ============================================================
-# FORMATTERS
-# ============================================================
+    if state.get("mode") in RESUMABLE_MODES:
+        delete_active_session(user_id, test_id)
 
 def build_question_text(
     index: int,
@@ -777,7 +787,7 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
     percent = round(correct / total * 100, 1) if total else 0
     wrong_count = len(state.get("wrong_answers", []))
     test_id = state.get("test_id")
-    mode_name = mode_title(state.get("mode"))
+    passed_mode = mode_title(state.get("mode"))
 
     if test_id:
         title = TESTS[test_id]["title"]
@@ -792,7 +802,7 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
     return (
         f"{header}\n\n"
         f"{title}\n"
-        f"🎮 Режим: {mode_name}\n\n"
+        f"🎮 Режим: {passed_mode}\n\n"
         f"📊 Результат: {percent}%\n"
         f"📝 Решено: {total} из {total_questions}\n"
         f"❌ Ошибок в этом решении: {wrong_count}\n\n"
@@ -858,6 +868,91 @@ def my_stats_text(user_id: int, test_id: str) -> str:
 # KEYBOARDS
 # ============================================================
 
+
+def public_rating_text(test_id: str) -> str:
+    title = TESTS[test_id]["title"]
+
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            WITH ranked_attempts AS (
+                SELECT
+                    a.*,
+                    (CAST(a.correct AS REAL) / NULLIF(a.answered, 0)) AS percent_value,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY a.user_id
+                        ORDER BY
+                            a.answered DESC,
+                            (CAST(a.correct AS REAL) / NULLIF(a.answered, 0)) DESC,
+                            a.duration_seconds ASC,
+                            a.finished_at DESC
+                    ) AS user_rank
+                FROM attempts a
+                WHERE a.test_id = ?
+                  AND a.finished_at IS NOT NULL
+                  AND a.answered > 0
+                  AND a.mode IN ('normal', 'random', 'reverse', 'from_number')
+            )
+            SELECT r.*, u.user_id, u.username, u.first_name, u.last_name
+            FROM ranked_attempts r
+            LEFT JOIN users u ON u.user_id = r.user_id
+            WHERE r.user_rank = 1
+            ORDER BY
+                r.answered DESC,
+                r.percent_value DESC,
+                r.duration_seconds ASC,
+                r.finished_at DESC
+            LIMIT 10
+            """,
+            (test_id,),
+        ).fetchall()
+
+    lines = [
+        "🏆 Рейтинг топ-10",
+        title,
+        "",
+    ]
+
+    if not rows:
+        lines.append("Пока нет завершённых решений.")
+        return "\n".join(lines)
+
+    seen_users: set[int] = set()
+    place = 1
+
+    for row in rows:
+        user_id = int(row["user_id"])
+        if user_id in seen_users:
+            continue
+
+        seen_users.add(user_id)
+        percent = round((row["correct"] / row["answered"]) * 100, 1) if row["answered"] else 0
+        lines.append(
+            f"{place}. {user_display_name(row)} — "
+            f"{row['correct']}/{row['answered']} — {percent}% · {seconds_to_text(row['duration_seconds'])}"
+        )
+        place += 1
+
+    return "\n".join(lines)
+
+
+def public_rating_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
+    ])
+
+
+async def handle_public_rating(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id = query.data.split(":")
+
+    await query.edit_message_text(
+        public_rating_text(test_id),
+        reply_markup=public_rating_keyboard(test_id),
+    )
+
 def test_select_keyboard() -> InlineKeyboardMarkup:
     rows = []
     for test_id, info in TESTS.items():
@@ -871,18 +966,39 @@ def test_select_keyboard() -> InlineKeyboardMarkup:
 
 
 
-
-
 def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📚 Учить", callback_data=f"learn_menu:{test_id}")],
+        [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
+        [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
+        [InlineKeyboardButton(BTN_BACK, callback_data="tests:menu")],
+    ])
+
+
+def learn_menu_text(user_id: int, test_id: str) -> str:
+    title = TESTS[test_id]["title"]
+    questions_count = len(get_questions(test_id))
+    errors_count = len(get_all_time_error_indices(user_id, test_id))
+
+    return (
+        f"📚 Учить\n"
+        f"{title}\n\n"
+        f"Вопросов: {questions_count}\n"
+        f"Ошибок: {errors_count}\n\n"
+        f"Выбери действие:"
+    )
+
+
+def learn_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📝 Решать", callback_data=f"solve_menu:{test_id}")],
         [InlineKeyboardButton("⚡ Тренировка", callback_data=f"mini_start:{test_id}:10")],
         [InlineKeyboardButton("🧠 Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
-        [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
-        [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
         [InlineKeyboardButton("🗑 Сбросить ошибки", callback_data=f"reset_errors_confirm:{test_id}")],
-        [InlineKeyboardButton("⬅️ Назад", callback_data="tests:menu")],
+        [InlineKeyboardButton("🔎 Найти вопрос", callback_data=f"find_question:{test_id}")],
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"test_menu:{test_id}")],
     ])
+
 
 def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeyboardMarkup:
     rows = []
@@ -892,12 +1008,17 @@ def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeybo
             rows.append([InlineKeyboardButton(f"▶️ {text}", callback_data=f"continue_session:{test_id}")])
 
     rows.extend([
-        [InlineKeyboardButton("🧭 По порядку", callback_data=f"start:{test_id}:normal")],
-        [InlineKeyboardButton("🔀 Вразброс", callback_data=f"start:{test_id}:random")],
-        [InlineKeyboardButton(BTN_BACK, callback_data=f"test_menu:{test_id}")],
+        [
+            InlineKeyboardButton("📋 По порядку", callback_data=f"start:{test_id}:normal"),
+            InlineKeyboardButton("🎲 Вразброс", callback_data=f"start:{test_id}:random"),
+        ],
+        [
+            InlineKeyboardButton("👨🏿‍🦳 С конца", callback_data=f"start:{test_id}:reverse"),
+            InlineKeyboardButton("🎳 С номера", callback_data=f"start_from_number:{test_id}"),
+        ],
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"learn_menu:{test_id}")],
     ])
     return InlineKeyboardMarkup(rows)
-
 
 def answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     q = get_questions(test_id)[index]
@@ -926,13 +1047,19 @@ def next_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     ])
 
 
-def question_menu_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+
+def question_menu_keyboard(test_id: str, index: int, mode: str | None = None) -> InlineKeyboardMarkup:
+    if mode in RESUMABLE_MODES:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
+            [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=f"pause_to_menu:{test_id}")],
+            [InlineKeyboardButton(BTN_FINISH, callback_data="finish")],
+        ])
+
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
-        [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=f"pause_to_menu:{test_id}")],
-        [InlineKeyboardButton(BTN_FINISH, callback_data="finish")],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"pause_to_menu:{test_id}")],
     ])
-
 
 def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboardMarkup:
     test_id = state.get("test_id")
@@ -973,16 +1100,12 @@ def stats_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")]])
 
 
+
 def reset_errors_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🗑 Да, сбросить ошибки", callback_data=f"reset_errors_confirm:{test_id}")],
-        [InlineKeyboardButton("↩️ Отмена", callback_data=f"test_menu:{test_id}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"learn_menu:{test_id}")],
     ])
-
-
-# ============================================================
-# COMMANDS
-# ============================================================
 
 async def setup_bot_commands(app) -> None:
     await app.bot.set_my_commands([
@@ -1044,224 +1167,6 @@ async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f"Твой Telegram ID: {update.effective_user.id}")
 
 
-
-def find_question_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("🔢 По номеру", callback_data=f"find_number:{test_id}"),
-            InlineKeyboardButton("🔤 По содержанию", callback_data=f"find_text:{test_id}"),
-        ],
-        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
-    ])
-
-
-def find_input_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")],
-        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
-    ])
-
-
-def question_view_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
-    total = len(get_questions(test_id))
-    nav_row = []
-
-    if index > 0:
-        nav_row.append(InlineKeyboardButton("⬅️", callback_data=f"view_question:{test_id}:{index - 1}"))
-
-    if index + 1 < total:
-        nav_row.append(InlineKeyboardButton("➡️", callback_data=f"view_question:{test_id}:{index + 1}"))
-
-    rows = []
-    if nav_row:
-        rows.append(nav_row)
-
-    rows.append([InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")])
-    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def find_results_keyboard(test_id: str, indices: list[int]) -> InlineKeyboardMarkup:
-    buttons = [
-        InlineKeyboardButton(str(index + 1), callback_data=f"view_question:{test_id}:{index}")
-        for index in indices
-    ]
-    rows = [buttons[i:i + 5] for i in range(0, len(buttons), 5)]
-    rows.append([InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")])
-    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def preview_question_text(test_id: str, index: int) -> str:
-    total = len(get_questions(test_id))
-    state = {
-        "test_id": test_id,
-        "mode": "view",
-        "order": list(range(total)),
-        "pos": index,
-    }
-    return build_question_text(index, state, selected_index=-1, show_correct=True)
-
-
-def search_question_indices(test_id: str, query_text: str, limit: int = 10) -> list[int]:
-    query_text = query_text.strip().casefold()
-    if not query_text:
-        return []
-
-    words = [word for word in re.split(r"\s+", query_text) if word]
-    results: list[tuple[int, int]] = []
-
-    for index, question in enumerate(get_questions(test_id)):
-        question_text = str(question["question"]).casefold()
-        options_text = " ".join(str(option) for option in question["options"]).casefold()
-        combined = f"{question_text} {options_text}"
-
-        score = 0
-        if query_text in question_text:
-            score += 100
-        elif query_text in combined:
-            score += 60
-
-        for word in words:
-            if word in question_text:
-                score += 10
-            elif word in combined:
-                score += 3
-
-        if score > 0:
-            results.append((score, index))
-
-    results.sort(key=lambda item: (-item[0], item[1]))
-    return [index for _score, index in results[:limit]]
-
-
-async def handle_find_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    state = get_state(query.message.chat_id)
-    state["find_mode"] = None
-    state["find_test_id"] = test_id
-
-    await query.edit_message_text(
-        "🔎 Найти вопрос\n\nКак искать?",
-        reply_markup=find_question_keyboard(test_id),
-    )
-
-
-async def handle_find_by_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    state = get_state(query.message.chat_id)
-    state["find_mode"] = "number"
-    state["find_test_id"] = test_id
-
-    await query.edit_message_text(
-        f"🔢 По номеру\n\nВведи номер вопроса от 1 до {len(get_questions(test_id))}.",
-        reply_markup=find_input_keyboard(test_id),
-    )
-
-
-async def handle_find_by_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    state = get_state(query.message.chat_id)
-    state["find_mode"] = "text"
-    state["find_test_id"] = test_id
-
-    await query.edit_message_text(
-        "🔤 По содержанию\n\nВведи слово или фразу из вопроса.",
-        reply_markup=find_input_keyboard(test_id),
-    )
-
-
-async def handle_view_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id, index_str = query.data.split(":")
-    index = int(index_str)
-    total = len(get_questions(test_id))
-    index = max(0, min(index, total - 1))
-
-    state = get_state(query.message.chat_id)
-    state["find_mode"] = None
-    state["find_test_id"] = test_id
-
-    await query.edit_message_text(
-        preview_question_text(test_id, index),
-        reply_markup=question_view_keyboard(test_id, index),
-        parse_mode="HTML",
-    )
-
-
-async def handle_find_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
-
-    state = get_state(update.effective_chat.id)
-    mode = state.get("find_mode")
-    test_id = state.get("find_test_id")
-
-    if mode not in {"number", "text"} or not test_id:
-        return
-
-    text = (update.message.text or "").strip()
-    total = len(get_questions(test_id))
-
-    if mode == "number":
-        if not text.isdigit():
-            await update.message.reply_text(
-                f"Введи номер вопроса числом от 1 до {total}.",
-                reply_markup=find_input_keyboard(test_id),
-            )
-            return
-
-        index = int(text) - 1
-        if index < 0 or index >= total:
-            await update.message.reply_text(
-                f"Номер должен быть от 1 до {total}.",
-                reply_markup=find_input_keyboard(test_id),
-            )
-            return
-
-        state["find_mode"] = None
-        await update.message.reply_text(
-            preview_question_text(test_id, index),
-            reply_markup=question_view_keyboard(test_id, index),
-            parse_mode="HTML",
-        )
-        return
-
-    indices = search_question_indices(test_id, text)
-    if not indices:
-        await update.message.reply_text(
-            "Ничего не найдено. Попробуй другое слово или фразу.",
-            reply_markup=find_input_keyboard(test_id),
-        )
-        return
-
-    lines = ["🔤 Найденные вопросы:\n"]
-    for index in indices:
-        question_text = get_questions(test_id)[index]["question"]
-        preview = question_text.replace("\n", " ")
-        if len(preview) > 90:
-            preview = preview[:90].rstrip() + "…"
-        lines.append(f"{index + 1}. {preview}")
-
-    await update.message.reply_text(
-        "\n".join(lines),
-        reply_markup=find_results_keyboard(test_id, indices),
-    )
-
 # ============================================================
 # USER CALLBACKS
 # ============================================================
@@ -1287,6 +1192,18 @@ async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     _, test_id = query.data.split(":")
     await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
 
+
+
+async def handle_learn_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id = query.data.split(":")
+
+    await query.edit_message_text(
+        learn_menu_text(query.from_user.id, test_id),
+        reply_markup=learn_menu_keyboard(test_id),
+    )
 
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1338,6 +1255,7 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
+
 async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1346,7 +1264,11 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     order = get_all_time_error_indices(query.from_user.id, test_id)
     if not order:
-        await query.edit_message_text("Ошибок за всё время нет.", reply_markup=test_main_keyboard(test_id))
+        await query.answer("Ошибок для разбора нет")
+        await query.edit_message_text(
+            learn_menu_text(query.from_user.id, test_id),
+            reply_markup=learn_menu_keyboard(test_id),
+        )
         return
 
     state = get_state(query.message.chat_id)
@@ -1358,7 +1280,6 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
-
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1506,13 +1427,17 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
+
 async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
     _, test_id, index_str = query.data.split(":")
-    await query.edit_message_reply_markup(reply_markup=question_menu_keyboard(test_id, int(index_str)))
 
+    state = get_state(query.message.chat_id)
+    await query.edit_message_reply_markup(
+        reply_markup=question_menu_keyboard(test_id, int(index_str), state.get("mode"))
+    )
 
 async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1543,6 +1468,7 @@ async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT
     )
 
 
+
 async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1552,13 +1478,13 @@ async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if state.get("test_id") == test_id:
         state["active"] = False
-        if state.get("mode") in {"normal", "random"}:
+
+        # Только попытка из "Решать" попадает в продолжение.
+        # Работа над ошибками не стирает сохранённую обычную попытку.
+        if state.get("mode") in RESUMABLE_MODES:
             save_active_session(query.from_user.id, state)
-        else:
-            delete_active_session(query.from_user.id, test_id)
 
     await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
-
 
 async def handle_continue_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -1693,94 +1619,6 @@ async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEF
     )
 
 
-
-def public_rating_text(test_id: str) -> str:
-    title = TESTS[test_id]["title"]
-
-    with db_connect() as conn:
-        rows = conn.execute(
-            """
-            WITH ranked_attempts AS (
-                SELECT
-                    a.*,
-                    (CAST(a.correct AS REAL) / NULLIF(a.answered, 0)) AS percent_value,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY a.user_id
-                        ORDER BY
-                            a.answered DESC,
-                            (CAST(a.correct AS REAL) / NULLIF(a.answered, 0)) DESC,
-                            a.duration_seconds ASC,
-                            a.finished_at DESC
-                    ) AS user_rank
-                FROM attempts a
-                WHERE a.test_id = ?
-                  AND a.finished_at IS NOT NULL
-                  AND a.answered > 0
-                  AND (
-                      a.mode IN ('normal', 'random', 'reverse', 'from_number')
-                      OR a.completed_full_test = 1
-                  )
-            )
-            SELECT r.*, u.user_id, u.username, u.first_name, u.last_name
-            FROM ranked_attempts r
-            LEFT JOIN users u ON u.user_id = r.user_id
-            WHERE r.user_rank = 1
-            ORDER BY
-                r.answered DESC,
-                r.percent_value DESC,
-                r.duration_seconds ASC,
-                r.finished_at DESC
-            LIMIT 10
-            """,
-            (test_id,),
-        ).fetchall()
-
-    lines = [
-        "🏆 Рейтинг топ-10",
-        title,
-        "",
-    ]
-
-    if not rows:
-        lines.append("Пока нет завершённых решений.")
-        return "\n".join(lines)
-
-    seen_users: set[int] = set()
-    place = 1
-
-    for row in rows:
-        user_id = int(row["user_id"])
-        if user_id in seen_users:
-            continue
-
-        seen_users.add(user_id)
-        percent = round((row["correct"] / row["answered"]) * 100, 1) if row["answered"] else 0
-        lines.append(
-            f"{place}. {user_display_name(row)} — "
-            f"{row['correct']}/{row['answered']} — {percent}% · {seconds_to_text(row['duration_seconds'])}"
-        )
-        place += 1
-
-    return "\n".join(lines)
-
-
-def public_rating_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏠 К меню теста", callback_data=f"test_menu:{test_id}")],
-    ])
-
-
-async def handle_public_rating(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    upsert_user(query.from_user)
-    await query.answer()
-
-    _, test_id = query.data.split(":")
-    await query.edit_message_text(
-        public_rating_text(test_id),
-        reply_markup=public_rating_keyboard(test_id),
-    )
-
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -1789,18 +1627,19 @@ async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await query.edit_message_text(my_stats_text(query.from_user.id, test_id), reply_markup=stats_keyboard(test_id))
 
 
+
 async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
-    await query.answer()
+    await query.answer("Ошибки сброшены")
+
     _, test_id = query.data.split(":")
     clear_all_time_errors(query.from_user.id, test_id)
-    await query.edit_message_text("✅ Ошибки сброшены.", reply_markup=test_main_keyboard(test_id))
 
-
-# ============================================================
-# ADMIN
-# ============================================================
+    await query.edit_message_text(
+        learn_menu_text(query.from_user.id, test_id),
+        reply_markup=learn_menu_keyboard(test_id),
+    )
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -2122,19 +1961,15 @@ def main() -> None:
     app.add_handler(CommandHandler("reset_errors", reset_errors_command))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(CommandHandler("admin", admin_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_find_input))
 
     # User callbacks
     app.add_handler(CallbackQueryHandler(handle_tests_menu, pattern=r"^tests:menu$"))
     app.add_handler(CallbackQueryHandler(handle_test_menu, pattern=r"^test_menu:"))
+    app.add_handler(CallbackQueryHandler(handle_learn_menu, pattern=r"^learn_menu:"))
     app.add_handler(CallbackQueryHandler(handle_solve_menu, pattern=r"^solve_menu:"))
     app.add_handler(CallbackQueryHandler(handle_start_quiz, pattern=r"^start:"))
     app.add_handler(CallbackQueryHandler(handle_mini_start, pattern=r"^mini_start:"))
     app.add_handler(CallbackQueryHandler(handle_errors_solve, pattern=r"^errors_solve:"))
-    app.add_handler(CallbackQueryHandler(handle_find_question_menu, pattern=r"^find_question:"))
-    app.add_handler(CallbackQueryHandler(handle_find_by_number, pattern=r"^find_number:"))
-    app.add_handler(CallbackQueryHandler(handle_find_by_text, pattern=r"^find_text:"))
-    app.add_handler(CallbackQueryHandler(handle_view_question, pattern=r"^view_question:"))
     app.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer:"))
     app.add_handler(CallbackQueryHandler(handle_show_answer, pattern=r"^show_answer:"))
     app.add_handler(CallbackQueryHandler(handle_next_question, pattern=r"^next_question:"))
