@@ -1,0 +1,277 @@
+from typing import Any
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+from .config import (
+    BTN_BACK,
+    BTN_CONTINUE,
+    BTN_FINISH,
+    BTN_MENU,
+    BTN_NEXT,
+    BTN_SAVE_EXIT,
+    BTN_SHOW_ANSWER,
+    BTN_TEST_MENU,
+    FIND_PAGE_SIZE,
+    LETTERS,
+    RESUMABLE_MODES,
+    TESTS,
+)
+from .loader import get_questions
+from .quiz import build_question_text
+from .state import active_session_button_text
+
+def test_select_keyboard() -> InlineKeyboardMarkup:
+    rows = []
+    for test_id, info in TESTS.items():
+        rows.append([
+            InlineKeyboardButton(
+                f"📚 {info['title']} — {len(get_questions(test_id))} вопросов",
+                callback_data=f"test_menu:{test_id}",
+            )
+        ])
+    return InlineKeyboardMarkup(rows)
+
+def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📖 Учить", callback_data=f"learn_menu:{test_id}")],
+        [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
+        [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
+        [InlineKeyboardButton(BTN_BACK, callback_data="tests:menu")],
+    ])
+
+
+def learn_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📝 Решать", callback_data=f"solve_menu:{test_id}")],
+        [InlineKeyboardButton("⚡ Тренировка", callback_data=f"mini_start:{test_id}:10")],
+        [InlineKeyboardButton("🧠 Разобрать ошибки", callback_data=f"errors_solve:{test_id}")],
+        [InlineKeyboardButton("🔎 Найти вопрос", callback_data=f"find_question:{test_id}")],
+        [InlineKeyboardButton("🗑 Сбросить ошибки", callback_data=f"reset_errors_confirm:{test_id}")],
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"test_menu:{test_id}")],
+    ])
+
+def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeyboardMarkup:
+    rows = []
+    if user_id is not None:
+        text = active_session_button_text(user_id, test_id)
+        if text:
+            rows.append([InlineKeyboardButton(f"▶️ {text}", callback_data=f"continue_session:{test_id}")])
+
+    rows.extend([
+        [
+            InlineKeyboardButton("📋 По порядку", callback_data=f"start:{test_id}:normal"),
+            InlineKeyboardButton("🎲 Вразброс", callback_data=f"start:{test_id}:random"),
+        ],
+        [
+            InlineKeyboardButton("👨🏿‍🦳 С конца", callback_data=f"start:{test_id}:reverse"),
+            InlineKeyboardButton("🎳 С номера", callback_data=f"start_from_number:{test_id}"),
+        ],
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"learn_menu:{test_id}")],
+    ])
+    return InlineKeyboardMarkup(rows)
+
+def answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+    q = get_questions(test_id)[index]
+    buttons = []
+    for i, _ in enumerate(q["options"]):
+        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
+        buttons.append(InlineKeyboardButton(f"{letter}", callback_data=f"answer:{test_id}:{index}:{i}"))
+
+    rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
+    rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
+    rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
+    return InlineKeyboardMarkup(rows)
+
+def next_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(BTN_NEXT, callback_data=f"next_question:{test_id}:{index}")],
+        [InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")],
+    ])
+
+def question_menu_keyboard(test_id: str, index: int, mode: str | None = None) -> InlineKeyboardMarkup:
+    if mode in RESUMABLE_MODES:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
+            [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=f"pause_to_menu:{test_id}")],
+            [InlineKeyboardButton(BTN_FINISH, callback_data="finish")],
+        ])
+
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"pause_to_menu:{test_id}")],
+    ])
+
+def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboardMarkup:
+    test_id = state.get("test_id")
+    if not test_id:
+        return InlineKeyboardMarkup([])
+
+    if state.get("mode") == "errors":
+        rows = []
+        if state.get("wrong_answers"):
+            rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"repeat_session_errors:{test_id}")])
+        rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+        return InlineKeyboardMarkup(rows)
+
+    rows = []
+
+    if state.get("wrong_answers"):
+        rows.append([InlineKeyboardButton("👀 Посмотреть ошибки", callback_data=f"session_error_show:{test_id}:0")])
+
+    if state.get("mode") == "mini":
+        rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"mini_start:{test_id}:10")])
+    else:
+        rows.append([InlineKeyboardButton("🔁 Повторить тест", callback_data=f"solve_menu:{test_id}")])
+
+    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+def session_error_keyboard(test_id: str, pos: int, total: int) -> InlineKeyboardMarkup:
+    rows = []
+    if pos > 0:
+        rows.append([InlineKeyboardButton("⬅️ Предыдущий", callback_data=f"session_error_show:{test_id}:{pos - 1}")])
+    if pos + 1 < total:
+        rows.append([InlineKeyboardButton(BTN_NEXT, callback_data=f"session_error_show:{test_id}:{pos + 1}")])
+    rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result:{test_id}")])
+    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+def stats_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")]])
+
+def reset_errors_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑 Да, сбросить ошибки", callback_data=f"reset_errors_do:{test_id}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"learn_menu:{test_id}")],
+    ])
+
+def public_rating_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
+    ])
+
+def start_from_number_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"solve_menu:{test_id}")],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")],
+    ])
+
+def find_question_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔢 По номеру", callback_data=f"find_number:{test_id}"),
+            InlineKeyboardButton("🔤 По содержанию", callback_data=f"find_text:{test_id}"),
+        ],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")],
+    ])
+
+def find_input_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")],
+    ])
+
+def question_view_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+    total = len(get_questions(test_id))
+    nav_row = []
+    if index > 0:
+        nav_row.append(InlineKeyboardButton("⬅️", callback_data=f"view_question:{test_id}:{index - 1}"))
+    if index + 1 < total:
+        nav_row.append(InlineKeyboardButton("➡️", callback_data=f"view_question:{test_id}:{index + 1}"))
+
+    rows = []
+    if nav_row:
+        rows.append(nav_row)
+    rows.append([InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")])
+    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+def preview_question_text(test_id: str, index: int) -> str:
+    total = len(get_questions(test_id))
+    state = {
+        "test_id": test_id,
+        "mode": "view",
+        "order": list(range(total)),
+        "pos": index,
+    }
+    return build_question_text(index, state, selected_index=-1, show_correct=True)
+
+def search_question_indices(test_id: str, query_text: str) -> list[int]:
+    query_text = query_text.strip().casefold()
+    if not query_text:
+        return []
+
+    words = [word for word in query_text.split() if word]
+    results: list[tuple[int, int]] = []
+
+    for index, question in enumerate(get_questions(test_id)):
+        question_text = str(question["question"]).casefold()
+        options_text = " ".join(str(option) for option in question["options"]).casefold()
+        combined = f"{question_text} {options_text}"
+
+        score = 0
+        if query_text in question_text:
+            score += 100
+        elif query_text in combined:
+            score += 60
+
+        for word in words:
+            if word in question_text:
+                score += 10
+            elif word in combined:
+                score += 3
+
+        if score > 0:
+            results.append((score, index))
+
+    results.sort(key=lambda item: (-item[0], item[1]))
+    return [index for _score, index in results]
+
+def find_results_text(test_id: str, query_text: str, indices: list[int], page: int = 0) -> str:
+    total = len(indices)
+    total_pages = max(1, (total + FIND_PAGE_SIZE - 1) // FIND_PAGE_SIZE)
+    page = max(0, min(page, total_pages - 1))
+    start = page * FIND_PAGE_SIZE
+    visible = indices[start:start + FIND_PAGE_SIZE]
+
+    lines = [
+        "🔤 Найденные вопросы",
+        f"Запрос: {query_text}",
+        "",
+        f"{start + 1}–{start + len(visible)} из {total}",
+        f"Страница {page + 1} из {total_pages}",
+        "",
+    ]
+
+    for index in visible:
+        question_text = str(get_questions(test_id)[index]["question"]).replace("\n", " ")
+        if len(question_text) > 95:
+            question_text = question_text[:95].rstrip() + "…"
+        lines.append(f"{index + 1}. {question_text}")
+
+    return "\n".join(lines)
+
+def find_results_keyboard(test_id: str, indices: list[int], page: int = 0) -> InlineKeyboardMarkup:
+    total = len(indices)
+    total_pages = max(1, (total + FIND_PAGE_SIZE - 1) // FIND_PAGE_SIZE)
+    page = max(0, min(page, total_pages - 1))
+    start = page * FIND_PAGE_SIZE
+    visible = indices[start:start + FIND_PAGE_SIZE]
+
+    number_buttons = [
+        InlineKeyboardButton(str(index + 1), callback_data=f"view_question:{test_id}:{index}")
+        for index in visible
+    ]
+    rows = [number_buttons[i:i + 5] for i in range(0, len(number_buttons), 5)]
+
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"find_results_page:{test_id}:{page - 1}"))
+    if page + 1 < total_pages:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"find_results_page:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+
+    rows.append([InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")])
+    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+    return InlineKeyboardMarkup(rows)
