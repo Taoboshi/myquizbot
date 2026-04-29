@@ -6,10 +6,10 @@ from pathlib import Path
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Update
 from telegram.ext import ContextTypes
 
-from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, TESTS
+from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, is_admin, mode_title, seconds_to_text, sep, user_display_name
 from .loader import get_questions
-from .quiz import format_solution_attempt, format_training_attempt
+from .quiz import format_training_attempt, public_rating_text
 from .storage import db_connect, get_all_time_error_indices, upsert_user
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
