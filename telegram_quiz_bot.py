@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "quiz_progress.sqlite3")))
 
 # Лучше хранить токен в Render → Environment Variables → TELEGRAM_BOT_TOKEN.
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAHTG-vDDheG-XTHE7BT18f57CL93RJkSro").strip()
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAE8SRutqJKGUyldcnvULGAFfWkjoNCNhUc").strip()
 ADMIN_IDS = {551500449}
 
 TESTS = {
@@ -45,7 +45,8 @@ BTN_SHOW_ANSWER = "Показать ответ"
 BTN_MENU = "☰ Меню"
 BTN_NEXT = "➡️ Следующий"
 BTN_CONTINUE = "▶️ Продолжить"
-BTN_FINISH = "🟥 Завершить"
+BTN_SAVE_EXIT = "💾 Сохранить и выйти"
+BTN_FINISH = "🎯 Завершить"
 BTN_TEST_MENU = "🏠 К меню теста"
 BTN_BACK = "⬅️ Назад"
 
@@ -1101,12 +1102,19 @@ def next_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
     ])
 
 
-def question_menu_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+
+def question_menu_keyboard(test_id: str, index: int, mode: str | None = None) -> InlineKeyboardMarkup:
+    if mode in RESUMABLE_MODES:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
+            [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=f"pause_to_menu:{test_id}")],
+            [InlineKeyboardButton(BTN_FINISH, callback_data="finish")],
+        ])
+
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
         [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"pause_to_menu:{test_id}")],
     ])
-
 
 def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboardMarkup:
     test_id = state.get("test_id")
@@ -1631,13 +1639,17 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
+
 async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
     _, test_id, index_str = query.data.split(":")
-    await query.edit_message_reply_markup(reply_markup=question_menu_keyboard(test_id, int(index_str)))
 
+    state = get_state(query.message.chat_id)
+    await query.edit_message_reply_markup(
+        reply_markup=question_menu_keyboard(test_id, int(index_str), state.get("mode"))
+    )
 
 async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
