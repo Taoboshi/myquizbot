@@ -2,7 +2,7 @@ import html
 import sqlite3
 from typing import Any
 
-from .config import FULL_TEST_MODES, LETTERS, SOLUTION_MODES, TESTS
+from .config import FULL_TEST_MODES, LETTERS, RESUMABLE_MODES, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, mode_title, seconds_to_text, sep, user_display_name
 from .loader import get_questions
 from .state import delete_active_session
