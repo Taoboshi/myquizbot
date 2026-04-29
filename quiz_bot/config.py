@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "quiz_progress.sqlite3")))
 
 # Лучше хранить токен в Render → Environment Variables → TELEGRAM_BOT_TOKEN.
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAE6NGE8oyINEauZeXtn1LVyYE4QemNL26I").strip()
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAGh37V7pgHREQ0OINPrgkrAmIlrzTqB3jA").strip()
 ADMIN_IDS = {551500449}
 
 TESTS = {
