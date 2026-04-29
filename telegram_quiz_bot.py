@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "quiz_progress.sqlite3")))
 
 # Лучше хранить токен в Render → Environment Variables → TELEGRAM_BOT_TOKEN.
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAEx8_Dkyd8saiI6bnLKb1R0Jjna4kQ5vfQ").strip()
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8643995860:AAE8SRutqJKGUyldcnvULGAFfWkjoNCNhUc").strip()
 ADMIN_IDS = {551500449}
 
 TESTS = {
@@ -473,7 +473,7 @@ def get_all_time_error_indices(user_id: int, test_id: str) -> list[int]:
             SELECT question_index
             FROM all_time_errors
             WHERE user_id = ? AND test_id = ?
-            ORDER BY last_wrong_at ASC
+            ORDER BY last_wrong_at DESC
             """,
             (user_id, test_id),
         ).fetchall()
@@ -727,6 +727,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
 # FORMATTERS
 # ============================================================
 
+
 def build_question_text(
     index: int,
     state: dict[str, Any],
@@ -738,12 +739,11 @@ def build_question_text(
     title = html.escape(TESTS[test_id]["title"])
     mode = html.escape(mode_title(state.get("mode")))
     correct_index = int(q["correct_index"])
-    total_questions = len(get_questions(test_id))
 
-    if state.get("mode") in {"from_number", "reverse", "view"}:
-        progress = f"{index + 1} из {total_questions}"
-    else:
-        progress = f"{state['pos'] + 1} из {len(state['order'])}"
+    current_in_attempt = int(state.get("pos", 0)) + 1
+    total_in_attempt = len(state.get("order", [])) or 1
+    real_question_number = index + 1
+    progress = f"{current_in_attempt}/{total_in_attempt} (вопрос {real_question_number})"
 
     lines = [
         title,
@@ -768,7 +768,6 @@ def build_question_text(
         lines.append("👁 Показан ответ")
 
     return "\n".join(lines)
-
 
 def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int | None]]) -> str:
     title = html.escape(TESTS[test_id]["title"])
