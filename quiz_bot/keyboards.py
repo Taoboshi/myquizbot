@@ -70,35 +70,60 @@ def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeybo
     ])
     return InlineKeyboardMarkup(rows)
 
-def answer_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
     q = get_questions(test_id)[index]
     buttons = []
     for i, _ in enumerate(q["options"]):
         letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        buttons.append(InlineKeyboardButton(f"{letter}", callback_data=f"answer:{test_id}:{index}:{i}"))
+        if attempt_id is not None:
+            callback_data = f"answer:{attempt_id}:{test_id}:{index}:{i}"
+        else:
+            callback_data = f"answer:{test_id}:{index}:{i}"
+        buttons.append(InlineKeyboardButton(f"{letter}", callback_data=callback_data))
 
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
-    rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
-    rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
+    if attempt_id is not None:
+        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
+        rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
+    else:
+        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
+        rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
     return InlineKeyboardMarkup(rows)
 
-def next_keyboard(test_id: str, index: int) -> InlineKeyboardMarkup:
+
+def next_keyboard(test_id: str, index: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
+    if attempt_id is not None:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(BTN_NEXT, callback_data=f"next_question:{attempt_id}:{test_id}:{index}")],
+            [InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")],
+        ])
+
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(BTN_NEXT, callback_data=f"next_question:{test_id}:{index}")],
         [InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")],
     ])
 
-def question_menu_keyboard(test_id: str, index: int, mode: str | None = None) -> InlineKeyboardMarkup:
+
+def question_menu_keyboard(test_id: str, index: int, mode: str | None = None, attempt_id: int | None = None) -> InlineKeyboardMarkup:
+    if attempt_id is not None:
+        continue_cb = f"question_continue:{attempt_id}:{test_id}:{index}"
+        pause_cb = f"pause_to_menu:{attempt_id}:{test_id}"
+        finish_cb = f"finish:{attempt_id}"
+    else:
+        continue_cb = f"question_continue:{test_id}:{index}"
+        pause_cb = f"pause_to_menu:{test_id}"
+        finish_cb = "finish"
+
     if mode in RESUMABLE_MODES:
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
-            [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=f"pause_to_menu:{test_id}")],
-            [InlineKeyboardButton(BTN_FINISH, callback_data="finish")],
+            [InlineKeyboardButton(BTN_CONTINUE, callback_data=continue_cb)],
+            [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=pause_cb)],
+            [InlineKeyboardButton(BTN_FINISH, callback_data=finish_cb)],
         ])
 
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(BTN_CONTINUE, callback_data=f"question_continue:{test_id}:{index}")],
-        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"pause_to_menu:{test_id}")],
+        [InlineKeyboardButton(BTN_CONTINUE, callback_data=continue_cb)],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=pause_cb)],
     ])
 
 def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboardMarkup:

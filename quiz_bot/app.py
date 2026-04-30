@@ -103,7 +103,7 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_question_continue, pattern=r"^question_continue:"))
     app.add_handler(CallbackQueryHandler(handle_pause_to_menu, pattern=r"^pause_to_menu:"))
     app.add_handler(CallbackQueryHandler(handle_continue_session, pattern=r"^continue_session:"))
-    app.add_handler(CallbackQueryHandler(handle_finish_button, pattern=r"^finish$"))
+    app.add_handler(CallbackQueryHandler(handle_finish_button, pattern=r"^finish(?::|$)"))
     app.add_handler(CallbackQueryHandler(handle_session_error_show, pattern=r"^session_error_show:"))
     app.add_handler(CallbackQueryHandler(handle_show_result, pattern=r"^show_result:"))
     app.add_handler(CallbackQueryHandler(handle_repeat_session_errors, pattern=r"^repeat_session_errors:"))

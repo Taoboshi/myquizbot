@@ -42,6 +42,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
     state["finish_recorded"] = True
 
     delete_runtime_session(user_id, test_id, state.get("mode"))
+
     if state.get("mode") in RESUMABLE_MODES:
         delete_active_session(user_id, test_id)
 

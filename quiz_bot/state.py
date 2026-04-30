@@ -202,6 +202,62 @@ def load_latest_runtime_session(user_id: int, test_id: str) -> dict[str, Any] | 
     return candidates[0] if candidates else None
 
 
+def load_runtime_session_by_attempt(user_id: int, attempt_id: int) -> dict[str, Any] | None:
+    _ensure_runtime_sessions_table()
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT state_json
+            FROM runtime_sessions
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+
+    for row in rows:
+        try:
+            data = json.loads(row["state_json"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        if data.get("attempt_id") == attempt_id and _valid_session_data(data, runtime=True):
+            return data
+
+    return None
+
+
+def load_active_session_by_attempt(user_id: int, attempt_id: int) -> dict[str, Any] | None:
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT state_json
+            FROM active_sessions
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+
+    for row in rows:
+        try:
+            data = json.loads(row["state_json"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        if data.get("attempt_id") == attempt_id and _valid_session_data(data, runtime=False):
+            return data
+
+    return None
+
+
+def load_session_by_attempt(user_id: int, attempt_id: int) -> dict[str, Any] | None:
+    data = load_runtime_session_by_attempt(user_id, attempt_id)
+    if data:
+        return data
+    return load_active_session_by_attempt(user_id, attempt_id)
+
+
 def save_active_session(user_id: int, state: dict[str, Any]) -> None:
     test_id = state.get("test_id")
     mode = state.get("mode")
@@ -225,6 +281,106 @@ def save_active_session(user_id: int, state: dict[str, Any]) -> None:
             """,
             (user_id, test_id, json.dumps(state_for_db(state), ensure_ascii=False)),
         )
+        conn.commit()
+
+
+def save_question_progress(
+    user_id: int,
+    state: dict[str, Any],
+    question_index: int,
+    is_correct: bool,
+    wrong_answer_index: int | None = None,
+    *,
+    save_session: bool = True,
+) -> None:
+    """Record one answered question and optionally save current quiz state in one DB transaction.
+
+    This combines several operations that used to be separate Neon calls:
+    stats update, all-time error update, attempt error insert, and session save.
+    """
+    test_id = state.get("test_id")
+    mode = state.get("mode")
+    if not test_id:
+        return
+
+    if save_session and mode in RUNTIME_MODES:
+        _ensure_runtime_sessions_table()
+
+    state_json = json.dumps(state_for_db(state), ensure_ascii=False)
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO user_stats (user_id, test_id)
+            VALUES (?, ?)
+            ON CONFLICT(user_id, test_id) DO NOTHING
+            """,
+            (user_id, test_id),
+        )
+        conn.execute(
+            """
+            UPDATE user_stats
+            SET total_answered = total_answered + 1,
+                total_correct = total_correct + ?,
+                last_activity_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (1 if is_correct else 0, user_id, test_id),
+        )
+
+        if is_correct:
+            conn.execute(
+                "DELETE FROM all_time_errors WHERE user_id = ? AND test_id = ? AND question_index = ?",
+                (user_id, test_id, question_index),
+            )
+        else:
+            conn.execute(
+                """
+                INSERT INTO attempt_wrong_answers (attempt_id, user_id, test_id, question_index, wrong_answer_index)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (state.get("attempt_id"), user_id, test_id, question_index, wrong_answer_index),
+            )
+            conn.execute(
+                """
+                INSERT INTO all_time_errors (user_id, test_id, question_index, wrong_count, last_wrong_answer_index, last_wrong_at)
+                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id, test_id, question_index)
+                DO UPDATE SET
+                    wrong_count = all_time_errors.wrong_count + 1,
+                    last_wrong_answer_index = excluded.last_wrong_answer_index,
+                    last_wrong_at = CURRENT_TIMESTAMP
+                """,
+                (user_id, test_id, question_index, wrong_answer_index),
+            )
+
+        if save_session and state.get("active") and not state.get("finish_recorded") and state.get("order"):
+            if mode in RUNTIME_MODES:
+                conn.execute(
+                    """
+                    INSERT INTO runtime_sessions (user_id, test_id, mode, state_json, updated_at)
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, test_id, mode)
+                    DO UPDATE SET
+                        state_json = excluded.state_json,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (user_id, test_id, mode, state_json),
+                )
+
+            if mode in RESUMABLE_MODES:
+                conn.execute(
+                    """
+                    INSERT INTO active_sessions (user_id, test_id, state_json, updated_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, test_id)
+                    DO UPDATE SET
+                        state_json = excluded.state_json,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (user_id, test_id, state_json),
+                )
+
         conn.commit()
 
 
