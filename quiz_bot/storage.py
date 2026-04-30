@@ -678,3 +678,101 @@ def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None
         }
         for row in rows
     ]
+
+
+
+def get_user_attempt_history(user_id: int, test_id: str, page: int = 0, page_size: int = 10) -> tuple[list[dict[str, Any]], int]:
+    """Return finished attempts for the profile history page."""
+    page = max(0, int(page or 0))
+    page_size = max(1, min(int(page_size or 10), 25))
+    offset = page * page_size
+
+    with db_connect() as conn:
+        total_row = conn.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM attempts
+            WHERE user_id = ?
+              AND test_id = ?
+              AND finished_at IS NOT NULL
+              AND answered > 0
+            """,
+            (user_id, test_id),
+        ).fetchone()
+        total = int(total_row["total"] or 0) if total_row else 0
+
+        rows = conn.execute(
+            """
+            SELECT
+                a.attempt_id,
+                a.user_id,
+                a.test_id,
+                a.mode,
+                a.started_at,
+                a.finished_at,
+                a.duration_seconds,
+                a.answered,
+                a.correct,
+                a.completed_full_test,
+                a.finished_by_user,
+                COALESCE(w.wrong_count, 0) AS wrong_count
+            FROM attempts a
+            LEFT JOIN (
+                SELECT attempt_id, COUNT(*) AS wrong_count
+                FROM attempt_wrong_answers
+                WHERE user_id = ? AND test_id = ? AND attempt_id IS NOT NULL
+                GROUP BY attempt_id
+            ) w ON w.attempt_id = a.attempt_id
+            WHERE a.user_id = ?
+              AND a.test_id = ?
+              AND a.finished_at IS NOT NULL
+              AND a.answered > 0
+            ORDER BY a.finished_at DESC, a.attempt_id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, test_id, user_id, test_id, page_size, offset),
+        ).fetchall()
+
+    return [dict(row) for row in rows], total
+
+
+def get_user_attempt_detail(user_id: int, test_id: str, attempt_id: int) -> dict[str, Any] | None:
+    """Return one finished attempt with its wrong answers for the profile detail screen."""
+    with db_connect() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                a.attempt_id,
+                a.user_id,
+                a.test_id,
+                a.mode,
+                a.started_at,
+                a.finished_at,
+                a.duration_seconds,
+                a.answered,
+                a.correct,
+                a.completed_full_test,
+                a.finished_by_user,
+                COALESCE(w.wrong_count, 0) AS wrong_count
+            FROM attempts a
+            LEFT JOIN (
+                SELECT attempt_id, COUNT(*) AS wrong_count
+                FROM attempt_wrong_answers
+                WHERE user_id = ? AND test_id = ? AND attempt_id = ?
+                GROUP BY attempt_id
+            ) w ON w.attempt_id = a.attempt_id
+            WHERE a.user_id = ?
+              AND a.test_id = ?
+              AND a.attempt_id = ?
+              AND a.finished_at IS NOT NULL
+            LIMIT 1
+            """,
+            (user_id, test_id, attempt_id, user_id, test_id, attempt_id),
+        ).fetchone()
+
+    if not row:
+        return None
+
+    data = dict(row)
+    data["wrong_answers"] = get_attempt_wrong_answers(user_id, test_id, attempt_id)
+    return data

@@ -5,7 +5,7 @@ from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Upd
 from telegram.ext import ContextTypes
 
 from .config import BTN_TEST_MENU, RESUMABLE_MODES, TESTS
-from .helpers import mode_title
+from .helpers import mode_title, seconds_to_text
 from .keyboards import (
     after_finish_keyboard,
     answer_keyboard,
@@ -14,6 +14,8 @@ from .keyboards import (
     find_results_keyboard,
     learn_menu_keyboard,
     profile_keyboard,
+    profile_attempt_detail_keyboard,
+    profile_history_keyboard,
     next_keyboard,
     public_rating_keyboard,
     question_menu_keyboard,
@@ -46,6 +48,8 @@ from .storage import (
     get_all_time_error_indices,
     get_answered_question_count,
     get_attempt_wrong_answers,
+    get_user_attempt_detail,
+    get_user_attempt_history,
     db_connect,
     record_answer,
     record_attempt_wrong_answer,
@@ -233,6 +237,153 @@ def profile_text(user, test_id: str) -> str:
     )
 
 
+
+
+def _format_datetime_for_profile(value) -> str:
+    if not value:
+        return "—"
+    if isinstance(value, datetime):
+        return value.strftime("%d.%m.%Y %H:%M")
+
+    text = str(value).strip()
+    if not text:
+        return "—"
+
+    normalized = text.replace("T", " ").replace("Z", "")
+    if "+" in normalized:
+        normalized = normalized.split("+", 1)[0].strip()
+    if "." in normalized:
+        normalized = normalized.split(".", 1)[0].strip()
+
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(normalized, fmt).strftime("%d.%m.%Y %H:%M")
+        except ValueError:
+            pass
+
+    return text[:16]
+
+
+def _attempt_percent(attempt: dict) -> int:
+    answered = int(attempt.get("answered") or 0)
+    correct = int(attempt.get("correct") or 0)
+    if answered <= 0:
+        return 0
+    return round(correct / answered * 100)
+
+
+def _mode_label(mode: str | None) -> str:
+    emoji = {
+        "normal": "📝",
+        "random": "🎲",
+        "reverse": "↩️",
+        "from_number": "🎳",
+        "mini": "⚡",
+        "errors": "🧠",
+    }.get(mode or "", "📝")
+    return f"{emoji} {mode_title(mode)}"
+
+
+def profile_history_text(user_id: int, test_id: str, page: int = 0) -> tuple[str, list[dict], int]:
+    title = TESTS[test_id]["title"]
+    page_size = 10
+    attempts, total = get_user_attempt_history(user_id, test_id, page=page, page_size=page_size)
+
+    if not attempts:
+        return (
+            f"📜 История попыток\n\n"
+            f"{title}\n\n"
+            f"Пока нет завершённых попыток.",
+            attempts,
+            total,
+        )
+
+    start = page * page_size
+    end = start + len(attempts)
+    lines = [
+        "📜 История попыток",
+        "",
+        title,
+        "",
+        f"Показаны: {start + 1}–{end} из {total}",
+        "",
+    ]
+
+    for i, attempt in enumerate(attempts, start=start + 1):
+        percent = _attempt_percent(attempt)
+        answered = int(attempt.get("answered") or 0)
+        correct = int(attempt.get("correct") or 0)
+        wrong_count = int(attempt.get("wrong_count") or max(0, answered - correct))
+        date = _format_datetime_for_profile(attempt.get("finished_at") or attempt.get("started_at"))
+
+        lines.extend([
+            f"{i}. {_mode_label(attempt.get('mode'))}",
+            date,
+            f"Результат: {percent}%",
+            f"Вопросов: {answered}",
+            f"Ошибок: {wrong_count}",
+            "",
+        ])
+
+    lines.append("Нажми номер попытки, чтобы открыть подробности.")
+    return "\n".join(lines).rstrip(), attempts, total
+
+
+def profile_attempt_detail_text(user_id: int, test_id: str, attempt_id: int) -> str:
+    title = TESTS[test_id]["title"]
+    attempt = get_user_attempt_detail(user_id, test_id, attempt_id)
+    if not attempt:
+        return (
+            f"📄 Попытка\n\n"
+            f"{title}\n\n"
+            f"Попытка не найдена или уже недоступна."
+        )
+
+    answered = int(attempt.get("answered") or 0)
+    correct = int(attempt.get("correct") or 0)
+    wrong_count = int(attempt.get("wrong_count") or max(0, answered - correct))
+    percent = _attempt_percent(attempt)
+    date = _format_datetime_for_profile(attempt.get("finished_at") or attempt.get("started_at"))
+    duration = seconds_to_text(attempt.get("duration_seconds"))
+
+    wrong_answers = attempt.get("wrong_answers") or []
+    wrong_numbers = []
+    for item in wrong_answers:
+        try:
+            wrong_numbers.append(str(int(item["question_index"]) + 1))
+        except (TypeError, ValueError, KeyError):
+            pass
+
+    lines = [
+        f"📄 Попытка #{attempt_id}",
+        "",
+        f"📚 {title}",
+        f"🎮 Режим: {mode_title(attempt.get('mode'))}",
+        f"🕓 Дата: {date}",
+        f"⏱ Время: {duration}",
+        "",
+        "📊 Результат",
+        f"🏆 {percent}%",
+        f"✅ Правильно: {correct}",
+        f"❌ Ошибок: {wrong_count}",
+        f"📝 Решено: {answered}",
+    ]
+
+    if int(attempt.get("finished_by_user") or 0):
+        lines.append("⏹ Завершена вручную")
+
+    lines.append("")
+    if wrong_numbers:
+        preview = ", ".join(wrong_numbers[:30])
+        if len(wrong_numbers) > 30:
+            preview += f" и ещё {len(wrong_numbers) - 30}"
+        lines.append("🧠 Ошибки в этой попытке:")
+        lines.append(preview)
+    else:
+        lines.append("🧠 Ошибок в этой попытке нет.")
+
+    return "\n".join(lines)
+
 def get_state_or_restore(chat_id: int, user_id: int, test_id: str) -> dict:
     state = get_state(chat_id)
     if state.get("active") and state.get("test_id") == test_id:
@@ -295,7 +446,6 @@ async def handle_profile_coming_soon(update: Update, context: ContextTypes.DEFAU
     titles = {
         "profile_favorites": "⭐ Избранные вопросы",
         "profile_errors": "🧠 Ошибки",
-        "profile_history": "📜 История попыток",
     }
     title = titles.get(action, "Раздел профиля")
 
@@ -303,6 +453,37 @@ async def handle_profile_coming_soon(update: Update, context: ContextTypes.DEFAU
         f"{title}\n\nРаздел скоро будет добавлен.",
         reply_markup=profile_keyboard(test_id),
     )
+
+async def handle_profile_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    parts = query.data.split(":")
+    test_id = parts[1]
+    page = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+
+    text, attempts, total = profile_history_text(query.from_user.id, test_id, page)
+    await query.edit_message_text(
+        text,
+        reply_markup=profile_history_keyboard(test_id, attempts, page, total),
+    )
+
+
+async def handle_profile_attempt_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+
+    _, test_id, attempt_id_str, page_str = query.data.split(":")
+    attempt_id = int(attempt_id_str)
+    page = int(page_str) if page_str.isdigit() else 0
+
+    await query.edit_message_text(
+        profile_attempt_detail_text(query.from_user.id, test_id, attempt_id),
+        reply_markup=profile_attempt_detail_keyboard(test_id, page),
+    )
+
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)

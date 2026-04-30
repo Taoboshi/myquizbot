@@ -35,7 +35,9 @@ from .handlers import (
     handle_my_stats,
     handle_next_question,
     handle_pause_to_menu,
+    handle_profile_attempt_detail,
     handle_profile_coming_soon,
+    handle_profile_history,
     handle_public_rating,
     handle_question_continue,
     handle_question_menu,
@@ -108,7 +110,9 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_test_menu, pattern=r"^test_menu:"))
     app.add_handler(CallbackQueryHandler(handle_learn_menu, pattern=r"^learn_menu:"))
     app.add_handler(CallbackQueryHandler(handle_my_profile, pattern=r"^my_profile:"))
-    app.add_handler(CallbackQueryHandler(handle_profile_coming_soon, pattern=r"^profile_(favorites|errors|history):"))
+    app.add_handler(CallbackQueryHandler(handle_profile_history, pattern=r"^profile_history:"))
+    app.add_handler(CallbackQueryHandler(handle_profile_attempt_detail, pattern=r"^profile_attempt:"))
+    app.add_handler(CallbackQueryHandler(handle_profile_coming_soon, pattern=r"^profile_(favorites|errors):"))
     app.add_handler(CallbackQueryHandler(handle_solve_menu, pattern=r"^solve_menu:"))
     app.add_handler(CallbackQueryHandler(handle_start_quiz, pattern=r"^start:"))
     app.add_handler(CallbackQueryHandler(handle_start_from_number_menu, pattern=r"^start_from_number:"))

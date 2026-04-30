@@ -57,6 +57,47 @@ def profile_section_keyboard(test_id: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
     ])
 
+
+def profile_history_keyboard(
+    test_id: str,
+    attempts: list[dict[str, Any]],
+    page: int,
+    total: int,
+    page_size: int = 10,
+) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+
+    start = max(0, page) * page_size
+    number_buttons = []
+    for i, attempt in enumerate(attempts):
+        attempt_id = int(attempt["attempt_id"])
+        number_buttons.append(
+            InlineKeyboardButton(
+                str(start + i + 1),
+                callback_data=f"profile_attempt:{test_id}:{attempt_id}:{page}",
+            )
+        )
+
+    rows.extend(number_buttons[i:i + 5] for i in range(0, len(number_buttons), 5))
+
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"profile_history:{test_id}:{page - 1}"))
+    if start + len(attempts) < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_history:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def profile_attempt_detail_keyboard(test_id: str, page: int = 0) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📜 К истории", callback_data=f"profile_history:{test_id}:{page}")],
+        [InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")],
+    ])
+
 def learn_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📝 Решать", callback_data=f"solve_menu:{test_id}")],
