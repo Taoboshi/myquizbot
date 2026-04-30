@@ -5,7 +5,7 @@ from typing import Any
 from .config import FULL_TEST_MODES, LETTERS, RESUMABLE_MODES, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, mode_title, seconds_to_text, sep, user_display_name
 from .loader import get_questions
-from .state import delete_active_session
+from .state import delete_active_session, delete_runtime_session
 from .storage import db_connect, get_all_time_error_indices, record_attempt_finish
 
 def add_session_wrong_answer(state: dict[str, Any], question_index: int, wrong_answer_index: int | None) -> None:
@@ -41,6 +41,7 @@ def finish_attempt_if_needed(user_id: int, state: dict[str, Any], finished_by_us
     )
     state["finish_recorded"] = True
 
+    delete_runtime_session(user_id, test_id, state.get("mode"))
     if state.get("mode") in RESUMABLE_MODES:
         delete_active_session(user_id, test_id)
 

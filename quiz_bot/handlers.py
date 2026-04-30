@@ -38,7 +38,18 @@ from .quiz import (
     wrong_index_for_question,
 )
 from .runtime import LAST_START_AT, USER_STATE
-from .state import clear_text_waiting_state, delete_active_session, get_state, restore_state, save_active_session, start_quiz_mode
+from .state import (
+    clear_text_waiting_state,
+    delete_active_session,
+    delete_runtime_session,
+    get_state,
+    load_active_session,
+    load_latest_runtime_session,
+    load_runtime_session_for_question,
+    restore_state,
+    save_active_session,
+    start_quiz_mode,
+)
 from .storage import (
     add_all_time_error,
     clear_all_time_errors,
@@ -88,8 +99,10 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     state = get_state(update.effective_chat.id)
-    if state.get("test_id") and state.get("mode") in RESUMABLE_MODES:
-        delete_active_session(update.effective_user.id, state.get("test_id"))
+    if state.get("test_id"):
+        if state.get("mode") in RESUMABLE_MODES:
+            delete_active_session(update.effective_user.id, state.get("test_id"))
+        delete_runtime_session(update.effective_user.id, state.get("test_id"))
     USER_STATE.pop(update.effective_chat.id, None)
     await update.message.reply_text("Текущее действие сброшено.", reply_markup=test_select_keyboard())
 
@@ -117,6 +130,34 @@ def learn_menu_text(user_id: int, test_id: str) -> str:
     total = len(get_questions(test_id))
     errors = len(get_all_time_error_indices(user_id, test_id))
     return f"📖 Учить\n{title}\n\nВопросов: {total}\nОшибок для разбора: {errors}"
+
+
+def get_state_or_restore(chat_id: int, user_id: int, test_id: str, question_index: int | None = None) -> dict:
+    state = get_state(chat_id)
+
+    if state.get("active") and state.get("test_id") == test_id:
+        if question_index is None:
+            return state
+        order = state.get("order") or []
+        pos = int(state.get("pos", 0))
+        if pos < len(order) and int(order[pos]) == question_index:
+            return state
+
+    if question_index is not None:
+        data = load_runtime_session_for_question(user_id, test_id, question_index)
+        if data:
+            return restore_state(chat_id, data)
+
+    if not state.get("active"):
+        data = load_active_session(user_id, test_id)
+        if data:
+            return restore_state(chat_id, data)
+
+        data = load_latest_runtime_session(user_id, test_id)
+        if data:
+            return restore_state(chat_id, data)
+
+    return state
 
 async def handle_learn_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -246,10 +287,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     _, test_id, index_str, answer_str = query.data.split(":")
     index = int(index_str)
     selected = int(answer_str)
-    state = get_state(query.message.chat_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index)
 
     if not state.get("active"):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=test_select_keyboard())
+        await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
         return
     if state.get("awaiting_next"):
         await query.answer("Нажми «Следующий»")
@@ -309,10 +350,10 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     _, test_id, index_str = query.data.split(":")
     index = int(index_str)
-    state = get_state(query.message.chat_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index)
 
     if not state.get("active"):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=test_select_keyboard())
+        await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
         return
     if state.get("awaiting_next"):
         await query.answer("Нажми «Следующий»")
@@ -342,10 +383,10 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
 
     _, test_id, index_str = query.data.split(":")
     index = int(index_str)
-    state = get_state(query.message.chat_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index)
 
     if not state.get("active"):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=after_finish_keyboard(query.from_user.id, state))
+        await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
         return
     if not state.get("awaiting_next"):
         await query.answer("Следующий вопрос уже открыт")
@@ -379,7 +420,7 @@ async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
     _, test_id, index_str = query.data.split(":")
 
-    state = get_state(query.message.chat_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, int(index_str))
     await query.edit_message_reply_markup(
         reply_markup=question_menu_keyboard(test_id, int(index_str), state.get("mode"))
     )
@@ -389,7 +430,7 @@ async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT
     upsert_user(query.from_user)
     await query.answer()
     _, test_id, _index_str = query.data.split(":")
-    state = get_state(query.message.chat_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, int(_index_str))
 
     if state.get("test_id") != test_id or not state.get("order") or state.get("pos", 0) >= len(state.get("order", [])):
         await query.edit_message_text("Незавершённой попытки нет.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
@@ -418,11 +459,23 @@ async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
     _, test_id = query.data.split(":")
     state = get_state(query.message.chat_id)
+    if state.get("test_id") != test_id:
+        data = load_latest_runtime_session(query.from_user.id, test_id)
+        if data:
+            state = restore_state(query.message.chat_id, data)
+        else:
+            data = load_active_session(query.from_user.id, test_id)
+            if data:
+                state = restore_state(query.message.chat_id, data)
 
     if state.get("test_id") == test_id:
+        mode = state.get("mode")
         state["active"] = False
-        if state.get("mode") in RESUMABLE_MODES:
+        if mode in RESUMABLE_MODES:
+            delete_runtime_session(query.from_user.id, test_id, mode)
             save_active_session(query.from_user.id, state)
+        else:
+            delete_runtime_session(query.from_user.id, test_id, mode)
 
     await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
 
