@@ -1,6 +1,7 @@
 import hashlib
 import os
 import sqlite3
+import threading
 from typing import Any
 
 from .config import DB_PATH
@@ -16,6 +17,8 @@ except ImportError:  # локальный запуск без PostgreSQL всё 
 
 
 _POLLING_LOCK_CONN = None
+_PG_DATA_CONN = None
+_PG_DATA_LOCK = threading.RLock()
 
 
 def _polling_lock_key() -> int:
@@ -44,14 +47,13 @@ def acquire_polling_lock() -> None:
 def release_polling_lock() -> None:
     global _POLLING_LOCK_CONN
 
-    if _POLLING_LOCK_CONN is None:
-        return
-
     try:
-        _POLLING_LOCK_CONN.execute("SELECT pg_advisory_unlock(%s)", (_polling_lock_key(),))
+        if _POLLING_LOCK_CONN is not None:
+            _POLLING_LOCK_CONN.execute("SELECT pg_advisory_unlock(%s)", (_polling_lock_key(),))
+            _POLLING_LOCK_CONN.close()
+            _POLLING_LOCK_CONN = None
     finally:
-        _POLLING_LOCK_CONN.close()
-        _POLLING_LOCK_CONN = None
+        _close_pg_data_connection()
 
 
 def _pg_sql(sql: str) -> str:
@@ -73,30 +75,73 @@ class PgCursorWrapper:
         return iter(self.cursor)
 
 
+def _close_pg_data_connection() -> None:
+    global _PG_DATA_CONN
+
+    if _PG_DATA_CONN is None:
+        return
+
+    try:
+        _PG_DATA_CONN.close()
+    finally:
+        _PG_DATA_CONN = None
+
+
+def _get_pg_data_connection():
+    global _PG_DATA_CONN
+
+    if psycopg is None:
+        raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
+
+    if _PG_DATA_CONN is None or _PG_DATA_CONN.closed:
+        _PG_DATA_CONN = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+
+    return _PG_DATA_CONN
+
+
 class PgConnectionWrapper:
     def __init__(self):
-        if psycopg is None:
-            raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
-        self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+        self.conn = None
 
     def __enter__(self):
-        self.conn.__enter__()
+        _PG_DATA_LOCK.acquire()
+        self.conn = _get_pg_data_connection()
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        return self.conn.__exit__(exc_type, exc, tb)
+        try:
+            if self.conn is not None:
+                if exc_type is None:
+                    self.conn.commit()
+                else:
+                    self.conn.rollback()
+        except Exception:
+            _close_pg_data_connection()
+            raise
+        finally:
+            self.conn = None
+            _PG_DATA_LOCK.release()
+        return False
 
     def execute(self, sql: str, params: tuple[Any, ...] | list[Any] | None = None):
-        cur = self.conn.execute(_pg_sql(sql), params)
+        if self.conn is None:
+            raise RuntimeError("PostgreSQL connection is not opened")
+        try:
+            cur = self.conn.execute(_pg_sql(sql), params)
+        except psycopg.OperationalError:
+            _close_pg_data_connection()
+            raise
         return PgCursorWrapper(cur)
 
     def executescript(self, script: str) -> None:
         for statement in script.split(";"):
             statement = statement.strip()
             if statement:
-                self.conn.execute(_pg_sql(statement))
+                self.execute(statement)
 
     def commit(self) -> None:
+        if self.conn is None:
+            raise RuntimeError("PostgreSQL connection is not opened")
         self.conn.commit()
 
 
