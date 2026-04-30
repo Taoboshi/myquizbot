@@ -44,6 +44,7 @@ from .storage import (
     add_all_time_error,
     clear_all_time_errors,
     get_all_time_error_indices,
+    get_answered_question_count,
     get_attempt_wrong_answers,
     db_connect,
     record_answer,
@@ -190,6 +191,7 @@ def profile_text(user, test_id: str) -> str:
     attempts_total = int(stats["attempts_started"] or 0) if stats else 0
     total_answered = int(stats["total_answered"] or 0) if stats else 0
     total_correct = int(stats["total_correct"] or 0) if stats else 0
+    answered_questions = get_answered_question_count(user.id, test_id)
     accuracy = _safe_percent(total_correct, total_answered)
 
     best_percent = _safe_percent(best_attempt["correct"], best_attempt["answered"]) if best_attempt else None
@@ -204,8 +206,7 @@ def profile_text(user, test_id: str) -> str:
         f"{_profile_username(user)}\n\n"
         f"📚 Тест: {title}\n\n"
         f"📌 Кратко:\n"
-        f"Вопросов в тесте: {total_questions}\n"
-        f"Ответов всего: {total_answered}\n"
+        f"Решено вопросов: {answered_questions} из {total_questions}\n"
         f"Точность ответов: {accuracy}%\n"
         f"Ошибок для разбора: {errors_count}\n"
         f"Попыток всего: {attempts_total}\n\n"
@@ -398,7 +399,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     correct_index = int(get_questions(test_id)[index]["correct_index"])
     is_correct = selected == correct_index
 
-    record_answer(query.from_user.id, test_id, is_correct)
+    record_answer(query.from_user.id, test_id, is_correct, index)
     state["total"] += 1
 
     if is_correct:
@@ -458,7 +459,7 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await query.answer("Этот вопрос уже обработан")
         return
 
-    record_answer(query.from_user.id, test_id, False)
+    record_answer(query.from_user.id, test_id, False, index)
     state["total"] += 1
     add_session_wrong_answer(state, index, None)
     record_attempt_wrong_answer(state.get("attempt_id"), query.from_user.id, test_id, index, None)
