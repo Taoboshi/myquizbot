@@ -1,7 +1,6 @@
 import hashlib
 import os
 import sqlite3
-import threading
 import time
 from typing import Any
 
@@ -17,13 +16,16 @@ except ImportError:  # локальный запуск без PostgreSQL всё 
     dict_row = None
 
 
-_POLLING_LOCK_CONN = None
-_PG_DATA_CONN = None
-_PG_DATA_LOCK = threading.RLock()
-
 USER_UPSERT_CACHE_TTL_SECONDS = int(os.getenv("USER_UPSERT_CACHE_TTL_SECONDS", "600"))
-_USER_UPSERT_CACHE: dict[int, tuple[float, str | None, str | None, str | None]] = {}
-_USER_UPSERT_CACHE_LOCK = threading.RLock()
+RUNTIME_SESSION_TTL_DAYS = int(os.getenv("RUNTIME_SESSION_TTL_DAYS", "7"))
+ACTIVE_SESSION_TTL_DAYS = int(os.getenv("ACTIVE_SESSION_TTL_DAYS", "90"))
+MAX_FINISHED_ATTEMPTS_PER_USER_TEST = int(os.getenv("MAX_FINISHED_ATTEMPTS_PER_USER_TEST", "300"))
+ORPHAN_WRONG_ANSWER_TTL_DAYS = int(os.getenv("ORPHAN_WRONG_ANSWER_TTL_DAYS", "30"))
+
+_USER_UPSERT_CACHE: dict[int, float] = {}
+
+
+_POLLING_LOCK_CONN = None
 
 
 def _polling_lock_key() -> int:
@@ -52,13 +54,14 @@ def acquire_polling_lock() -> None:
 def release_polling_lock() -> None:
     global _POLLING_LOCK_CONN
 
+    if _POLLING_LOCK_CONN is None:
+        return
+
     try:
-        if _POLLING_LOCK_CONN is not None:
-            _POLLING_LOCK_CONN.execute("SELECT pg_advisory_unlock(%s)", (_polling_lock_key(),))
-            _POLLING_LOCK_CONN.close()
-            _POLLING_LOCK_CONN = None
+        _POLLING_LOCK_CONN.execute("SELECT pg_advisory_unlock(%s)", (_polling_lock_key(),))
     finally:
-        _close_pg_data_connection()
+        _POLLING_LOCK_CONN.close()
+        _POLLING_LOCK_CONN = None
 
 
 def _pg_sql(sql: str) -> str:
@@ -80,73 +83,30 @@ class PgCursorWrapper:
         return iter(self.cursor)
 
 
-def _close_pg_data_connection() -> None:
-    global _PG_DATA_CONN
-
-    if _PG_DATA_CONN is None:
-        return
-
-    try:
-        _PG_DATA_CONN.close()
-    finally:
-        _PG_DATA_CONN = None
-
-
-def _get_pg_data_connection():
-    global _PG_DATA_CONN
-
-    if psycopg is None:
-        raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
-
-    if _PG_DATA_CONN is None or _PG_DATA_CONN.closed:
-        _PG_DATA_CONN = psycopg.connect(DATABASE_URL, row_factory=dict_row)
-
-    return _PG_DATA_CONN
-
-
 class PgConnectionWrapper:
     def __init__(self):
-        self.conn = None
+        if psycopg is None:
+            raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
+        self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
     def __enter__(self):
-        _PG_DATA_LOCK.acquire()
-        self.conn = _get_pg_data_connection()
+        self.conn.__enter__()
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        try:
-            if self.conn is not None:
-                if exc_type is None:
-                    self.conn.commit()
-                else:
-                    self.conn.rollback()
-        except Exception:
-            _close_pg_data_connection()
-            raise
-        finally:
-            self.conn = None
-            _PG_DATA_LOCK.release()
-        return False
+        return self.conn.__exit__(exc_type, exc, tb)
 
     def execute(self, sql: str, params: tuple[Any, ...] | list[Any] | None = None):
-        if self.conn is None:
-            raise RuntimeError("PostgreSQL connection is not opened")
-        try:
-            cur = self.conn.execute(_pg_sql(sql), params)
-        except psycopg.OperationalError:
-            _close_pg_data_connection()
-            raise
+        cur = self.conn.execute(_pg_sql(sql), params)
         return PgCursorWrapper(cur)
 
     def executescript(self, script: str) -> None:
         for statement in script.split(";"):
             statement = statement.strip()
             if statement:
-                self.execute(statement)
+                self.conn.execute(_pg_sql(statement))
 
     def commit(self) -> None:
-        if self.conn is None:
-            raise RuntimeError("PostgreSQL connection is not opened")
         self.conn.commit()
 
 
@@ -334,59 +294,143 @@ def _init_sqlite_db() -> None:
 
         conn.commit()
 
+def _table_exists(conn, table_name: str) -> bool:
+    if DATABASE_URL:
+        row = conn.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = ?
+            ) AS exists
+            """,
+            (table_name,),
+        ).fetchone()
+        return bool(row and row["exists"])
+
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,),
+    ).fetchone()
+    return bool(row)
+
+
+def _timestamp_cutoff_sql(days: int) -> tuple[str, tuple[int]]:
+    if DATABASE_URL:
+        return "CURRENT_TIMESTAMP - (? * INTERVAL '1 day')", (days,)
+    return "datetime('now', '-' || ? || ' days')", (days,)
+
+
+def _chunked(items: list[int], size: int = 500):
+    for start in range(0, len(items), size):
+        yield items[start:start + size]
+
+
+def cleanup_old_data() -> None:
+    """Keep Neon/SQLite storage compact without touching current progress.
+
+    Defaults can be changed from Render Environment Variables:
+    - MAX_FINISHED_ATTEMPTS_PER_USER_TEST=300
+    - RUNTIME_SESSION_TTL_DAYS=7
+    - ACTIVE_SESSION_TTL_DAYS=90
+    - ORPHAN_WRONG_ANSWER_TTL_DAYS=30
+    """
+    with db_connect() as conn:
+        # Runtime sessions are only used to survive restarts/deploys. Old rows are safe to remove.
+        if RUNTIME_SESSION_TTL_DAYS > 0 and _table_exists(conn, "runtime_sessions"):
+            cutoff_sql, params = _timestamp_cutoff_sql(RUNTIME_SESSION_TTL_DAYS)
+            conn.execute(f"DELETE FROM runtime_sessions WHERE updated_at < {cutoff_sql}", params)
+
+        # Active sessions are paused main-test sessions. Keep them much longer.
+        if ACTIVE_SESSION_TTL_DAYS > 0:
+            cutoff_sql, params = _timestamp_cutoff_sql(ACTIVE_SESSION_TTL_DAYS)
+            conn.execute(f"DELETE FROM active_sessions WHERE updated_at < {cutoff_sql}", params)
+
+        # Keep only the latest N finished attempts per user/test.
+        if MAX_FINISHED_ATTEMPTS_PER_USER_TEST > 0:
+            old_rows = conn.execute(
+                """
+                SELECT attempt_id
+                FROM (
+                    SELECT
+                        attempt_id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY user_id, test_id
+                            ORDER BY COALESCE(finished_at, started_at) DESC, attempt_id DESC
+                        ) AS rn
+                    FROM attempts
+                    WHERE finished_at IS NOT NULL
+                ) ranked
+                WHERE rn > ?
+                """,
+                (MAX_FINISHED_ATTEMPTS_PER_USER_TEST,),
+            ).fetchall()
+            old_attempt_ids = [int(row["attempt_id"]) for row in old_rows]
+
+            for batch in _chunked(old_attempt_ids):
+                placeholders = ",".join(["?"] * len(batch))
+                conn.execute(
+                    f"DELETE FROM attempt_wrong_answers WHERE attempt_id IN ({placeholders})",
+                    tuple(batch),
+                )
+                conn.execute(
+                    f"DELETE FROM attempts WHERE attempt_id IN ({placeholders})",
+                    tuple(batch),
+                )
+
+        # Remove very old wrong-answer rows that are not attached to an attempt.
+        if ORPHAN_WRONG_ANSWER_TTL_DAYS > 0:
+            cutoff_sql, params = _timestamp_cutoff_sql(ORPHAN_WRONG_ANSWER_TTL_DAYS)
+            conn.execute(
+                f"""
+                DELETE FROM attempt_wrong_answers
+                WHERE attempt_id IS NULL AND created_at < {cutoff_sql}
+                """,
+                params,
+            )
+
+        conn.commit()
+
+
+def storage_debug_stats() -> dict[str, int | str | None]:
+    """Small storage report for admin/debug screens."""
+    with db_connect() as conn:
+        data: dict[str, int | str | None] = {
+            "backend": "PostgreSQL / Neon" if DATABASE_URL else "SQLite",
+            "users": int(conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"] or 0),
+            "attempts": int(conn.execute("SELECT COUNT(*) AS c FROM attempts").fetchone()["c"] or 0),
+            "finished_attempts": int(conn.execute("SELECT COUNT(*) AS c FROM attempts WHERE finished_at IS NOT NULL").fetchone()["c"] or 0),
+            "active_sessions": int(conn.execute("SELECT COUNT(*) AS c FROM active_sessions").fetchone()["c"] or 0),
+            "attempt_wrong_answers": int(conn.execute("SELECT COUNT(*) AS c FROM attempt_wrong_answers").fetchone()["c"] or 0),
+            "all_time_errors": int(conn.execute("SELECT COUNT(*) AS c FROM all_time_errors").fetchone()["c"] or 0),
+            "database_size_bytes": None,
+        }
+        if _table_exists(conn, "runtime_sessions"):
+            data["runtime_sessions"] = int(conn.execute("SELECT COUNT(*) AS c FROM runtime_sessions").fetchone()["c"] or 0)
+        else:
+            data["runtime_sessions"] = 0
+
+        if DATABASE_URL:
+            row = conn.execute("SELECT pg_database_size(current_database()) AS size_bytes").fetchone()
+            data["database_size_bytes"] = int(row["size_bytes"] or 0)
+        return data
+
 
 def init_db() -> None:
     if DATABASE_URL:
         _init_postgres_db()
     else:
         _init_sqlite_db()
-
-
-def _user_cache_profile(user) -> tuple[int, str | None, str | None, str | None]:
-    return (int(user.id), user.username, user.first_name, user.last_name)
-
-
-def _is_user_upsert_cached(user) -> bool:
-    if USER_UPSERT_CACHE_TTL_SECONDS <= 0:
-        return False
-
-    user_id, username, first_name, last_name = _user_cache_profile(user)
-    now = time.monotonic()
-
-    with _USER_UPSERT_CACHE_LOCK:
-        cached = _USER_UPSERT_CACHE.get(user_id)
-        if not cached:
-            return False
-
-        cached_at, cached_username, cached_first_name, cached_last_name = cached
-        if now - cached_at >= USER_UPSERT_CACHE_TTL_SECONDS:
-            return False
-
-        return (cached_username, cached_first_name, cached_last_name) == (username, first_name, last_name)
-
-
-def _mark_user_upsert_cached(user) -> None:
-    if USER_UPSERT_CACHE_TTL_SECONDS <= 0:
-        return
-
-    user_id, username, first_name, last_name = _user_cache_profile(user)
-    now = time.monotonic()
-
-    with _USER_UPSERT_CACHE_LOCK:
-        _USER_UPSERT_CACHE[user_id] = (now, username, first_name, last_name)
-
-        if len(_USER_UPSERT_CACHE) > 5000:
-            cutoff = now - USER_UPSERT_CACHE_TTL_SECONDS
-            stale_user_ids = [uid for uid, item in _USER_UPSERT_CACHE.items() if item[0] < cutoff]
-            for uid in stale_user_ids:
-                _USER_UPSERT_CACHE.pop(uid, None)
+    cleanup_old_data()
 
 
 def upsert_user(user) -> None:
     if not user:
         return
 
-    if _is_user_upsert_cached(user):
+    now = time.time()
+    last_updated = _USER_UPSERT_CACHE.get(user.id)
+    if last_updated is not None and now - last_updated < USER_UPSERT_CACHE_TTL_SECONDS:
         return
 
     with db_connect() as conn:
@@ -405,8 +449,7 @@ def upsert_user(user) -> None:
         )
         conn.commit()
 
-    _mark_user_upsert_cached(user)
-
+    _USER_UPSERT_CACHE[user.id] = now
 
 def ensure_user_stats(user_id: int, test_id: str) -> None:
     with db_connect() as conn:
