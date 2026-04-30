@@ -1,8 +1,11 @@
+import logging
+import time
+
+from telegram.error import Conflict
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from .admin import (
     admin_command,
-    admin_debug_command,
     handle_admin_export_all,
     handle_admin_export_test,
     handle_admin_frequent_errors,
@@ -37,6 +40,7 @@ from .handlers import (
     handle_repeat_session_errors,
     handle_reset_errors_confirm,
     handle_reset_errors_do,
+    handle_session_error_detail,
     handle_session_error_show,
     handle_show_answer,
     handle_show_result,
@@ -56,18 +60,36 @@ from .handlers import (
     tests_command,
 )
 from .runtime import keep_alive
-from .storage import acquire_polling_lock, init_db, release_polling_lock
+from .storage import init_db
+
+logger = logging.getLogger(__name__)
 
 
-def main() -> None:
-    init_db()
-    keep_alive()
+try:
+    from .admin import admin_debug_command
+except ImportError:  # чтобы файл не падал, если admin_debug ещё не добавлен
+    admin_debug_command = None
 
-    if not BOT_TOKEN:
-        raise RuntimeError("Не найден токен. Добавь TELEGRAM_BOT_TOKEN в Render или впиши BOT_TOKEN в код.")
 
-    acquire_polling_lock()
+async def error_handler(update, context) -> None:
+    """Логирует ошибки callback/command в Render Logs и даёт пользователю понятный ответ."""
+    logger.exception("Unhandled bot error", exc_info=context.error)
 
+    if isinstance(context.error, Conflict):
+        # Conflict обрабатывается в main() повторным запуском polling.
+        return
+
+    try:
+        if update and update.effective_chat:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="Произошла ошибка. Нажми /start.",
+            )
+    except Exception:
+        logger.exception("Failed to send error message to user")
+
+
+def build_application():
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(setup_bot_commands).build()
 
     # Commands
@@ -79,7 +101,8 @@ def main() -> None:
     app.add_handler(CommandHandler("reset_errors", reset_errors_command))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(CommandHandler("admin", admin_command))
-    app.add_handler(CommandHandler("admin_debug", admin_debug_command))
+    if admin_debug_command is not None:
+        app.add_handler(CommandHandler("admin_debug", admin_debug_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
     # User callbacks
@@ -103,8 +126,10 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_question_continue, pattern=r"^question_continue:"))
     app.add_handler(CallbackQueryHandler(handle_pause_to_menu, pattern=r"^pause_to_menu:"))
     app.add_handler(CallbackQueryHandler(handle_continue_session, pattern=r"^continue_session:"))
-    app.add_handler(CallbackQueryHandler(handle_finish_button, pattern=r"^finish(?::|$)"))
+    app.add_handler(CallbackQueryHandler(handle_finish_button, pattern=r"^finish$"))
     app.add_handler(CallbackQueryHandler(handle_session_error_show, pattern=r"^session_error_show:"))
+    app.add_handler(CallbackQueryHandler(handle_session_error_show, pattern=r"^session_errors:"))
+    app.add_handler(CallbackQueryHandler(handle_session_error_detail, pattern=r"^session_error_detail:"))
     app.add_handler(CallbackQueryHandler(handle_show_result, pattern=r"^show_result:"))
     app.add_handler(CallbackQueryHandler(handle_repeat_session_errors, pattern=r"^repeat_session_errors:"))
     app.add_handler(CallbackQueryHandler(handle_my_stats, pattern=r"^my_stats:"))
@@ -126,8 +151,33 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_admin_export_all, pattern=r"^admin:export_all$"))
     app.add_handler(CallbackQueryHandler(handle_admin_export_test, pattern=r"^admin:export_test:"))
 
-    print("Bot is running...")
-    try:
-        app.run_polling()
-    finally:
-        release_polling_lock()
+    app.add_error_handler(error_handler)
+    return app
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO)
+
+    init_db()
+    keep_alive()
+
+    if not BOT_TOKEN:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
+
+    while True:
+        app = build_application()
+        print("Bot is running...")
+        try:
+            app.run_polling(
+                drop_pending_updates=False,
+                poll_interval=1.0,
+                timeout=30,
+                bootstrap_retries=0,
+            )
+            break
+        except Conflict:
+            print("Telegram polling conflict: another bot instance is still running. Waiting 15 seconds...")
+            time.sleep(15)
+        except Exception:
+            logger.exception("Bot crashed")
+            raise
