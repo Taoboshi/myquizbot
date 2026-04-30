@@ -2,6 +2,7 @@ import hashlib
 import os
 import sqlite3
 import threading
+import time
 from typing import Any
 
 from .config import DB_PATH
@@ -19,6 +20,10 @@ except ImportError:  # локальный запуск без PostgreSQL всё 
 _POLLING_LOCK_CONN = None
 _PG_DATA_CONN = None
 _PG_DATA_LOCK = threading.RLock()
+
+USER_UPSERT_CACHE_TTL_SECONDS = int(os.getenv("USER_UPSERT_CACHE_TTL_SECONDS", "600"))
+_USER_UPSERT_CACHE: dict[int, tuple[float, str | None, str | None, str | None]] = {}
+_USER_UPSERT_CACHE_LOCK = threading.RLock()
 
 
 def _polling_lock_key() -> int:
@@ -337,8 +342,51 @@ def init_db() -> None:
         _init_sqlite_db()
 
 
+def _user_cache_profile(user) -> tuple[int, str | None, str | None, str | None]:
+    return (int(user.id), user.username, user.first_name, user.last_name)
+
+
+def _is_user_upsert_cached(user) -> bool:
+    if USER_UPSERT_CACHE_TTL_SECONDS <= 0:
+        return False
+
+    user_id, username, first_name, last_name = _user_cache_profile(user)
+    now = time.monotonic()
+
+    with _USER_UPSERT_CACHE_LOCK:
+        cached = _USER_UPSERT_CACHE.get(user_id)
+        if not cached:
+            return False
+
+        cached_at, cached_username, cached_first_name, cached_last_name = cached
+        if now - cached_at >= USER_UPSERT_CACHE_TTL_SECONDS:
+            return False
+
+        return (cached_username, cached_first_name, cached_last_name) == (username, first_name, last_name)
+
+
+def _mark_user_upsert_cached(user) -> None:
+    if USER_UPSERT_CACHE_TTL_SECONDS <= 0:
+        return
+
+    user_id, username, first_name, last_name = _user_cache_profile(user)
+    now = time.monotonic()
+
+    with _USER_UPSERT_CACHE_LOCK:
+        _USER_UPSERT_CACHE[user_id] = (now, username, first_name, last_name)
+
+        if len(_USER_UPSERT_CACHE) > 5000:
+            cutoff = now - USER_UPSERT_CACHE_TTL_SECONDS
+            stale_user_ids = [uid for uid, item in _USER_UPSERT_CACHE.items() if item[0] < cutoff]
+            for uid in stale_user_ids:
+                _USER_UPSERT_CACHE.pop(uid, None)
+
+
 def upsert_user(user) -> None:
     if not user:
+        return
+
+    if _is_user_upsert_cached(user):
         return
 
     with db_connect() as conn:
@@ -356,6 +404,8 @@ def upsert_user(user) -> None:
             (user.id, user.username, user.first_name, user.last_name),
         )
         conn.commit()
+
+    _mark_user_upsert_cached(user)
 
 
 def ensure_user_stats(user_id: int, test_id: str) -> None:
