@@ -34,11 +34,28 @@ def test_select_keyboard() -> InlineKeyboardMarkup:
 def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📖 Учить", callback_data=f"learn_menu:{test_id}")],
-        [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
+        [InlineKeyboardButton("👤 Профиль", callback_data=f"my_profile:{test_id}")],
         [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
         [InlineKeyboardButton(BTN_BACK, callback_data="tests:menu")],
     ])
 
+
+
+def profile_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
+        [InlineKeyboardButton("⭐ Избранные вопросы", callback_data=f"profile_favorites:{test_id}")],
+        [InlineKeyboardButton("🧠 Ошибки", callback_data=f"profile_errors:{test_id}")],
+        [InlineKeyboardButton("📜 История попыток", callback_data=f"profile_history:{test_id}")],
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"test_menu:{test_id}")],
+    ])
+
+
+def profile_section_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")],
+        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
+    ])
 
 def learn_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -162,7 +179,7 @@ def session_error_keyboard(test_id: str, pos: int, total: int) -> InlineKeyboard
     return InlineKeyboardMarkup(rows)
 
 def stats_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")]])
+    return profile_section_keyboard(test_id)
 
 def reset_errors_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([

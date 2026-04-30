@@ -13,6 +13,7 @@ from .keyboards import (
     find_question_keyboard,
     find_results_keyboard,
     learn_menu_keyboard,
+    profile_keyboard,
     next_keyboard,
     public_rating_keyboard,
     question_menu_keyboard,
@@ -38,24 +39,16 @@ from .quiz import (
     wrong_index_for_question,
 )
 from .runtime import LAST_START_AT, USER_STATE
-from .state import (
-    clear_text_waiting_state,
-    delete_active_session,
-    delete_runtime_session,
-    get_state,
-    load_active_session,
-    load_latest_runtime_session,
-    load_runtime_session_for_question,
-    load_session_by_attempt,
-    restore_state,
-    save_active_session,
-    save_question_progress,
-    start_quiz_mode,
-)
+from .state import clear_text_waiting_state, delete_active_session, get_state, load_active_session, restore_state, save_active_session, start_quiz_mode
 from .storage import (
+    add_all_time_error,
     clear_all_time_errors,
     get_all_time_error_indices,
     get_attempt_wrong_answers,
+    db_connect,
+    record_answer,
+    record_attempt_wrong_answer,
+    remove_all_time_error,
     upsert_user,
 )
 
@@ -97,10 +90,8 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     state = get_state(update.effective_chat.id)
-    if state.get("test_id"):
-        if state.get("mode") in RESUMABLE_MODES:
-            delete_active_session(update.effective_user.id, state.get("test_id"))
-        delete_runtime_session(update.effective_user.id, state.get("test_id"))
+    if state.get("test_id") and state.get("mode") in RESUMABLE_MODES:
+        delete_active_session(update.effective_user.id, state.get("test_id"))
     USER_STATE.pop(update.effective_chat.id, None)
     await update.message.reply_text("Текущее действие сброшено.", reply_markup=test_select_keyboard())
 
@@ -130,81 +121,105 @@ def learn_menu_text(user_id: int, test_id: str) -> str:
     return f"📖 Учить\n{title}\n\nВопросов: {total}\nОшибок для разбора: {errors}"
 
 
-def _parse_attempt_id(value: str | None) -> int | None:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+
+def _safe_percent(correct: int | None, answered: int | None) -> int:
+    answered = int(answered or 0)
+    correct = int(correct or 0)
+    if answered <= 0:
+        return 0
+    return round(correct / answered * 100)
 
 
-def _parse_answer_callback(data: str) -> tuple[int | None, str, int, int]:
-    parts = data.split(":")
-    if len(parts) == 5:
-        return _parse_attempt_id(parts[1]), parts[2], int(parts[3]), int(parts[4])
-    return None, parts[1], int(parts[2]), int(parts[3])
+def _profile_display_name(user) -> str:
+    first = getattr(user, "first_name", None) or "Пользователь"
+    last = getattr(user, "last_name", None) or ""
+    return f"{first} {last}".strip()
 
 
-def _parse_question_callback(data: str) -> tuple[int | None, str, int]:
-    parts = data.split(":")
-    if len(parts) == 4:
-        return _parse_attempt_id(parts[1]), parts[2], int(parts[3])
-    return None, parts[1], int(parts[2])
+def _profile_username(user) -> str:
+    username = getattr(user, "username", None)
+    return f"@{username}" if username else "username не указан"
 
 
-def _parse_pause_callback(data: str) -> tuple[int | None, str]:
-    parts = data.split(":")
-    if len(parts) == 3:
-        return _parse_attempt_id(parts[1]), parts[2]
-    return None, parts[1]
+def profile_text(user, test_id: str) -> str:
+    title = TESTS[test_id]["title"]
+    total_questions = len(get_questions(test_id))
+    errors_count = len(get_all_time_error_indices(user.id, test_id))
 
+    with db_connect() as conn:
+        stats = conn.execute(
+            """
+            SELECT attempts_started, attempts_finished, total_answered, total_correct
+            FROM user_stats
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (user.id, test_id),
+        ).fetchone()
 
-def _parse_finish_callback(data: str) -> int | None:
-    parts = data.split(":")
-    if len(parts) == 2:
-        return _parse_attempt_id(parts[1])
-    return None
+        best_attempt = conn.execute(
+            """
+            SELECT answered, correct
+            FROM attempts
+            WHERE user_id = ?
+              AND test_id = ?
+              AND finished_at IS NOT NULL
+              AND answered > 0
+            ORDER BY
+                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
+                correct DESC,
+                finished_at DESC
+            LIMIT 1
+            """,
+            (user.id, test_id),
+        ).fetchone()
 
+        last_attempt = conn.execute(
+            """
+            SELECT answered, correct
+            FROM attempts
+            WHERE user_id = ?
+              AND test_id = ?
+              AND finished_at IS NOT NULL
+              AND answered > 0
+            ORDER BY finished_at DESC
+            LIMIT 1
+            """,
+            (user.id, test_id),
+        ).fetchone()
 
-def get_state_or_restore(
-    chat_id: int,
-    user_id: int,
-    test_id: str | None = None,
-    question_index: int | None = None,
-    attempt_id: int | None = None,
-) -> dict:
+    attempts_total = int(stats["attempts_started"] or 0) if stats else 0
+    total_answered = int(stats["total_answered"] or 0) if stats else 0
+    total_correct = int(stats["total_correct"] or 0) if stats else 0
+    accuracy = _safe_percent(total_correct, total_answered)
+
+    best_percent = _safe_percent(best_attempt["correct"], best_attempt["answered"]) if best_attempt else None
+    last_percent = _safe_percent(last_attempt["correct"], last_attempt["answered"]) if last_attempt else None
+
+    best_line = f"{best_percent}%" if best_percent is not None else "пока нет"
+    last_line = f"{last_percent}%" if last_percent is not None else "пока нет"
+
+    return (
+        f"👤 Профиль\n\n"
+        f"{_profile_display_name(user)}\n"
+        f"{_profile_username(user)}\n\n"
+        f"📚 Тест: {title}\n\n"
+        f"📌 Кратко:\n"
+        f"Вопросов в тесте: {total_questions}\n"
+        f"Ответов всего: {total_answered}\n"
+        f"Точность ответов: {accuracy}%\n"
+        f"Ошибок для разбора: {errors_count}\n"
+        f"Попыток всего: {attempts_total}\n\n"
+        f"🏆 Лучший результат: {best_line}\n"
+        f"🕓 Последняя попытка: {last_line}"
+    )
+
+def get_state_or_restore(chat_id: int, user_id: int, test_id: str) -> dict:
     state = get_state(chat_id)
-
-    if attempt_id is not None:
-        if state.get("attempt_id") == attempt_id:
-            return state
-
-        data = load_session_by_attempt(user_id, attempt_id)
-        if data:
-            return restore_state(chat_id, data)
-
+    if state.get("active") and state.get("test_id") == test_id:
         return state
 
-    if test_id and state.get("active") and state.get("test_id") == test_id:
-        if question_index is None:
-            return state
-        order = state.get("order") or []
-        pos = int(state.get("pos", 0))
-        if pos < len(order) and int(order[pos]) == question_index:
-            return state
-
-    if test_id and question_index is not None:
-        data = load_runtime_session_for_question(user_id, test_id, question_index)
-        if data:
-            return restore_state(chat_id, data)
-
-    if test_id and not state.get("active"):
+    if not state.get("active"):
         data = load_active_session(user_id, test_id)
-        if data:
-            return restore_state(chat_id, data)
-
-        data = load_latest_runtime_session(user_id, test_id)
         if data:
             return restore_state(chat_id, data)
 
@@ -238,6 +253,36 @@ async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
 
+
+async def handle_my_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id = query.data.split(":")
+
+    state = get_state(query.message.chat_id)
+    clear_text_waiting_state(state)
+
+    await query.edit_message_text(profile_text(query.from_user, test_id), reply_markup=profile_keyboard(test_id))
+
+
+async def handle_profile_coming_soon(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    action, test_id = query.data.split(":", 1)
+
+    titles = {
+        "profile_favorites": "⭐ Избранные вопросы",
+        "profile_errors": "🧠 Ошибки",
+        "profile_history": "📜 История попыток",
+    }
+    title = titles.get(action, "Раздел профиля")
+
+    await query.edit_message_text(
+        f"{title}\n\nРаздел скоро будет добавлен.",
+        reply_markup=profile_keyboard(test_id),
+    )
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -269,7 +314,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -304,7 +349,7 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -326,7 +371,7 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -335,8 +380,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     upsert_user(query.from_user)
     await query.answer()
 
-    attempt_id, test_id, index, selected = _parse_answer_callback(query.data)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index, attempt_id)
+    _, test_id, index_str, answer_str = query.data.split(":")
+    index = int(index_str)
+    selected = int(answer_str)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
     if not state.get("active"):
         await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
@@ -351,10 +398,12 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     correct_index = int(get_questions(test_id)[index]["correct_index"])
     is_correct = selected == correct_index
 
+    record_answer(query.from_user.id, test_id, is_correct)
     state["total"] += 1
 
     if is_correct:
         state["correct"] += 1
+        remove_all_time_error(query.from_user.id, test_id, index)
 
         await query.edit_message_text(
             build_question_text(index, state, selected_index=selected, show_correct=True),
@@ -362,39 +411,31 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         )
 
         state["pos"] += 1
-        is_finished = state["pos"] >= len(state["order"])
 
-        if is_finished:
+        if state["pos"] >= len(state["order"]):
             state["active"] = False
-
-        save_question_progress(
-            query.from_user.id,
-            state,
-            index,
-            True,
-            save_session=not is_finished,
-        )
-
-        if is_finished:
             finish_attempt_if_needed(query.from_user.id, state)
             await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
             return
 
+        save_active_session(query.from_user.id, state)
         next_index = state["order"][state["pos"]]
         await query.message.reply_text(
             build_question_text(next_index, state),
-            reply_markup=answer_keyboard(test_id, next_index, state.get("attempt_id")),
+            reply_markup=answer_keyboard(test_id, next_index),
             parse_mode="HTML",
         )
         return
 
     add_session_wrong_answer(state, index, selected)
+    record_attempt_wrong_answer(state.get("attempt_id"), query.from_user.id, test_id, index, selected)
+    add_all_time_error(query.from_user.id, test_id, index, selected)
     state["awaiting_next"] = True
-    save_question_progress(query.from_user.id, state, index, False, selected)
+    save_active_session(query.from_user.id, state)
 
     await query.edit_message_text(
         build_question_text(index, state, selected_index=selected, show_correct=True),
-        reply_markup=next_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=next_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -403,8 +444,9 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     upsert_user(query.from_user)
     await query.answer()
 
-    attempt_id, test_id, index = _parse_question_callback(query.data)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index, attempt_id)
+    _, test_id, index_str = query.data.split(":")
+    index = int(index_str)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
     if not state.get("active"):
         await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
@@ -416,14 +458,17 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await query.answer("Этот вопрос уже обработан")
         return
 
+    record_answer(query.from_user.id, test_id, False)
     state["total"] += 1
     add_session_wrong_answer(state, index, None)
+    record_attempt_wrong_answer(state.get("attempt_id"), query.from_user.id, test_id, index, None)
+    add_all_time_error(query.from_user.id, test_id, index, None)
     state["awaiting_next"] = True
-    save_question_progress(query.from_user.id, state, index, False, None)
+    save_active_session(query.from_user.id, state)
 
     await query.edit_message_text(
         build_question_text(index, state, selected_index=None, show_correct=True),
-        reply_markup=next_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=next_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -432,8 +477,9 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
     upsert_user(query.from_user)
     await query.answer()
 
-    attempt_id, test_id, index = _parse_question_callback(query.data)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index, attempt_id)
+    _, test_id, index_str = query.data.split(":")
+    index = int(index_str)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
     if not state.get("active"):
         await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
@@ -460,7 +506,7 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
     next_index = state["order"][state["pos"]]
     await query.message.reply_text(
         build_question_text(next_index, state),
-        reply_markup=answer_keyboard(test_id, next_index, state.get("attempt_id")),
+        reply_markup=answer_keyboard(test_id, next_index),
         parse_mode="HTML",
     )
 
@@ -468,19 +514,19 @@ async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-    attempt_id, test_id, index = _parse_question_callback(query.data)
+    _, test_id, index_str = query.data.split(":")
 
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index, attempt_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
     await query.edit_message_reply_markup(
-        reply_markup=question_menu_keyboard(test_id, index, state.get("mode"), state.get("attempt_id"))
+        reply_markup=question_menu_keyboard(test_id, int(index_str), state.get("mode"))
     )
 
 async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-    attempt_id, test_id, index_from_callback = _parse_question_callback(query.data)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, index_from_callback, attempt_id)
+    _, test_id, _index_str = query.data.split(":")
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
     if state.get("test_id") != test_id or not state.get("order") or state.get("pos", 0) >= len(state.get("order", [])):
         await query.edit_message_text("Незавершённой попытки нет.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
@@ -492,14 +538,14 @@ async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT
     if state.get("awaiting_next"):
         await query.edit_message_text(
             build_question_text(index, state, selected_index=wrong_index_for_question(state, index), show_correct=True),
-            reply_markup=next_keyboard(test_id, index, state.get("attempt_id")),
+            reply_markup=next_keyboard(test_id, index),
             parse_mode="HTML",
         )
         return
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -507,25 +553,13 @@ async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-    attempt_id, test_id = _parse_pause_callback(query.data)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id, attempt_id=attempt_id)
-    if state.get("test_id") != test_id:
-        data = load_latest_runtime_session(query.from_user.id, test_id)
-        if data:
-            state = restore_state(query.message.chat_id, data)
-        else:
-            data = load_active_session(query.from_user.id, test_id)
-            if data:
-                state = restore_state(query.message.chat_id, data)
+    _, test_id = query.data.split(":")
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
     if state.get("test_id") == test_id:
-        mode = state.get("mode")
         state["active"] = False
-        if mode in RESUMABLE_MODES:
-            delete_runtime_session(query.from_user.id, test_id, mode)
+        if state.get("mode") in RESUMABLE_MODES:
             save_active_session(query.from_user.id, state)
-        else:
-            delete_runtime_session(query.from_user.id, test_id, mode)
 
     await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
 
@@ -546,14 +580,14 @@ async def handle_continue_session(update: Update, context: ContextTypes.DEFAULT_
     if state.get("awaiting_next"):
         await query.edit_message_text(
             build_question_text(index, state, selected_index=wrong_index_for_question(state, index), show_correct=True),
-            reply_markup=next_keyboard(test_id, index, state.get("attempt_id")),
+            reply_markup=next_keyboard(test_id, index),
             parse_mode="HTML",
         )
         return
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, state.get("attempt_id")),
+        reply_markup=answer_keyboard(test_id, index),
         parse_mode="HTML",
     )
 
@@ -561,9 +595,7 @@ async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYP
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-
-    attempt_id = _parse_finish_callback(query.data)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, attempt_id=attempt_id) if attempt_id is not None else get_state(query.message.chat_id)
+    state = get_state(query.message.chat_id)
 
     if not state.get("test_id"):
         await query.edit_message_text("Сейчас нет активного режима.", reply_markup=test_select_keyboard())
@@ -649,7 +681,7 @@ async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEF
 
     start_quiz_mode(state, query.from_user.id, test_id, "errors", order)
     index = state["order"][state["pos"]]
-    await query.edit_message_text(build_question_text(index, state), reply_markup=answer_keyboard(test_id, index, state.get("attempt_id")), parse_mode="HTML")
+    await query.edit_message_text(build_question_text(index, state), reply_markup=answer_keyboard(test_id, index), parse_mode="HTML")
 
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -783,7 +815,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         start_quiz_mode(state, update.effective_user.id, start_test_id, "from_number", order)
         index = state["order"][state["pos"]]
 
-        await update.message.reply_text(build_question_text(index, state), reply_markup=answer_keyboard(start_test_id, index, state.get("attempt_id")), parse_mode="HTML")
+        await update.message.reply_text(build_question_text(index, state), reply_markup=answer_keyboard(start_test_id, index), parse_mode="HTML")
         return
 
     find_mode = state.get("find_mode")
