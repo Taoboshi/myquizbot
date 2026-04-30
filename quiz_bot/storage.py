@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import sqlite3
 import time
@@ -16,16 +17,9 @@ except ImportError:  # локальный запуск без PostgreSQL всё 
     dict_row = None
 
 
-USER_UPSERT_CACHE_TTL_SECONDS = int(os.getenv("USER_UPSERT_CACHE_TTL_SECONDS", "600"))
-RUNTIME_SESSION_TTL_DAYS = int(os.getenv("RUNTIME_SESSION_TTL_DAYS", "7"))
-ACTIVE_SESSION_TTL_DAYS = int(os.getenv("ACTIVE_SESSION_TTL_DAYS", "90"))
-MAX_FINISHED_ATTEMPTS_PER_USER_TEST = int(os.getenv("MAX_FINISHED_ATTEMPTS_PER_USER_TEST", "300"))
-ORPHAN_WRONG_ANSWER_TTL_DAYS = int(os.getenv("ORPHAN_WRONG_ANSWER_TTL_DAYS", "30"))
-
-_USER_UPSERT_CACHE: dict[int, float] = {}
-
-
 _POLLING_LOCK_CONN = None
+_USER_UPSERT_CACHE: dict[int, float] = {}
+USER_UPSERT_CACHE_TTL_SECONDS = int(os.getenv("USER_UPSERT_CACHE_TTL_SECONDS", "600"))
 
 
 def _polling_lock_key() -> int:
@@ -59,8 +53,8 @@ def release_polling_lock() -> None:
 
     try:
         _POLLING_LOCK_CONN.execute("SELECT pg_advisory_unlock(%s)", (_polling_lock_key(),))
-    finally:
         _POLLING_LOCK_CONN.close()
+    finally:
         _POLLING_LOCK_CONN = None
 
 
@@ -145,6 +139,19 @@ def _init_postgres_db() -> None:
                 total_correct INTEGER NOT NULL DEFAULT 0,
                 last_activity_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, test_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_answered_questions (
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                first_answered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_answered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                answer_count INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY (user_id, test_id, question_index)
             )
             """
         )
@@ -238,6 +245,16 @@ def _init_sqlite_db() -> None:
                 PRIMARY KEY (user_id, test_id)
             );
 
+            CREATE TABLE IF NOT EXISTS user_answered_questions (
+                user_id INTEGER NOT NULL,
+                test_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                first_answered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_answered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                answer_count INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY (user_id, test_id, question_index)
+            );
+
             CREATE TABLE IF NOT EXISTS attempts (
                 attempt_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -294,134 +311,12 @@ def _init_sqlite_db() -> None:
 
         conn.commit()
 
-def _table_exists(conn, table_name: str) -> bool:
-    if DATABASE_URL:
-        row = conn.execute(
-            """
-            SELECT EXISTS (
-                SELECT 1
-                FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_name = ?
-            ) AS exists
-            """,
-            (table_name,),
-        ).fetchone()
-        return bool(row and row["exists"])
-
-    row = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
-        (table_name,),
-    ).fetchone()
-    return bool(row)
-
-
-def _timestamp_cutoff_sql(days: int) -> tuple[str, tuple[int]]:
-    if DATABASE_URL:
-        return "CURRENT_TIMESTAMP - (? * INTERVAL '1 day')", (days,)
-    return "datetime('now', '-' || ? || ' days')", (days,)
-
-
-def _chunked(items: list[int], size: int = 500):
-    for start in range(0, len(items), size):
-        yield items[start:start + size]
-
-
-def cleanup_old_data() -> None:
-    """Keep Neon/SQLite storage compact without touching current progress.
-
-    Defaults can be changed from Render Environment Variables:
-    - MAX_FINISHED_ATTEMPTS_PER_USER_TEST=300
-    - RUNTIME_SESSION_TTL_DAYS=7
-    - ACTIVE_SESSION_TTL_DAYS=90
-    - ORPHAN_WRONG_ANSWER_TTL_DAYS=30
-    """
-    with db_connect() as conn:
-        # Runtime sessions are only used to survive restarts/deploys. Old rows are safe to remove.
-        if RUNTIME_SESSION_TTL_DAYS > 0 and _table_exists(conn, "runtime_sessions"):
-            cutoff_sql, params = _timestamp_cutoff_sql(RUNTIME_SESSION_TTL_DAYS)
-            conn.execute(f"DELETE FROM runtime_sessions WHERE updated_at < {cutoff_sql}", params)
-
-        # Active sessions are paused main-test sessions. Keep them much longer.
-        if ACTIVE_SESSION_TTL_DAYS > 0:
-            cutoff_sql, params = _timestamp_cutoff_sql(ACTIVE_SESSION_TTL_DAYS)
-            conn.execute(f"DELETE FROM active_sessions WHERE updated_at < {cutoff_sql}", params)
-
-        # Keep only the latest N finished attempts per user/test.
-        if MAX_FINISHED_ATTEMPTS_PER_USER_TEST > 0:
-            old_rows = conn.execute(
-                """
-                SELECT attempt_id
-                FROM (
-                    SELECT
-                        attempt_id,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY user_id, test_id
-                            ORDER BY COALESCE(finished_at, started_at) DESC, attempt_id DESC
-                        ) AS rn
-                    FROM attempts
-                    WHERE finished_at IS NOT NULL
-                ) ranked
-                WHERE rn > ?
-                """,
-                (MAX_FINISHED_ATTEMPTS_PER_USER_TEST,),
-            ).fetchall()
-            old_attempt_ids = [int(row["attempt_id"]) for row in old_rows]
-
-            for batch in _chunked(old_attempt_ids):
-                placeholders = ",".join(["?"] * len(batch))
-                conn.execute(
-                    f"DELETE FROM attempt_wrong_answers WHERE attempt_id IN ({placeholders})",
-                    tuple(batch),
-                )
-                conn.execute(
-                    f"DELETE FROM attempts WHERE attempt_id IN ({placeholders})",
-                    tuple(batch),
-                )
-
-        # Remove very old wrong-answer rows that are not attached to an attempt.
-        if ORPHAN_WRONG_ANSWER_TTL_DAYS > 0:
-            cutoff_sql, params = _timestamp_cutoff_sql(ORPHAN_WRONG_ANSWER_TTL_DAYS)
-            conn.execute(
-                f"""
-                DELETE FROM attempt_wrong_answers
-                WHERE attempt_id IS NULL AND created_at < {cutoff_sql}
-                """,
-                params,
-            )
-
-        conn.commit()
-
-
-def storage_debug_stats() -> dict[str, int | str | None]:
-    """Small storage report for admin/debug screens."""
-    with db_connect() as conn:
-        data: dict[str, int | str | None] = {
-            "backend": "PostgreSQL / Neon" if DATABASE_URL else "SQLite",
-            "users": int(conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"] or 0),
-            "attempts": int(conn.execute("SELECT COUNT(*) AS c FROM attempts").fetchone()["c"] or 0),
-            "finished_attempts": int(conn.execute("SELECT COUNT(*) AS c FROM attempts WHERE finished_at IS NOT NULL").fetchone()["c"] or 0),
-            "active_sessions": int(conn.execute("SELECT COUNT(*) AS c FROM active_sessions").fetchone()["c"] or 0),
-            "attempt_wrong_answers": int(conn.execute("SELECT COUNT(*) AS c FROM attempt_wrong_answers").fetchone()["c"] or 0),
-            "all_time_errors": int(conn.execute("SELECT COUNT(*) AS c FROM all_time_errors").fetchone()["c"] or 0),
-            "database_size_bytes": None,
-        }
-        if _table_exists(conn, "runtime_sessions"):
-            data["runtime_sessions"] = int(conn.execute("SELECT COUNT(*) AS c FROM runtime_sessions").fetchone()["c"] or 0)
-        else:
-            data["runtime_sessions"] = 0
-
-        if DATABASE_URL:
-            row = conn.execute("SELECT pg_database_size(current_database()) AS size_bytes").fetchone()
-            data["database_size_bytes"] = int(row["size_bytes"] or 0)
-        return data
-
 
 def init_db() -> None:
     if DATABASE_URL:
         _init_postgres_db()
     else:
         _init_sqlite_db()
-    cleanup_old_data()
 
 
 def upsert_user(user) -> None:
@@ -429,8 +324,8 @@ def upsert_user(user) -> None:
         return
 
     now = time.time()
-    last_updated = _USER_UPSERT_CACHE.get(user.id)
-    if last_updated is not None and now - last_updated < USER_UPSERT_CACHE_TTL_SECONDS:
+    last_seen = _USER_UPSERT_CACHE.get(user.id)
+    if last_seen is not None and now - last_seen < USER_UPSERT_CACHE_TTL_SECONDS:
         return
 
     with db_connect() as conn:
@@ -450,6 +345,7 @@ def upsert_user(user) -> None:
         conn.commit()
 
     _USER_UPSERT_CACHE[user.id] = now
+
 
 def ensure_user_stats(user_id: int, test_id: str) -> None:
     with db_connect() as conn:
@@ -495,7 +391,89 @@ def record_attempt_start(user_id: int, test_id: str, mode: str) -> int:
         return attempt_id
 
 
-def record_answer(user_id: int, test_id: str, is_correct: bool) -> None:
+def _answered_indices_from_session_json(state_json: str | None) -> set[int]:
+    if not state_json:
+        return set()
+    try:
+        data = json.loads(state_json)
+    except (TypeError, json.JSONDecodeError):
+        return set()
+
+    order = data.get("order") or []
+    try:
+        pos = int(data.get("pos") or 0)
+    except (TypeError, ValueError):
+        pos = 0
+
+    pos = max(0, min(pos, len(order)))
+    indices: set[int] = set()
+
+    for raw_index in order[:pos]:
+        try:
+            indices.add(int(raw_index))
+        except (TypeError, ValueError):
+            pass
+
+    if data.get("awaiting_next") and pos < len(order):
+        try:
+            indices.add(int(order[pos]))
+        except (TypeError, ValueError):
+            pass
+
+    return indices
+
+
+def get_answered_question_count(user_id: int, test_id: str) -> int:
+    """Return count of different questions the user has answered in this test.
+
+    Old builds only stored total answer clicks. The session fallback lets the profile
+    show current in-progress progress even if the detailed table was added later.
+    """
+    indices: set[int] = set()
+
+    with db_connect() as conn:
+        if _table_exists(conn, "user_answered_questions"):
+            rows = conn.execute(
+                """
+                SELECT question_index
+                FROM user_answered_questions
+                WHERE user_id = ? AND test_id = ?
+                """,
+                (user_id, test_id),
+            ).fetchall()
+            for row in rows:
+                try:
+                    indices.add(int(row["question_index"]))
+                except (TypeError, ValueError):
+                    pass
+
+        session_rows = conn.execute(
+            """
+            SELECT state_json
+            FROM active_sessions
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (user_id, test_id),
+        ).fetchall()
+        for row in session_rows:
+            indices.update(_answered_indices_from_session_json(row["state_json"]))
+
+        if _table_exists(conn, "runtime_sessions"):
+            runtime_rows = conn.execute(
+                """
+                SELECT state_json
+                FROM runtime_sessions
+                WHERE user_id = ? AND test_id = ?
+                """,
+                (user_id, test_id),
+            ).fetchall()
+            for row in runtime_rows:
+                indices.update(_answered_indices_from_session_json(row["state_json"]))
+
+    return len(indices)
+
+
+def record_answer(user_id: int, test_id: str, is_correct: bool, question_index: int | None = None) -> None:
     ensure_user_stats(user_id, test_id)
     with db_connect() as conn:
         conn.execute(
@@ -508,6 +486,20 @@ def record_answer(user_id: int, test_id: str, is_correct: bool) -> None:
             """,
             (1 if is_correct else 0, user_id, test_id),
         )
+        if question_index is not None:
+            conn.execute(
+                """
+                INSERT INTO user_answered_questions (
+                    user_id, test_id, question_index, first_answered_at, last_answered_at, answer_count
+                )
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+                ON CONFLICT(user_id, test_id, question_index)
+                DO UPDATE SET
+                    last_answered_at = CURRENT_TIMESTAMP,
+                    answer_count = user_answered_questions.answer_count + 1
+                """,
+                (user_id, test_id, question_index),
+            )
         conn.commit()
 
 
