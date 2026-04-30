@@ -1,14 +1,169 @@
+import os
 import sqlite3
 from typing import Any
 
 from .config import DB_PATH
 
-def db_connect() -> sqlite3.Connection:
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except ImportError:  # локальный запуск без PostgreSQL всё ещё сможет работать на SQLite
+    psycopg = None
+    dict_row = None
+
+
+def _pg_sql(sql: str) -> str:
+    return sql.replace("?", "%s")
+
+
+class PgCursorWrapper:
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self.lastrowid = None
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+    def __iter__(self):
+        return iter(self.cursor)
+
+
+class PgConnectionWrapper:
+    def __init__(self):
+        if psycopg is None:
+            raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
+        self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+
+    def __enter__(self):
+        self.conn.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return self.conn.__exit__(exc_type, exc, tb)
+
+    def execute(self, sql: str, params: tuple[Any, ...] | list[Any] | None = None):
+        cur = self.conn.execute(_pg_sql(sql), params)
+        return PgCursorWrapper(cur)
+
+    def executescript(self, script: str) -> None:
+        for statement in script.split(";"):
+            statement = statement.strip()
+            if statement:
+                self.conn.execute(_pg_sql(statement))
+
+    def commit(self) -> None:
+        self.conn.commit()
+
+
+def db_connect():
+    if DATABASE_URL:
+        return PgConnectionWrapper()
+
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db() -> None:
+
+def _init_postgres_db() -> None:
+    with db_connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                username TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_stats (
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                attempts_started INTEGER NOT NULL DEFAULT 0,
+                attempts_finished INTEGER NOT NULL DEFAULT 0,
+                total_answered INTEGER NOT NULL DEFAULT 0,
+                total_correct INTEGER NOT NULL DEFAULT 0,
+                last_activity_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, test_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS attempts (
+                attempt_id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                finished_at TIMESTAMP,
+                duration_seconds INTEGER,
+                answered INTEGER NOT NULL DEFAULT 0,
+                correct INTEGER NOT NULL DEFAULT 0,
+                completed_full_test INTEGER NOT NULL DEFAULT 0,
+                finished_by_user INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS all_time_errors (
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                wrong_count INTEGER NOT NULL DEFAULT 1,
+                last_wrong_answer_index INTEGER,
+                last_wrong_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, test_id, question_index)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS attempt_wrong_answers (
+                id SERIAL PRIMARY KEY,
+                attempt_id INTEGER,
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                wrong_answer_index INTEGER,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS active_sessions (
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                state_json TEXT NOT NULL,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, test_id)
+            )
+            """
+        )
+
+        for stmt in [
+            "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS last_wrong_answer_index INTEGER",
+            "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS finished_by_user INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE active_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+        ]:
+            conn.execute(stmt)
+
+        conn.commit()
+
+
+def _init_sqlite_db() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with db_connect() as conn:
         conn.executescript(
@@ -89,6 +244,14 @@ def init_db() -> None:
 
         conn.commit()
 
+
+def init_db() -> None:
+    if DATABASE_URL:
+        _init_postgres_db()
+    else:
+        _init_sqlite_db()
+
+
 def upsert_user(user) -> None:
     if not user:
         return
@@ -109,10 +272,19 @@ def upsert_user(user) -> None:
         )
         conn.commit()
 
+
 def ensure_user_stats(user_id: int, test_id: str) -> None:
     with db_connect() as conn:
-        conn.execute("INSERT OR IGNORE INTO user_stats (user_id, test_id) VALUES (?, ?)", (user_id, test_id))
+        conn.execute(
+            """
+            INSERT INTO user_stats (user_id, test_id)
+            VALUES (?, ?)
+            ON CONFLICT(user_id, test_id) DO NOTHING
+            """,
+            (user_id, test_id),
+        )
         conn.commit()
+
 
 def record_attempt_start(user_id: int, test_id: str, mode: str) -> int:
     ensure_user_stats(user_id, test_id)
@@ -126,9 +298,24 @@ def record_attempt_start(user_id: int, test_id: str, mode: str) -> int:
             """,
             (user_id, test_id),
         )
-        cur = conn.execute("INSERT INTO attempts (user_id, test_id, mode) VALUES (?, ?, ?)", (user_id, test_id, mode))
+
+        if DATABASE_URL:
+            row = conn.execute(
+                """
+                INSERT INTO attempts (user_id, test_id, mode)
+                VALUES (?, ?, ?)
+                RETURNING attempt_id
+                """,
+                (user_id, test_id, mode),
+            ).fetchone()
+            attempt_id = int(row["attempt_id"])
+        else:
+            cur = conn.execute("INSERT INTO attempts (user_id, test_id, mode) VALUES (?, ?, ?)", (user_id, test_id, mode))
+            attempt_id = int(cur.lastrowid)
+
         conn.commit()
-        return int(cur.lastrowid)
+        return attempt_id
+
 
 def record_answer(user_id: int, test_id: str, is_correct: bool) -> None:
     ensure_user_stats(user_id, test_id)
@@ -144,6 +331,7 @@ def record_answer(user_id: int, test_id: str, is_correct: bool) -> None:
             (1 if is_correct else 0, user_id, test_id),
         )
         conn.commit()
+
 
 def record_attempt_finish(
     user_id: int,
@@ -166,11 +354,16 @@ def record_attempt_finish(
             (user_id, test_id),
         )
         if attempt_id is not None:
+            if DATABASE_URL:
+                duration_expr = "EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - started_at))::INTEGER"
+            else:
+                duration_expr = "CAST((julianday(CURRENT_TIMESTAMP) - julianday(started_at)) * 86400 AS INTEGER)"
+
             conn.execute(
-                """
+                f"""
                 UPDATE attempts
                 SET finished_at = CURRENT_TIMESTAMP,
-                    duration_seconds = CAST((julianday(CURRENT_TIMESTAMP) - julianday(started_at)) * 86400 AS INTEGER),
+                    duration_seconds = {duration_expr},
                     answered = ?,
                     correct = ?,
                     completed_full_test = ?,
@@ -181,6 +374,7 @@ def record_attempt_finish(
             )
         conn.commit()
 
+
 def add_all_time_error(user_id: int, test_id: str, question_index: int, wrong_answer_index: int | None) -> None:
     with db_connect() as conn:
         conn.execute(
@@ -189,13 +383,14 @@ def add_all_time_error(user_id: int, test_id: str, question_index: int, wrong_an
             VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(user_id, test_id, question_index)
             DO UPDATE SET
-                wrong_count = wrong_count + 1,
+                wrong_count = all_time_errors.wrong_count + 1,
                 last_wrong_answer_index = excluded.last_wrong_answer_index,
                 last_wrong_at = CURRENT_TIMESTAMP
             """,
             (user_id, test_id, question_index, wrong_answer_index),
         )
         conn.commit()
+
 
 def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> None:
     with db_connect() as conn:
@@ -205,10 +400,12 @@ def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> No
         )
         conn.commit()
 
+
 def clear_all_time_errors(user_id: int, test_id: str) -> None:
     with db_connect() as conn:
         conn.execute("DELETE FROM all_time_errors WHERE user_id = ? AND test_id = ?", (user_id, test_id))
         conn.commit()
+
 
 def get_all_time_error_indices(user_id: int, test_id: str) -> list[int]:
     with db_connect() as conn:
@@ -222,6 +419,7 @@ def get_all_time_error_indices(user_id: int, test_id: str) -> list[int]:
             (user_id, test_id),
         ).fetchall()
     return [int(row["question_index"]) for row in rows]
+
 
 def record_attempt_wrong_answer(
     attempt_id: int | None,
@@ -239,6 +437,7 @@ def record_attempt_wrong_answer(
             (attempt_id, user_id, test_id, question_index, wrong_answer_index),
         )
         conn.commit()
+
 
 def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None) -> list[dict[str, int | None]]:
     if attempt_id is None:
