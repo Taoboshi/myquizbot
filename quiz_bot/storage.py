@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sqlite3
 from typing import Any
@@ -12,6 +13,45 @@ try:
 except ImportError:  # локальный запуск без PostgreSQL всё ещё сможет работать на SQLite
     psycopg = None
     dict_row = None
+
+
+_POLLING_LOCK_CONN = None
+
+
+def _polling_lock_key() -> int:
+    raw_key = os.getenv("BOT_POLLING_LOCK_KEY", "telegram_quiz_bot_polling_lock")
+    digest = hashlib.sha256(raw_key.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big", signed=False) & ((1 << 63) - 1)
+
+
+def acquire_polling_lock() -> None:
+    """Allow only one Render process to run Telegram polling at a time."""
+    global _POLLING_LOCK_CONN
+
+    if not DATABASE_URL:
+        return
+    if psycopg is None:
+        raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
+    if _POLLING_LOCK_CONN is not None:
+        return
+
+    print("Waiting for Telegram polling lock...")
+    _POLLING_LOCK_CONN = psycopg.connect(DATABASE_URL, autocommit=True)
+    _POLLING_LOCK_CONN.execute("SELECT pg_advisory_lock(%s)", (_polling_lock_key(),))
+    print("Telegram polling lock acquired.")
+
+
+def release_polling_lock() -> None:
+    global _POLLING_LOCK_CONN
+
+    if _POLLING_LOCK_CONN is None:
+        return
+
+    try:
+        _POLLING_LOCK_CONN.execute("SELECT pg_advisory_unlock(%s)", (_polling_lock_key(),))
+    finally:
+        _POLLING_LOCK_CONN.close()
+        _POLLING_LOCK_CONN = None
 
 
 def _pg_sql(sql: str) -> str:

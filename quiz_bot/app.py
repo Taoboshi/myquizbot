@@ -55,7 +55,7 @@ from .handlers import (
     tests_command,
 )
 from .runtime import keep_alive
-from .storage import init_db
+from .storage import acquire_polling_lock, init_db, release_polling_lock
 
 
 def main() -> None:
@@ -64,6 +64,8 @@ def main() -> None:
 
     if not BOT_TOKEN:
         raise RuntimeError("Не найден токен. Добавь TELEGRAM_BOT_TOKEN в Render или впиши BOT_TOKEN в код.")
+
+    acquire_polling_lock()
 
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(setup_bot_commands).build()
 
@@ -123,4 +125,7 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_admin_export_test, pattern=r"^admin:export_test:"))
 
     print("Bot is running...")
-    app.run_polling()
+    try:
+        app.run_polling()
+    finally:
+        release_polling_lock()
