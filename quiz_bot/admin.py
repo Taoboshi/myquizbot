@@ -6,11 +6,11 @@ from pathlib import Path
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Update
 from telegram.ext import ContextTypes
 
-from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, SOLUTION_MODES, TESTS
+from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, is_admin, mode_title, seconds_to_text, sep, user_display_name
 from .loader import get_questions
-from .quiz import format_training_attempt, public_rating_text
-from .storage import db_connect, get_all_time_error_indices, upsert_user
+from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
+from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, upsert_user
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -399,6 +399,86 @@ def admin_summary_text() -> str:
         f"🔢 Ответов в попытках: {answered}"
     )
 
+
+def _safe_count(conn, table_name: str, where_sql: str = "") -> int | None:
+    try:
+        row = conn.execute(f"SELECT COUNT(*) AS c FROM {table_name} {where_sql}").fetchone()
+        return int(row["c"] or 0)
+    except Exception:
+        return None
+
+
+def _fmt_count(value: int | None) -> str:
+    return str(value) if value is not None else "—"
+
+
+def admin_debug_text() -> str:
+    backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
+    db_place = "DATABASE_URL" if DATABASE_URL else str(DB_PATH)
+
+    with db_connect() as conn:
+        users = _safe_count(conn, "users")
+        user_stats = _safe_count(conn, "user_stats")
+        attempts = _safe_count(conn, "attempts")
+        finished_attempts = _safe_count(conn, "attempts", "WHERE finished_at IS NOT NULL")
+        active_sessions = _safe_count(conn, "active_sessions")
+        runtime_sessions = _safe_count(conn, "runtime_sessions")
+        all_time_errors = _safe_count(conn, "all_time_errors")
+        attempt_wrong_answers = _safe_count(conn, "attempt_wrong_answers")
+
+        try:
+            last_attempt = conn.execute(
+                """
+                SELECT test_id, mode, started_at, finished_at
+                FROM attempts
+                ORDER BY attempt_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        except Exception:
+            last_attempt = None
+
+    test_lines = []
+    for test_id, info in TESTS.items():
+        try:
+            count = len(get_questions(test_id))
+        except Exception:
+            count = "ошибка загрузки"
+        test_lines.append(f"• {info['title']} ({test_id}) — {count}")
+
+    lines = [
+        "🛠 Admin debug",
+        "",
+        f"База: {backend}",
+        f"Путь/переменная: {db_place}",
+        f"DATABASE_URL: {'есть' if DATABASE_URL else 'нет'}",
+        "",
+        f"Тестов загружено: {len(TESTS)}",
+        *test_lines,
+        "",
+        f"👥 users: {_fmt_count(users)}",
+        f"📊 user_stats: {_fmt_count(user_stats)}",
+        f"📝 attempts: {_fmt_count(attempts)}",
+        f"✅ finished attempts: {_fmt_count(finished_attempts)}",
+        f"💾 active_sessions: {_fmt_count(active_sessions)}",
+        f"🔄 runtime_sessions: {_fmt_count(runtime_sessions)}",
+        f"🧠 all_time_errors: {_fmt_count(all_time_errors)}",
+        f"❌ attempt_wrong_answers: {_fmt_count(attempt_wrong_answers)}",
+    ]
+
+    if last_attempt:
+        finished = last_attempt["finished_at"] or "не завершена"
+        lines.extend([
+            "",
+            "Последняя попытка:",
+            f"• test_id: {last_attempt['test_id']}",
+            f"• mode: {last_attempt['mode']}",
+            f"• start: {last_attempt['started_at']}",
+            f"• finish: {finished}",
+        ])
+
+    return "\n".join(lines)
+
 def export_csv(test_id: str | None = None) -> Path:
     suffix = test_id or "all"
     path = BASE_DIR / f"quiz_export_{suffix}.csv"
@@ -446,6 +526,14 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text("Админ-панель недоступна.")
         return
     await update.message.reply_text("Админ-панель", reply_markup=admin_main_keyboard())
+
+
+async def admin_debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    upsert_user(update.effective_user)
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("Админ-панель недоступна.")
+        return
+    await update.message.reply_text(admin_debug_text())
 
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query

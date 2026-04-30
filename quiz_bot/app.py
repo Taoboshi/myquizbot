@@ -1,10 +1,8 @@
-import logging
-
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from .admin import (
     admin_command,
+    admin_debug_command,
     handle_admin_export_all,
     handle_admin_export_test,
     handle_admin_frequent_errors,
@@ -61,43 +59,7 @@ from .runtime import keep_alive
 from .storage import acquire_polling_lock, init_db, release_polling_lock
 
 
-logger = logging.getLogger(__name__)
-
-
-async def handle_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Log unexpected errors and show a safe message to the user."""
-    logger.exception("Unhandled exception while processing update: %s", update, exc_info=context.error)
-
-    try:
-        if not isinstance(update, Update):
-            return
-
-        if update.callback_query:
-            try:
-                await update.callback_query.answer(
-                    "Произошла ошибка. Нажми /start.",
-                    show_alert=True,
-                )
-            except Exception:
-                logger.exception("Failed to answer callback after error")
-            return
-
-        if update.effective_chat:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="Произошла ошибка. Нажми /start.",
-            )
-    except Exception:
-        logger.exception("Failed to notify user about an error")
-
-
 def main() -> None:
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        level=logging.INFO,
-    )
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-
     init_db()
     keep_alive()
 
@@ -107,7 +69,6 @@ def main() -> None:
     acquire_polling_lock()
 
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(setup_bot_commands).build()
-    app.add_error_handler(handle_error)
 
     # Commands
     app.add_handler(CommandHandler("start", start))
@@ -118,6 +79,7 @@ def main() -> None:
     app.add_handler(CommandHandler("reset_errors", reset_errors_command))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(CommandHandler("admin_debug", admin_debug_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
     # User callbacks
