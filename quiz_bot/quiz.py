@@ -87,6 +87,34 @@ def build_question_text(
 
     return "\n".join(lines)
 
+def format_marked_question_text(
+    test_id: str,
+    index: int,
+    header_lines: list[str],
+    selected_index: int | None = None,
+    show_answer_note: bool = False,
+) -> str:
+    q = get_questions(test_id)[index]
+    correct_index = int(q["correct_index"])
+    lines = [html.escape(line) for line in header_lines]
+    lines.extend(["", f"<b>{html.escape(q['question'])}</b>", "", "···"])
+
+    for i, option in enumerate(q["options"]):
+        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
+        prefix = ""
+        if i == correct_index:
+            prefix = "✅ "
+        elif selected_index is not None and i == selected_index and i != correct_index:
+            prefix = "❌ "
+        lines.append(f"{prefix}{letter}) {html.escape(option)}")
+
+    if show_answer_note:
+        lines.append("")
+        lines.append("👁 Показан ответ")
+
+    return "\n".join(lines)
+
+
 def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int | None]]) -> str:
     title = html.escape(TESTS[test_id]["title"])
     if not items:
@@ -132,24 +160,47 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
 
     if test_id:
         title = TESTS[test_id]["title"]
-        all_errors = len(get_all_time_error_indices(user_id, test_id))
         total_questions = len(state.get("order", [])) or total
     else:
         title = "тест не выбран"
-        all_errors = 0
         total_questions = total
+
+    duration_text = "—"
+    attempt_id = state.get("attempt_id")
+    if attempt_id is not None:
+        try:
+            with db_connect() as conn:
+                row = conn.execute(
+                    "SELECT duration_seconds FROM attempts WHERE attempt_id = ?",
+                    (attempt_id,),
+                ).fetchone()
+            if row:
+                duration_text = seconds_to_text(row["duration_seconds"])
+        except Exception:
+            duration_text = "—"
 
     header = "⏹ Решение завершено" if finished_by_user else "🎉 Тест завершён"
     mode = mode_title(state.get("mode"))
-    return (
-        f"{header}\n\n"
-        f"{title}\n"
-        f"🎮 Режим: {mode}\n\n"
-        f"📊 Результат: {percent}%\n"
-        f"📝 Решено: {total} из {total_questions}\n"
-        f"❌ Ошибок в этом решении: {wrong_count}\n\n"
-        f"🧠 Ошибок за всё время: {all_errors}"
-    )
+
+    lines = [
+        header,
+        "",
+        f"📚 {title}",
+        f"🎮 {mode}",
+        f"⏱ Время: {duration_text}",
+        "",
+        "📊 Результат",
+        f"🏆 {percent}%",
+        f"✅ Правильно: {correct}",
+        f"❌ Ошибок: {wrong_count}",
+        f"📝 Решено: {total}/{total_questions}",
+    ]
+
+    if wrong_count:
+        lines.extend(["", "🧠 Ошибки этого прохождения — по кнопке ниже."])
+
+    return "\n".join(lines)
+
 
 def format_solution_attempt(attempt: sqlite3.Row | None) -> str:
     if not attempt or not attempt["answered"]:

@@ -28,6 +28,7 @@ def mode_title(mode: str | None) -> str:
         "mini": "Тренировка",
         "errors": "Разбор ошибок",
         "view": "Просмотр",
+        "repeat": "Повтор попытки",
     }.get(mode or "", "Тест")
 
 def get_admin_ids() -> set[int]:

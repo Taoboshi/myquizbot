@@ -6,7 +6,7 @@ from .loader import get_questions
 from .runtime import USER_STATE
 from .storage import db_connect, record_attempt_start
 
-RUNTIME_MODES = set(RESUMABLE_MODES) | {"mini", "errors"}
+RUNTIME_MODES = set(RESUMABLE_MODES) | {"mini", "errors", "repeat"}
 _RUNTIME_TABLE_READY = False
 
 
@@ -330,7 +330,12 @@ def save_question_progress(
 
         if is_correct:
             conn.execute(
-                "DELETE FROM all_time_errors WHERE user_id = ? AND test_id = ? AND question_index = ?",
+                """
+                UPDATE all_time_errors
+                SET is_resolved = 1,
+                    resolved_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND test_id = ? AND question_index = ?
+                """,
                 (user_id, test_id, question_index),
             )
         else:
@@ -343,13 +348,18 @@ def save_question_progress(
             )
             conn.execute(
                 """
-                INSERT INTO all_time_errors (user_id, test_id, question_index, wrong_count, last_wrong_answer_index, last_wrong_at)
-                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
+                INSERT INTO all_time_errors (
+                    user_id, test_id, question_index, wrong_count,
+                    last_wrong_answer_index, last_wrong_at, is_resolved, resolved_at
+                )
+                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP, 0, NULL)
                 ON CONFLICT(user_id, test_id, question_index)
                 DO UPDATE SET
                     wrong_count = all_time_errors.wrong_count + 1,
                     last_wrong_answer_index = excluded.last_wrong_answer_index,
-                    last_wrong_at = CURRENT_TIMESTAMP
+                    last_wrong_at = CURRENT_TIMESTAMP,
+                    is_resolved = 0,
+                    resolved_at = NULL
                 """,
                 (user_id, test_id, question_index, wrong_answer_index),
             )
@@ -444,7 +454,7 @@ def start_quiz_mode(state: dict[str, Any], user_id: int, test_id: str, mode: str
         "awaiting_next": False,
         "active": True,
         "finish_recorded": False,
-        "attempt_id": record_attempt_start(user_id, test_id, mode),
+        "attempt_id": record_attempt_start(user_id, test_id, mode, order),
         "pending_start_from_number_test_id": None,
         "find_mode": None,
     })

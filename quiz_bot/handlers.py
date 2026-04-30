@@ -1,3 +1,4 @@
+import html
 import random
 from datetime import datetime
 
@@ -12,10 +13,17 @@ from .keyboards import (
     find_input_keyboard,
     find_question_keyboard,
     find_results_keyboard,
+    favorite_question_keyboard,
+    favorites_list_keyboard,
+    history_keyboard,
+    attempt_detail_keyboard,
+    attempt_error_detail_keyboard,
+    attempt_errors_keyboard,
+    profile_error_detail_keyboard,
+    profile_errors_keyboard,
     learn_menu_keyboard,
     profile_keyboard,
-    profile_attempt_detail_keyboard,
-    profile_history_keyboard,
+    profile_back_keyboard,
     next_keyboard,
     public_rating_keyboard,
     question_menu_keyboard,
@@ -35,6 +43,7 @@ from .quiz import (
     build_question_text,
     finish_attempt_if_needed,
     format_session_error_card,
+    format_marked_question_text,
     my_stats_text,
     public_rating_text,
     result_text,
@@ -48,12 +57,21 @@ from .storage import (
     get_all_time_error_indices,
     get_answered_question_count,
     get_attempt_wrong_answers,
-    get_user_attempt_detail,
-    get_user_attempt_history,
+    get_attempt_detail,
+    get_attempt_history,
+    get_attempt_history_count,
+    get_attempt_order,
+    get_favorite_count,
+    get_favorite_indices,
+    get_profile_error_counts,
+    get_profile_error_rows,
     db_connect,
+    is_favorite_question,
     record_answer,
     record_attempt_wrong_answer,
     remove_all_time_error,
+    remove_favorite_question,
+    toggle_favorite_question,
     upsert_user,
 )
 
@@ -155,6 +173,11 @@ def profile_text(user, test_id: str) -> str:
     except Exception:
         errors_count = 0
 
+    try:
+        favorites_count = get_favorite_count(user.id, test_id)
+    except Exception:
+        favorites_count = 0
+
     stats = None
     best_attempt = None
     last_attempt = None
@@ -230,159 +253,272 @@ def profile_text(user, test_id: str) -> str:
         f"📌 Кратко:\n"
         f"Решено вопросов: {answered_questions} из {total_questions}\n"
         f"Точность ответов: {accuracy}%\n"
-        f"Ошибок для разбора: {errors_count}\n"
-        f"Попыток всего: {attempts_total}\n\n"
+        f"Ошибок: {errors_count}\n"
+        f"Избранных: {favorites_count}\n"
+        f"Попыток: {attempts_total}\n\n"
         f"🏆 Лучший результат: {best_line}\n"
         f"🕓 Последняя попытка: {last_line}"
     )
 
 
 
+PROFILE_PAGE_SIZE = 10
 
-def _format_datetime_for_profile(value) -> str:
+
+def _format_dt(value) -> str:
     if not value:
         return "—"
-    if isinstance(value, datetime):
-        return value.strftime("%d.%m.%Y %H:%M")
-
-    text = str(value).strip()
-    if not text:
-        return "—"
-
-    normalized = text.replace("T", " ").replace("Z", "")
-    if "+" in normalized:
-        normalized = normalized.split("+", 1)[0].strip()
-    if "." in normalized:
-        normalized = normalized.split(".", 1)[0].strip()
-
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
-        try:
-            return datetime.strptime(normalized, fmt).strftime("%d.%m.%Y %H:%M")
-        except ValueError:
-            pass
-
+    text = str(value)
+    if "." in text:
+        text = text.split(".", 1)[0]
+    text = text.replace("T", " ")
+    if "+" in text:
+        text = text.split("+", 1)[0].strip()
     return text[:16]
 
 
-def _attempt_percent(attempt: dict) -> int:
-    answered = int(attempt.get("answered") or 0)
-    correct = int(attempt.get("correct") or 0)
-    if answered <= 0:
-        return 0
-    return round(correct / answered * 100)
+def _short_question(test_id: str, index: int, limit: int = 90) -> str:
+    question = str(get_questions(test_id)[index]["question"]).replace("\n", " ").strip()
+    if len(question) > limit:
+        return question[:limit].rstrip() + "…"
+    return question
 
 
-def _mode_label(mode: str | None) -> str:
-    emoji = {
-        "normal": "📝",
-        "random": "🎲",
-        "reverse": "↩️",
-        "from_number": "🎳",
-        "mini": "⚡",
-        "errors": "🧠",
-    }.get(mode or "", "📝")
-    return f"{emoji} {mode_title(mode)}"
+def _total_pages(total: int, page_size: int = PROFILE_PAGE_SIZE) -> int:
+    return max(1, (total + page_size - 1) // page_size)
 
 
-def profile_history_text(user_id: int, test_id: str, page: int = 0) -> tuple[str, list[dict], int]:
-    title = TESTS[test_id]["title"]
-    page_size = 10
-    attempts, total = get_user_attempt_history(user_id, test_id, page=page, page_size=page_size)
-
-    if not attempts:
-        return (
-            f"📜 История попыток\n\n"
-            f"{title}\n\n"
-            f"Пока нет завершённых попыток.",
-            attempts,
-            total,
-        )
-
+def _page_bounds(page: int, total: int, page_size: int = PROFILE_PAGE_SIZE) -> tuple[int, int, int]:
+    pages = _total_pages(total, page_size)
+    page = max(0, min(page, pages - 1))
     start = page * page_size
-    end = start + len(attempts)
+    end = min(total, start + page_size)
+    return page, start, end
+
+
+def _neighbor_indices(indices: list[int], current_index: int) -> tuple[int | None, int | None]:
+    try:
+        pos = indices.index(current_index)
+    except ValueError:
+        return None, None
+    prev_index = indices[pos - 1] if pos > 0 else None
+    next_index = indices[pos + 1] if pos + 1 < len(indices) else None
+    return prev_index, next_index
+
+
+def favorites_text(user_id: int, test_id: str, page: int) -> tuple[str, list[int], int, int]:
+    indices = get_favorite_indices(user_id, test_id)
+    total = len(indices)
+    page, start, end = _page_bounds(page, total)
+    visible = indices[start:end]
+    title = TESTS[test_id]["title"]
+
     lines = [
-        "📜 История попыток",
+        "⭐ Избранные",
         "",
         title,
         "",
-        f"Показаны: {start + 1}–{end} из {total}",
+        f"Всего: {total}",
+    ]
+
+    if total:
+        lines.append(f"Показаны: {start + 1}–{end} из {total}")
+        lines.append("")
+        for item_no, index in enumerate(visible, start=start + 1):
+            lines.append(f"{item_no}. Вопрос {index + 1}")
+            lines.append(_short_question(test_id, index))
+            lines.append("")
+    else:
+        lines.extend(["", "Избранных вопросов пока нет."])
+
+    return "\n".join(lines).rstrip(), visible, page, _total_pages(total)
+
+
+def favorite_question_text(test_id: str, index: int) -> str:
+    title = TESTS[test_id]["title"]
+    return format_marked_question_text(
+        test_id,
+        index,
+        ["⭐ Избранный вопрос", "", f"📚 {title}", f"Вопрос {index + 1}"],
+    )
+
+
+def profile_errors_text(user_id: int, test_id: str, page: int) -> tuple[str, list[int], int, int]:
+    rows = get_profile_error_rows(user_id, test_id)
+    counts = get_profile_error_counts(user_id, test_id)
+    total = len(rows)
+    page, start, end = _page_bounds(page, total)
+    visible_rows = rows[start:end]
+    visible_indices = [int(row["question_index"]) for row in visible_rows]
+    title = TESTS[test_id]["title"]
+
+    lines = [
+        "🧠 Ошибки",
+        "",
+        title,
+        "",
+        f"Всего: {counts['total']}",
+        f"Не исправлено: {counts['unresolved']}",
+        f"Исправлено: {counts['resolved']}",
+    ]
+
+    if total:
+        lines.append("")
+        lines.append(f"Показаны: {start + 1}–{end} из {total}")
+        lines.append("")
+        for item_no, row in enumerate(visible_rows, start=start + 1):
+            index = int(row["question_index"])
+            resolved = int(row.get("is_resolved") or 0) == 1
+            status = "✅ Исправлена" if resolved else "❌ Не исправлена"
+            lines.append(f"{item_no}. Вопрос {index + 1}")
+            lines.append(_short_question(test_id, index))
+            lines.append(f"Дата ошибки: {_format_dt(row.get('last_wrong_at'))}")
+            lines.append(f"Статус: {status}")
+            lines.append("")
+    else:
+        lines.extend(["", "Ошибок пока нет."])
+
+    return "\n".join(lines).rstrip(), visible_indices, page, _total_pages(total)
+
+
+def profile_error_text(user_id: int, test_id: str, index: int) -> str:
+    rows = get_profile_error_rows(user_id, test_id)
+    row = next((item for item in rows if int(item["question_index"]) == index), None)
+    title = TESTS[test_id]["title"]
+
+    if row:
+        resolved = int(row.get("is_resolved") or 0) == 1
+        status = "✅ Исправлена" if resolved else "❌ Не исправлена"
+        wrong_index = row.get("last_wrong_answer_index")
+        extra = [
+            "🧠 Ошибка",
+            "",
+            f"📚 {title}",
+            f"Вопрос {index + 1}",
+            "",
+            f"Дата ошибки: {_format_dt(row.get('last_wrong_at'))}",
+            f"Статус: {status}",
+        ]
+    else:
+        wrong_index = None
+        extra = ["🧠 Ошибка", "", f"📚 {title}", f"Вопрос {index + 1}"]
+
+    return format_marked_question_text(
+        test_id,
+        index,
+        extra,
+        selected_index=wrong_index,
+        show_answer_note=wrong_index is None,
+    )
+
+
+def history_text(user_id: int, test_id: str, page: int) -> tuple[str, list[dict], int, int]:
+    total = get_attempt_history_count(user_id, test_id)
+    page, start, end = _page_bounds(page, total)
+    attempts = get_attempt_history(user_id, test_id, limit=PROFILE_PAGE_SIZE, offset=start)
+    title = TESTS[test_id]["title"]
+
+    lines = [
+        "📜 История",
+        "",
+        title,
         "",
     ]
 
-    for i, attempt in enumerate(attempts, start=start + 1):
-        percent = _attempt_percent(attempt)
+    if not attempts:
+        lines.append("Попыток пока нет.")
+        return "\n".join(lines), attempts, page, _total_pages(total)
+
+    lines.append(f"Показаны: {start + 1}–{start + len(attempts)} из {total}")
+    lines.append("")
+
+    for item_no, attempt in enumerate(attempts, start=1):
         answered = int(attempt.get("answered") or 0)
         correct = int(attempt.get("correct") or 0)
-        wrong_count = int(attempt.get("wrong_count") or max(0, answered - correct))
-        date = _format_datetime_for_profile(attempt.get("finished_at") or attempt.get("started_at"))
+        wrong = int(attempt.get("wrong_count") or 0)
+        percent = round(correct / answered * 100) if answered else 0
+        lines.append(f"{item_no}. {mode_title(attempt.get('mode'))} · {percent}%")
+        lines.append(f"{_format_dt(attempt.get('finished_at'))} · {answered} вопроса · {wrong} ошибок")
+        lines.append("")
 
-        lines.extend([
-            f"{i}. {_mode_label(attempt.get('mode'))}",
-            date,
-            f"Результат: {percent}%",
-            f"Вопросов: {answered}",
-            f"Ошибок: {wrong_count}",
-            "",
-        ])
-
-    lines.append("Нажми номер попытки, чтобы открыть подробности.")
-    return "\n".join(lines).rstrip(), attempts, total
+    return "\n".join(lines).rstrip(), attempts, page, _total_pages(total)
 
 
-def profile_attempt_detail_text(user_id: int, test_id: str, attempt_id: int) -> str:
-    title = TESTS[test_id]["title"]
-    attempt = get_user_attempt_detail(user_id, test_id, attempt_id)
+def attempt_detail_text(user_id: int, test_id: str, attempt_id: int) -> tuple[str, dict | None]:
+    attempt = get_attempt_detail(user_id, test_id, attempt_id)
     if not attempt:
-        return (
-            f"📄 Попытка\n\n"
-            f"{title}\n\n"
-            f"Попытка не найдена или уже недоступна."
-        )
+        return "Попытка не найдена.", None
 
+    title = TESTS[test_id]["title"]
     answered = int(attempt.get("answered") or 0)
     correct = int(attempt.get("correct") or 0)
-    wrong_count = int(attempt.get("wrong_count") or max(0, answered - correct))
-    percent = _attempt_percent(attempt)
-    date = _format_datetime_for_profile(attempt.get("finished_at") or attempt.get("started_at"))
-    duration = seconds_to_text(attempt.get("duration_seconds"))
-
-    wrong_answers = attempt.get("wrong_answers") or []
-    wrong_numbers = []
-    for item in wrong_answers:
-        try:
-            wrong_numbers.append(str(int(item["question_index"]) + 1))
-        except (TypeError, ValueError, KeyError):
-            pass
+    wrong = int(attempt.get("wrong_count") or 0)
+    percent = round(correct / answered * 100) if answered else 0
 
     lines = [
         f"📄 Попытка #{attempt_id}",
         "",
         f"📚 {title}",
-        f"🎮 Режим: {mode_title(attempt.get('mode'))}",
-        f"🕓 Дата: {date}",
-        f"⏱ Время: {duration}",
+        f"🎮 {mode_title(attempt.get('mode'))}",
+        f"🕓 {_format_dt(attempt.get('finished_at'))}",
+        f"⏱ {seconds_to_text(attempt.get('duration_seconds'))}",
         "",
-        "📊 Результат",
+        "📊 Результат:",
         f"🏆 {percent}%",
         f"✅ Правильно: {correct}",
-        f"❌ Ошибок: {wrong_count}",
+        f"❌ Ошибок: {wrong}",
         f"📝 Решено: {answered}",
     ]
 
-    if int(attempt.get("finished_by_user") or 0):
-        lines.append("⏹ Завершена вручную")
+    return "\n".join(lines), attempt
 
-    lines.append("")
-    if wrong_numbers:
-        preview = ", ".join(wrong_numbers[:30])
-        if len(wrong_numbers) > 30:
-            preview += f" и ещё {len(wrong_numbers) - 30}"
-        lines.append("🧠 Ошибки в этой попытке:")
-        lines.append(preview)
+
+def attempt_errors_text(user_id: int, test_id: str, attempt_id: int, page: int) -> tuple[str, list[int], int, int]:
+    items = get_attempt_wrong_answers(user_id, test_id, attempt_id)
+    indices = [int(item["question_index"]) for item in items]
+    total = len(indices)
+    page, start, end = _page_bounds(page, total)
+    visible = indices[start:end]
+    title = TESTS[test_id]["title"]
+
+    lines = [
+        "🧠 Ошибки попытки",
+        "",
+        f"📄 Попытка #{attempt_id}",
+        title,
+        "",
+        f"Ошибок: {total}",
+    ]
+
+    if total:
+        lines.append("")
+        if total > PROFILE_PAGE_SIZE:
+            lines.append(f"Показаны: {start + 1}–{end} из {total}")
+            lines.append("")
+        for item_no, index in enumerate(visible, start=start + 1):
+            lines.append(f"{item_no}. Вопрос {index + 1}")
+            lines.append(_short_question(test_id, index))
+            lines.append("")
     else:
-        lines.append("🧠 Ошибок в этой попытке нет.")
+        lines.extend(["", "Ошибок в этой попытке нет."])
 
-    return "\n".join(lines)
+    return "\n".join(lines).rstrip(), visible, page, _total_pages(total)
+
+
+def attempt_error_text(user_id: int, test_id: str, attempt_id: int, index: int) -> str:
+    items = get_attempt_wrong_answers(user_id, test_id, attempt_id)
+    item = next((entry for entry in items if int(entry["question_index"]) == index), None)
+    wrong_index = item.get("wrong_answer_index") if item else None
+    title = TESTS[test_id]["title"]
+
+    return format_marked_question_text(
+        test_id,
+        index,
+        ["🧠 Ошибка попытки", "", f"📚 {title}", f"📄 Попытка #{attempt_id}", f"Вопрос {index + 1}"],
+        selected_index=wrong_index,
+        show_answer_note=wrong_index is None,
+    )
+
 
 def get_state_or_restore(chat_id: int, user_id: int, test_id: str) -> dict:
     state = get_state(chat_id)
@@ -437,51 +573,237 @@ async def handle_my_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text(profile_text(query.from_user, test_id), reply_markup=profile_keyboard(test_id))
 
 
-async def handle_profile_coming_soon(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def handle_profile_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-    action, test_id = query.data.split(":", 1)
+    _, test_id, page_str = query.data.split(":")
+    page = int(page_str)
 
-    titles = {
-        "profile_favorites": "⭐ Избранные вопросы",
-        "profile_errors": "🧠 Ошибки",
-    }
-    title = titles.get(action, "Раздел профиля")
+    text, visible, page, total_pages = favorites_text(query.from_user.id, test_id, page)
+    await query.edit_message_text(text, reply_markup=favorites_list_keyboard(test_id, visible, page, total_pages))
+
+
+async def handle_favorite_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id, page_str, index_str = query.data.split(":")
+    page = int(page_str)
+    index = int(index_str)
+
+    indices = get_favorite_indices(query.from_user.id, test_id)
+    if index not in indices:
+        text, visible, page, total_pages = favorites_text(query.from_user.id, test_id, page)
+        await query.edit_message_text(text, reply_markup=favorites_list_keyboard(test_id, visible, page, total_pages))
+        return
+
+    prev_index, next_index = _neighbor_indices(indices, index)
+    await query.edit_message_text(
+        favorite_question_text(test_id, index),
+        reply_markup=favorite_question_keyboard(test_id, index, page, prev_index, next_index),
+        parse_mode="HTML",
+    )
+
+
+async def handle_favorite_remove(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer("Убрано из избранного")
+    _, test_id, page_str, index_str = query.data.split(":")
+    page = int(page_str)
+    index = int(index_str)
+
+    remove_favorite_question(query.from_user.id, test_id, index)
+    text, visible, page, total_pages = favorites_text(query.from_user.id, test_id, page)
+    await query.edit_message_text(text, reply_markup=favorites_list_keyboard(test_id, visible, page, total_pages))
+
+
+async def handle_profile_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id, page_str = query.data.split(":")
+    page = int(page_str)
+
+    text, visible, page, total_pages = profile_errors_text(query.from_user.id, test_id, page)
+    await query.edit_message_text(text, reply_markup=profile_errors_keyboard(test_id, visible, page, total_pages))
+
+
+async def handle_profile_error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id, page_str, index_str = query.data.split(":")
+    page = int(page_str)
+    index = int(index_str)
+
+    rows = get_profile_error_rows(query.from_user.id, test_id)
+    indices = [int(row["question_index"]) for row in rows]
+    prev_index, next_index = _neighbor_indices(indices, index)
+    favorite = is_favorite_question(query.from_user.id, test_id, index)
 
     await query.edit_message_text(
-        f"{title}\n\nРаздел скоро будет добавлен.",
-        reply_markup=profile_keyboard(test_id),
+        profile_error_text(query.from_user.id, test_id, index),
+        reply_markup=profile_error_detail_keyboard(test_id, index, page, prev_index, next_index, favorite),
+        parse_mode="HTML",
     )
+
+
+async def handle_profile_error_favorite_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    _, test_id, page_str, index_str = query.data.split(":")
+    page = int(page_str)
+    index = int(index_str)
+
+    is_now_favorite = toggle_favorite_question(query.from_user.id, test_id, index)
+    await query.answer("Добавлено в избранное" if is_now_favorite else "Убрано из избранного")
+
+    rows = get_profile_error_rows(query.from_user.id, test_id)
+    indices = [int(row["question_index"]) for row in rows]
+    prev_index, next_index = _neighbor_indices(indices, index)
+
+    await query.edit_message_reply_markup(
+        reply_markup=profile_error_detail_keyboard(test_id, index, page, prev_index, next_index, is_now_favorite)
+    )
+
 
 async def handle_profile_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
+    _, test_id, page_str = query.data.split(":")
+    page = int(page_str)
 
-    parts = query.data.split(":")
-    test_id = parts[1]
-    page = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
-
-    text, attempts, total = profile_history_text(query.from_user.id, test_id, page)
-    await query.edit_message_text(
-        text,
-        reply_markup=profile_history_keyboard(test_id, attempts, page, total),
-    )
+    text, attempts, page, total_pages = history_text(query.from_user.id, test_id, page)
+    await query.edit_message_text(text, reply_markup=history_keyboard(test_id, attempts, page, total_pages))
 
 
-async def handle_profile_attempt_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_profile_attempt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-
     _, test_id, attempt_id_str, page_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
-    page = int(page_str) if page_str.isdigit() else 0
+    page = int(page_str)
+
+    text, attempt = attempt_detail_text(query.from_user.id, test_id, attempt_id)
+    if not attempt:
+        await query.edit_message_text(text, reply_markup=profile_back_keyboard(test_id))
+        return
 
     await query.edit_message_text(
-        profile_attempt_detail_text(query.from_user.id, test_id, attempt_id),
-        reply_markup=profile_attempt_detail_keyboard(test_id, page),
+        text,
+        reply_markup=attempt_detail_keyboard(test_id, attempt_id, page, int(attempt.get("wrong_count") or 0)),
+    )
+
+
+async def handle_repeat_attempt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id, attempt_id_str = query.data.split(":")
+    attempt_id = int(attempt_id_str)
+
+    attempt = get_attempt_detail(query.from_user.id, test_id, attempt_id)
+    order = get_attempt_order(attempt)
+
+    if not order:
+        await query.edit_message_text(
+            "Для этой старой попытки повтор недоступен.",
+            reply_markup=profile_back_keyboard(test_id),
+        )
+        return
+
+    state = get_state(query.message.chat_id)
+    clear_text_waiting_state(state)
+    start_quiz_mode(state, query.from_user.id, test_id, "repeat", order)
+    index = state["order"][state["pos"]]
+
+    await query.edit_message_text(
+        build_question_text(index, state),
+        reply_markup=answer_keyboard(test_id, index),
+        parse_mode="HTML",
+    )
+
+
+async def handle_attempt_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id, attempt_id_str, page_str, history_page_str = query.data.split(":")
+    attempt_id = int(attempt_id_str)
+    page = int(page_str)
+    history_page = int(history_page_str)
+
+    text, visible, page, total_pages = attempt_errors_text(query.from_user.id, test_id, attempt_id, page)
+    await query.edit_message_text(
+        text,
+        reply_markup=attempt_errors_keyboard(test_id, attempt_id, visible, page, total_pages, history_page),
+    )
+
+
+async def handle_attempt_error(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id, attempt_id_str, page_str, index_str, history_page_str = query.data.split(":")
+    attempt_id = int(attempt_id_str)
+    page = int(page_str)
+    index = int(index_str)
+    history_page = int(history_page_str)
+
+    items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    indices = [int(item["question_index"]) for item in items]
+    prev_index, next_index = _neighbor_indices(indices, index)
+    favorite = is_favorite_question(query.from_user.id, test_id, index)
+
+    await query.edit_message_text(
+        attempt_error_text(query.from_user.id, test_id, attempt_id, index),
+        reply_markup=attempt_error_detail_keyboard(
+            test_id, attempt_id, index, page, history_page, prev_index, next_index, favorite
+        ),
+        parse_mode="HTML",
+    )
+
+
+async def handle_attempt_error_favorite_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    _, test_id, attempt_id_str, page_str, index_str, history_page_str = query.data.split(":")
+    attempt_id = int(attempt_id_str)
+    page = int(page_str)
+    index = int(index_str)
+    history_page = int(history_page_str)
+
+    is_now_favorite = toggle_favorite_question(query.from_user.id, test_id, index)
+    await query.answer("Добавлено в избранное" if is_now_favorite else "Убрано из избранного")
+
+    items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    indices = [int(item["question_index"]) for item in items]
+    prev_index, next_index = _neighbor_indices(indices, index)
+
+    await query.edit_message_reply_markup(
+        reply_markup=attempt_error_detail_keyboard(
+            test_id, attempt_id, index, page, history_page, prev_index, next_index, is_now_favorite
+        )
+    )
+
+
+async def handle_question_favorite_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    _, test_id, index_str = query.data.split(":")
+    index = int(index_str)
+
+    is_now_favorite = toggle_favorite_question(query.from_user.id, test_id, index)
+    await query.answer("Добавлено в избранное" if is_now_favorite else "Убрано из избранного")
+
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
+    await query.edit_message_reply_markup(
+        reply_markup=question_menu_keyboard(test_id, index, state.get("mode"), is_favorite=is_now_favorite)
     )
 
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -717,9 +1039,11 @@ async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
     _, test_id, index_str = query.data.split(":")
 
+    index = int(index_str)
     state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
+    favorite = is_favorite_question(query.from_user.id, test_id, index)
     await query.edit_message_reply_markup(
-        reply_markup=question_menu_keyboard(test_id, int(index_str), state.get("mode"))
+        reply_markup=question_menu_keyboard(test_id, index, state.get("mode"), is_favorite=favorite)
     )
 
 async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
