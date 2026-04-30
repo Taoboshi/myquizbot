@@ -114,6 +114,41 @@ def db_connect():
     return conn
 
 
+def _table_exists(conn, table_name: str) -> bool:
+    """Return True if a table exists in SQLite or PostgreSQL."""
+    try:
+        if DATABASE_URL:
+            row = conn.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = current_schema()
+                      AND table_name = ?
+                ) AS exists_flag
+                """,
+                (table_name,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM sqlite_master
+                    WHERE type = 'table'
+                      AND name = ?
+                ) AS exists_flag
+                """,
+                (table_name,),
+            ).fetchone()
+
+        if row is None:
+            return False
+        return bool(row["exists_flag"])
+    except Exception:
+        return False
+
+
 def _init_postgres_db() -> None:
     with db_connect() as conn:
         conn.execute(
@@ -426,13 +461,14 @@ def _answered_indices_from_session_json(state_json: str | None) -> set[int]:
 def get_answered_question_count(user_id: int, test_id: str) -> int:
     """Return count of different questions the user has answered in this test.
 
-    Old builds only stored total answer clicks. The session fallback lets the profile
-    show current in-progress progress even if the detailed table was added later.
+    This function is deliberately defensive: old deployments may have tables with
+    slightly different schemas, and the profile screen must not crash because of
+    one optional progress source.
     """
     indices: set[int] = set()
 
     with db_connect() as conn:
-        if _table_exists(conn, "user_answered_questions"):
+        try:
             rows = conn.execute(
                 """
                 SELECT question_index
@@ -444,21 +480,29 @@ def get_answered_question_count(user_id: int, test_id: str) -> int:
             for row in rows:
                 try:
                     indices.add(int(row["question_index"]))
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, KeyError):
                     pass
+        except Exception:
+            pass
 
-        session_rows = conn.execute(
-            """
-            SELECT state_json
-            FROM active_sessions
-            WHERE user_id = ? AND test_id = ?
-            """,
-            (user_id, test_id),
-        ).fetchall()
-        for row in session_rows:
-            indices.update(_answered_indices_from_session_json(row["state_json"]))
+        try:
+            session_rows = conn.execute(
+                """
+                SELECT state_json
+                FROM active_sessions
+                WHERE user_id = ? AND test_id = ?
+                """,
+                (user_id, test_id),
+            ).fetchall()
+            for row in session_rows:
+                try:
+                    indices.update(_answered_indices_from_session_json(row["state_json"]))
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
-        if _table_exists(conn, "runtime_sessions"):
+        try:
             runtime_rows = conn.execute(
                 """
                 SELECT state_json
@@ -468,7 +512,12 @@ def get_answered_question_count(user_id: int, test_id: str) -> int:
                 (user_id, test_id),
             ).fetchall()
             for row in runtime_rows:
-                indices.update(_answered_indices_from_session_json(row["state_json"]))
+                try:
+                    indices.update(_answered_indices_from_session_json(row["state_json"]))
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     return len(indices)
 

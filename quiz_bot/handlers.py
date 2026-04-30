@@ -145,53 +145,71 @@ def _profile_username(user) -> str:
 def profile_text(user, test_id: str) -> str:
     title = TESTS[test_id]["title"]
     total_questions = len(get_questions(test_id))
-    errors_count = len(get_all_time_error_indices(user.id, test_id))
 
-    with db_connect() as conn:
-        stats = conn.execute(
-            """
-            SELECT attempts_started, attempts_finished, total_answered, total_correct
-            FROM user_stats
-            WHERE user_id = ? AND test_id = ?
-            """,
-            (user.id, test_id),
-        ).fetchone()
+    try:
+        errors_count = len(get_all_time_error_indices(user.id, test_id))
+    except Exception:
+        errors_count = 0
 
-        best_attempt = conn.execute(
-            """
-            SELECT answered, correct
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY
-                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
-                correct DESC,
-                finished_at DESC
-            LIMIT 1
-            """,
-            (user.id, test_id),
-        ).fetchone()
+    stats = None
+    best_attempt = None
+    last_attempt = None
 
-        last_attempt = conn.execute(
-            """
-            SELECT answered, correct
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY finished_at DESC
-            LIMIT 1
-            """,
-            (user.id, test_id),
-        ).fetchone()
+    try:
+        with db_connect() as conn:
+            stats = conn.execute(
+                """
+                SELECT attempts_started, attempts_finished, total_answered, total_correct
+                FROM user_stats
+                WHERE user_id = ? AND test_id = ?
+                """,
+                (user.id, test_id),
+            ).fetchone()
+
+            best_attempt = conn.execute(
+                """
+                SELECT answered, correct
+                FROM attempts
+                WHERE user_id = ?
+                  AND test_id = ?
+                  AND finished_at IS NOT NULL
+                  AND answered > 0
+                ORDER BY
+                    (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
+                    correct DESC,
+                    finished_at DESC
+                LIMIT 1
+                """,
+                (user.id, test_id),
+            ).fetchone()
+
+            last_attempt = conn.execute(
+                """
+                SELECT answered, correct
+                FROM attempts
+                WHERE user_id = ?
+                  AND test_id = ?
+                  AND finished_at IS NOT NULL
+                  AND answered > 0
+                ORDER BY finished_at DESC
+                LIMIT 1
+                """,
+                (user.id, test_id),
+            ).fetchone()
+    except Exception:
+        stats = None
+        best_attempt = None
+        last_attempt = None
 
     attempts_total = int(stats["attempts_started"] or 0) if stats else 0
     total_answered = int(stats["total_answered"] or 0) if stats else 0
     total_correct = int(stats["total_correct"] or 0) if stats else 0
-    answered_questions = get_answered_question_count(user.id, test_id)
+
+    try:
+        answered_questions = get_answered_question_count(user.id, test_id)
+    except Exception:
+        answered_questions = min(total_answered, total_questions)
+
     accuracy = _safe_percent(total_correct, total_answered)
 
     best_percent = _safe_percent(best_attempt["correct"], best_attempt["answered"]) if best_attempt else None
@@ -213,6 +231,7 @@ def profile_text(user, test_id: str) -> str:
         f"🏆 Лучший результат: {best_line}\n"
         f"🕓 Последняя попытка: {last_line}"
     )
+
 
 def get_state_or_restore(chat_id: int, user_id: int, test_id: str) -> dict:
     state = get_state(chat_id)
