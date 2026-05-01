@@ -10,10 +10,10 @@ from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
-from .access import access_label, access_type_label, can_view_test, effective_test_access, effective_access_type, effective_access_code
+from .access import access_label, access_type_label, can_view_test, effective_test_access, effective_access_type, effective_access_code, subject_access_label, subject_access_type, subject_access_code
 from .loader import add_subject_override, apply_test_metadata_override, effective_test_info, get_questions, get_subject_info, get_subjects, get_tests_for_subject, get_unassigned_tests, remove_subject_override, _slug
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
-from .storage import DATABASE_URL, db_connect, delete_subject_setting, get_all_time_error_indices, get_test_access_setting, get_test_metadata_setting, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, reset_test_access_setting, reset_test_metadata_setting, revoke_user_test_access, set_subject_setting, set_test_access_setting, set_test_metadata_setting, upsert_user
+from .storage import DATABASE_URL, db_connect, delete_subject_setting, get_all_time_error_indices, get_test_access_setting, get_test_metadata_setting, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, reset_test_access_setting, reset_test_metadata_setting, revoke_user_test_access, set_subject_access_setting, set_subject_setting, set_test_access_setting, set_test_metadata_setting, upsert_user
 
 
 def fmt_msk(value) -> str:
@@ -40,6 +40,13 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
         ],
     ])
 
+def subject_button_title(info: dict, subject_id: str = "") -> str:
+    emoji = (info.get("emoji") or "").strip()
+    title = info.get("title") or subject_id
+    return subject_button_title(info, subject_id) if emoji else str(title)
+
+
+
 def admin_tests_text() -> str:
     subjects = get_subjects()
     tests_count = len(TESTS)
@@ -63,11 +70,11 @@ def admin_tests_keyboard() -> InlineKeyboardMarkup:
 
     for subject_id, info in get_subjects():
         tests_count = len(get_tests_for_subject(subject_id))
-        emoji = info.get("emoji", "📚")
+        emoji = info.get("emoji", "")
         title = info.get("title", subject_id)
         rows.append([
             InlineKeyboardButton(
-                f"{emoji} {title} ({tests_count})",
+                f"{subject_button_title(info, subject_id)} ({tests_count})",
                 callback_data=f"admin:subject:{subject_id}",
             )
         ])
@@ -81,12 +88,12 @@ def admin_tests_keyboard() -> InlineKeyboardMarkup:
 def admin_subject_text(subject_id: str) -> str:
     info = get_subject_info(subject_id)
     title = info.get("title", subject_id)
-    emoji = info.get("emoji", "📚")
+    emoji = info.get("emoji", "")
     tests = get_tests_for_subject(subject_id)
     unassigned_count = len(get_unassigned_tests())
 
     lines = [
-        f"{emoji} {title}",
+        subject_button_title(info, subject_id),
         "",
         f"Тестов в разделе: {len(tests)}",
         f"Непривязанных JSON-тестов: {unassigned_count}",
@@ -121,19 +128,62 @@ def admin_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+def admin_subject_access_text(subject_id: str) -> str:
+    info = get_subject_info(subject_id)
+    title = subject_button_title(info, subject_id)
+    access_type = subject_access_type(subject_id)
+    code = subject_access_code(subject_id)
+
+    lines = [
+        "🔐 Доступ к разделу",
+        "",
+        f"Раздел: {title}",
+        f"Текущий доступ: {access_type_label(access_type)}",
+        f"Код доступа: {code if access_type == 'code' else '—'}",
+        "",
+    ]
+
+    if access_type == "public":
+        lines.append("Раздел открыт всем.")
+    elif access_type == "private":
+        lines.append("Раздел видят только пользователи с доступом.")
+    elif access_type == "code":
+        lines.append("Раздел виден с замком и открывается по коду.")
+    elif access_type == "admin_only":
+        lines.append("Раздел видит только админ.")
+
+    return "\n".join(lines)
+
+
+def admin_subject_access_keyboard(subject_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🌍 Открытый", callback_data=f"admin:set_subject_access:{subject_id}:public"),
+            InlineKeyboardButton("🔐 Приватный", callback_data=f"admin:set_subject_access:{subject_id}:private"),
+        ],
+        [
+            InlineKeyboardButton("🔑 По коду", callback_data=f"admin:set_subject_access:{subject_id}:code"),
+            InlineKeyboardButton("🙈 Только админ", callback_data=f"admin:set_subject_access:{subject_id}:admin_only"),
+        ],
+        [InlineKeyboardButton("✏️ Изменить код", callback_data=f"admin:set_subject_code:{subject_id}")],
+        [InlineKeyboardButton("↩️ К настройкам раздела", callback_data=f"admin:subject_settings:{subject_id}")],
+    ])
+
+
 def admin_subject_settings_text(subject_id: str) -> str:
     info = get_subject_info(subject_id)
     tests = get_tests_for_subject(subject_id)
     title = info.get("title", subject_id)
-    emoji = info.get("emoji", "📚")
+    emoji = info.get("emoji", "")
 
     lines = [
         "⚙️ Настройки раздела",
         "",
-        f"{emoji} {title}",
+        subject_button_title(info, subject_id),
         f"Тестов внутри: {len(tests)}",
+        f"Доступ: {subject_access_label(subject_id)}",
         "",
-        "Здесь можно переименовать или удалить раздел.",
+        "Здесь можно переименовать, удалить раздел или настроить доступ.",
     ]
 
     if tests:
@@ -149,6 +199,7 @@ def admin_subject_settings_text(subject_id: str) -> str:
 def admin_subject_settings_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton("✏️ Переименовать раздел", callback_data=f"admin:rename_subject:{subject_id}")],
+        [InlineKeyboardButton("🔐 Доступ к разделу", callback_data=f"admin:subject_access:{subject_id}")],
     ]
 
     if get_tests_for_subject(subject_id):
@@ -175,7 +226,7 @@ def admin_add_test_to_subject_text(subject_id: str) -> str:
     lines = [
         "➕ Добавить тест",
         "",
-        f"Раздел: {subject.get('emoji', '📚')} {subject.get('title', subject_id)}",
+        f"Раздел: {subject_button_title(subject, subject_id)}",
         "",
     ]
 
@@ -2173,7 +2224,7 @@ def admin_move_test_subject_keyboard(test_id: str) -> InlineKeyboardMarkup:
     current_subject_id = effective_test_info(test_id).get("subject_id")
     for subject_id, subject in get_subjects():
         title = subject.get("title", subject_id)
-        emoji = subject.get("emoji", "📚")
+        emoji = subject.get("emoji", "")
         prefix = "✅ " if subject_id == current_subject_id else ""
         rows.append([
             InlineKeyboardButton(
@@ -2375,7 +2426,7 @@ def admin_user_access_text(user_id: int) -> str:
         if not subject_tests:
             continue
 
-        lines.append(f"{subject.get('emoji', '📚')} {subject.get('title', subject_id)}")
+        lines.append(f"{subject.get('emoji', '')} {subject.get('title', subject_id)}")
         for test_id, info in subject_tests:
             access_type = effective_access_type(test_id)
             has_access = has_user_test_access(user_id, test_id)
@@ -2772,6 +2823,29 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
     if not user or not is_admin(user.id):
         return
 
+    subject_code_id = context.user_data.get("admin_subject_code_id")
+    if subject_code_id:
+        text = (update.message.text or "").strip()
+        if not text:
+            await update.message.reply_text(
+                "Код не может быть пустым.",
+                reply_markup=admin_subject_access_keyboard(subject_code_id),
+            )
+            raise ApplicationHandlerStop
+
+        context.user_data.pop("admin_subject_code_id", None)
+        set_subject_access_setting(
+            subject_code_id,
+            "code",
+            code=text,
+            updated_by=user.id,
+        )
+        await update.message.reply_text(
+            "✅ Код раздела обновлён.\n\n" + admin_subject_access_text(subject_code_id),
+            reply_markup=admin_subject_access_keyboard(subject_code_id),
+        )
+        raise ApplicationHandlerStop
+
     rename_subject_id = context.user_data.get("admin_rename_subject_id")
     if rename_subject_id:
         text = (update.message.text or "").strip()
@@ -2791,8 +2865,8 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
         else:
             subject_id = rename_subject_id
 
-        set_subject_setting(subject_id, text, emoji="📚", updated_by=user.id)
-        add_subject_override(subject_id, text, emoji="📚")
+        set_subject_setting(subject_id, text, emoji="", updated_by=user.id)
+        add_subject_override(subject_id, text, emoji="")
 
         await update.message.reply_text(
             "✅ Раздел переименован.\n\n" + admin_subject_text(subject_id),
@@ -2812,8 +2886,8 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
         context.user_data.pop("admin_add_subject_waiting", None)
 
         subject_id = _slug(text)
-        set_subject_setting(subject_id, text, emoji="📚", updated_by=user.id)
-        add_subject_override(subject_id, text, emoji="📚")
+        set_subject_setting(subject_id, text, emoji="", updated_by=user.id)
+        add_subject_override(subject_id, text, emoji="")
 
         await update.message.reply_text(
             "✅ Раздел добавлен.\n\n" + admin_tests_text(),
@@ -2868,14 +2942,14 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
             title=current.get("title"),
             subject_id=subject_id,
             subject_title=text,
-            subject_emoji=current.get("subject_emoji") or "📚",
+            subject_emoji=current.get("subject_emoji") or "",
             updated_by=user.id,
         )
         apply_test_metadata_override(
             subject_test_id,
             subject_id=subject_id,
             subject_title=text,
-            subject_emoji=current.get("subject_emoji") or "📚",
+            subject_emoji=current.get("subject_emoji") or "",
         )
 
         await update.message.reply_text(
@@ -3467,14 +3541,14 @@ async def handle_admin_assign_test_subject(update: Update, context: ContextTypes
         title=current.get("title"),
         subject_id=subject_id,
         subject_title=subject.get("title", subject_id),
-        subject_emoji=subject.get("emoji", "📚"),
+        subject_emoji=subject.get("emoji", ""),
         updated_by=query.from_user.id,
     )
     apply_test_metadata_override(
         test_id,
         subject_id=subject_id,
         subject_title=subject.get("title", subject_id),
-        subject_emoji=subject.get("emoji", "📚"),
+        subject_emoji=subject.get("emoji", ""),
     )
 
     await query.edit_message_text(
@@ -3482,6 +3556,60 @@ async def handle_admin_assign_test_subject(update: Update, context: ContextTypes
         reply_markup=admin_subject_keyboard(subject_id),
     )
 
+
+
+async def handle_admin_subject_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    await query.edit_message_text(
+        admin_subject_access_text(subject_id),
+        reply_markup=admin_subject_access_keyboard(subject_id),
+    )
+
+
+async def handle_admin_set_subject_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id, access_type = query.data.split(":", 3)
+    current_code = subject_access_code(subject_id)
+    set_subject_access_setting(subject_id, access_type, code=current_code, updated_by=query.from_user.id)
+
+    await query.edit_message_text(
+        admin_subject_access_text(subject_id),
+        reply_markup=admin_subject_access_keyboard(subject_id),
+    )
+
+
+async def handle_admin_set_subject_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    context.user_data["admin_subject_code_id"] = subject_id
+
+    await query.edit_message_text(
+        "✏️ Изменить код раздела\n\n"
+        f"Раздел: {subject_button_title(get_subject_info(subject_id), subject_id)}\n\n"
+        "Отправь следующим сообщением новый код доступа.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:subject_access:{subject_id}")],
+        ]),
+    )
 
 
 async def handle_admin_subject_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -3606,14 +3734,14 @@ async def handle_admin_move_test_subject_do(update: Update, context: ContextType
         title=current.get("title"),
         subject_id=subject_id,
         subject_title=subject.get("title", subject_id),
-        subject_emoji=subject.get("emoji", "📚"),
+        subject_emoji=subject.get("emoji", ""),
         updated_by=query.from_user.id,
     )
     apply_test_metadata_override(
         test_id,
         subject_id=subject_id,
         subject_title=subject.get("title", subject_id),
-        subject_emoji=subject.get("emoji", "📚"),
+        subject_emoji=subject.get("emoji", ""),
     )
 
     await query.edit_message_text(

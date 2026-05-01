@@ -439,7 +439,9 @@ def _init_postgres_db() -> None:
             CREATE TABLE IF NOT EXISTS subject_settings (
                 subject_id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
-                emoji TEXT NOT NULL DEFAULT '📚',
+                emoji TEXT NOT NULL DEFAULT '',
+                access_type TEXT NOT NULL DEFAULT 'public',
+                code TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_by BIGINT
@@ -458,6 +460,7 @@ def _init_postgres_db() -> None:
         ]:
             conn.execute(stmt)
 
+        _ensure_subject_settings_columns(conn)
         conn.commit()
 
 
@@ -576,7 +579,9 @@ def _init_sqlite_db() -> None:
             CREATE TABLE IF NOT EXISTS subject_settings (
                 subject_id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
-                emoji TEXT NOT NULL DEFAULT '📚',
+                emoji TEXT NOT NULL DEFAULT '',
+                access_type TEXT NOT NULL DEFAULT 'public',
+                code TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_by INTEGER
@@ -598,6 +603,7 @@ def _init_sqlite_db() -> None:
             except sqlite3.OperationalError:
                 pass
 
+        _ensure_subject_settings_columns(conn)
         conn.commit()
 
 
@@ -679,9 +685,10 @@ def list_subject_settings() -> list[dict[str, Any]]:
         if not _table_exists(conn, "subject_settings"):
             return []
 
+        _ensure_subject_settings_columns(conn)
         rows = conn.execute(
             """
-            SELECT subject_id, title, emoji, created_at, updated_at, updated_by
+            SELECT subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by
             FROM subject_settings
             ORDER BY LOWER(title)
             """
@@ -691,7 +698,9 @@ def list_subject_settings() -> list[dict[str, Any]]:
         {
             "id": row["subject_id"],
             "title": row["title"],
-            "emoji": row["emoji"] or "📚",
+            "emoji": row["emoji"] or "",
+            "access_type": row["access_type"] or "public",
+            "code": row["code"] or "",
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
             "updated_by": row["updated_by"],
@@ -719,9 +728,10 @@ def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
         if not _table_exists(conn, "subject_settings"):
             return None
 
+        _ensure_subject_settings_columns(conn)
         row = conn.execute(
             """
-            SELECT subject_id, title, emoji, created_at, updated_at, updated_by
+            SELECT subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by
             FROM subject_settings
             WHERE subject_id = ?
             """,
@@ -734,36 +744,70 @@ def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
     return {
         "id": row["subject_id"],
         "title": row["title"],
-        "emoji": row["emoji"] or "📚",
+        "emoji": row["emoji"] or "",
+        "access_type": row["access_type"] or "public",
+        "code": row["code"] or "",
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
         "updated_by": row["updated_by"],
     }
 
 
-def set_subject_setting(subject_id: str, title: str, emoji: str = "📚", updated_by: int | None = None) -> None:
+def set_subject_setting(
+    subject_id: str,
+    title: str,
+    emoji: str = "",
+    access_type: str | None = None,
+    code: str | None = None,
+    updated_by: int | None = None,
+) -> None:
     subject_id = str(subject_id or "").strip()
     title = str(title or "").strip()
-    emoji = str(emoji or "📚").strip() or "📚"
+    emoji = str(emoji or "").strip()
 
     if not subject_id or not title:
         return
 
+    current = get_subject_setting(subject_id) or {}
+    access_type_value = str(access_type or current.get("access_type") or "public").strip().lower()
+    if access_type_value not in VALID_ACCESS_TYPES:
+        access_type_value = "public"
+
+    code_value = (str(code).strip() if code is not None else current.get("code", "")) or None
+
     with db_connect() as conn:
+        _ensure_subject_settings_columns(conn)
         conn.execute(
             """
-            INSERT INTO subject_settings (subject_id, title, emoji, created_at, updated_at, updated_by)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+            INSERT INTO subject_settings (subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(subject_id)
             DO UPDATE SET
                 title = excluded.title,
                 emoji = excluded.emoji,
+                access_type = excluded.access_type,
+                code = excluded.code,
                 updated_at = CURRENT_TIMESTAMP,
                 updated_by = excluded.updated_by
             """,
-            (subject_id, title, emoji, updated_by),
+            (subject_id, title, emoji, access_type_value, code_value, updated_by),
         )
         conn.commit()
+
+
+def set_subject_access_setting(subject_id: str, access_type: str, code: str | None = None, updated_by: int | None = None) -> None:
+    current = get_subject_setting(subject_id)
+    if not current:
+        return
+
+    set_subject_setting(
+        subject_id=subject_id,
+        title=current.get("title") or subject_id,
+        emoji=current.get("emoji") or "",
+        access_type=access_type,
+        code=code,
+        updated_by=updated_by,
+    )
 
 
 def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:

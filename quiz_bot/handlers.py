@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 
 from .config import ADMIN_IDS, BTN_TEST_MENU, RESUMABLE_MODES, TESTS
 from .helpers import attempt_percent, format_display_datetime, mode_title, seconds_to_text, short_question_text
-from .access import can_open_test, is_code_locked_for_user, verify_access_code
+from .access import can_open_subject, can_open_test, is_code_locked_for_user, verify_access_code, verify_subject_access_code
 from .keyboards import (
     after_finish_keyboard,
     answer_keyboard,
@@ -248,11 +248,65 @@ async def handle_tests_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text("Выбери предмет:", reply_markup=subject_select_keyboard(query.from_user.id))
 
 
+async def handle_locked_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, subject_id = query.data.split(":", 1)
+
+    if can_open_subject(query.from_user.id, subject_id):
+        query.data = f"subject_menu:{subject_id}"
+        await handle_subject_menu(update, context)
+        return
+
+    info = get_subject_info(subject_id)
+    title = info.get("title", subject_id)
+    await query.edit_message_text(
+        f"🔒 {title}\n\nЭтот раздел открывается по коду доступа.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔑 Ввести код", callback_data=f"enter_subject_code:{subject_id}")],
+            [InlineKeyboardButton("⬅️ К предметам", callback_data="tests:menu")],
+        ]),
+    )
+
+
+async def handle_enter_subject_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, subject_id = query.data.split(":", 1)
+
+    if can_open_subject(query.from_user.id, subject_id):
+        query.data = f"subject_menu:{subject_id}"
+        await handle_subject_menu(update, context)
+        return
+
+    state = get_state(query.message.chat_id)
+    clear_text_waiting_state(state)
+    state["pending_subject_access_code_id"] = subject_id
+
+    info = get_subject_info(subject_id)
+    await query.edit_message_text(
+        f"🔑 Введи код доступа для раздела:\n\n{info.get('title', subject_id)}",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ К предметам", callback_data="tests:menu")],
+        ]),
+    )
+
+
 async def handle_subject_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
     _, subject_id = query.data.split(":", 1)
+
+    if not can_open_subject(query.from_user.id, subject_id):
+        info = get_subject_info(subject_id)
+        await query.edit_message_text(
+            f"🔒 {info.get('title', subject_id)}\n\nУ тебя нет доступа к этому разделу.",
+            reply_markup=subject_select_keyboard(query.from_user.id),
+        )
+        return
 
     info = get_subject_info(subject_id)
     emoji = info.get("emoji", "📚")
@@ -1239,6 +1293,23 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     upsert_user(update.effective_user)
     state = get_state(update.effective_chat.id)
     text = (update.message.text or "").strip()
+
+    subject_access_id = state.get("pending_subject_access_code_id")
+    if subject_access_id:
+        if verify_subject_access_code(update.effective_user.id, subject_access_id, text):
+            state["pending_subject_access_code_id"] = None
+            info = get_subject_info(subject_access_id)
+            await update.message.reply_text(
+                f"✅ Доступ к разделу открыт.\n\n{info.get('title', subject_access_id)}",
+                reply_markup=subject_tests_keyboard(subject_access_id, update.effective_user.id),
+            )
+            return
+
+        await update.message.reply_text(
+            "❌ Неверный код. Попробуй ещё раз или вернись назад.",
+            reply_markup=subject_select_keyboard(update.effective_user.id),
+        )
+        return
 
     access_test_id = state.get("pending_access_code_test_id")
     if access_test_id:

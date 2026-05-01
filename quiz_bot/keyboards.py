@@ -16,7 +16,7 @@ from .config import (
     RESUMABLE_MODES,
     TESTS,
 )
-from .access import can_view_test, is_code_locked_for_user
+from .access import can_view_subject, is_subject_code_locked_for_user, can_view_test, is_code_locked_for_user
 from .loader import get_questions, get_subject_info, get_subjects, get_tests_for_subject, test_subject_id
 from .quiz import build_question_text
 from .state import active_session_button_text
@@ -33,12 +33,18 @@ def subject_select_keyboard(user_id: int) -> InlineKeyboardMarkup:
         if not visible_tests:
             continue
 
-        emoji = info.get("emoji", "📚")
+        if not can_view_subject(user_id, subject_id):
+            continue
+
+        emoji = info.get("emoji", "")
         title = info.get("title", subject_id)
+        is_locked = is_subject_code_locked_for_user(user_id, subject_id)
+        prefix = "🔒 " if is_locked else (f"{emoji} " if emoji else "")
+        callback = f"locked_subject:{subject_id}" if is_locked else f"subject_menu:{subject_id}"
         rows.append([
             InlineKeyboardButton(
-                f"{emoji} {title}",
-                callback_data=f"subject_menu:{subject_id}",
+                f"{prefix}{title}",
+                callback_data=callback,
             )
         ])
 

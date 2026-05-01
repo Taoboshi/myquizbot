@@ -64,6 +64,9 @@ from .admin import (
     handle_admin_add_subject,
     handle_admin_add_test_to_subject,
     handle_admin_assign_test_subject,
+    handle_admin_subject_access,
+    handle_admin_set_subject_access,
+    handle_admin_set_subject_code,
     handle_admin_subject_settings,
     handle_admin_rename_subject,
     handle_admin_delete_subject_confirm,
@@ -124,6 +127,8 @@ from .handlers import (
     handle_start_quiz,
     handle_test_menu,
     handle_tests_menu,
+    handle_locked_subject,
+    handle_enter_subject_code,
     handle_subject_menu,
     handle_locked_test,
     handle_enter_access_code,
@@ -207,6 +212,8 @@ def build_application():
     # User callbacks
     app.add_handler(CallbackQueryHandler(handle_noop, pattern=r"^noop$"))
     app.add_handler(CallbackQueryHandler(handle_tests_menu, pattern=r"^tests:menu$"))
+    app.add_handler(CallbackQueryHandler(handle_locked_subject, pattern=r"^locked_subject:"))
+    app.add_handler(CallbackQueryHandler(handle_enter_subject_code, pattern=r"^enter_subject_code:"))
     app.add_handler(CallbackQueryHandler(handle_subject_menu, pattern=r"^subject_menu:"))
     app.add_handler(CallbackQueryHandler(handle_locked_test, pattern=r"^locked_test:"))
     app.add_handler(CallbackQueryHandler(handle_enter_access_code, pattern=r"^enter_access_code:"))
@@ -280,6 +287,9 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_reset_user_do, pattern=r"^admin:reset_user_do:"))
     app.add_handler(CallbackQueryHandler(handle_admin_validate_tests, pattern=r"^admin:validate_tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_subject_access, pattern=r"^admin:subject_access:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_set_subject_access, pattern=r"^admin:set_subject_access:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_set_subject_code, pattern=r"^admin:set_subject_code:"))
     app.add_handler(CallbackQueryHandler(handle_admin_subject_settings, pattern=r"^admin:subject_settings:"))
     app.add_handler(CallbackQueryHandler(handle_admin_rename_subject, pattern=r"^admin:rename_subject:"))
     app.add_handler(CallbackQueryHandler(handle_admin_delete_subject_confirm, pattern=r"^admin:delete_subject_confirm:"))

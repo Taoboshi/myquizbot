@@ -28,14 +28,14 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
     if isinstance(subject, dict):
         subject_id = _slug(subject.get("id") or subject.get("slug") or subject.get("title") or "default")
         title = str(subject.get("title") or _clean_title(subject_id)).strip()
-        emoji = str(subject.get("emoji") or "📚").strip()
+        emoji = str(subject.get("emoji") or "").strip()
         order = int(subject.get("order") or 100)
     else:
         subject_id = _slug(subject or "")
         if not subject_id and path is not None:
             subject_id = _slug(path.parent.name)
         title = _clean_title(subject or subject_id)
-        emoji = "📚"
+        emoji = ""
         order = 100
 
     if path is not None and (not subject_id or subject_id == "default"):
@@ -64,7 +64,7 @@ def _register_subject(subject: dict[str, Any]) -> None:
     existing = SUBJECTS.get(subject_id, {})
     SUBJECTS[subject_id] = {
         "title": existing.get("title") or subject.get("title") or _clean_title(subject_id),
-        "emoji": existing.get("emoji") or subject.get("emoji") or "📚",
+        "emoji": existing.get("emoji") or subject.get("emoji") or "",
         "order": existing.get("order", subject.get("order", 100)),
     }
 
@@ -309,7 +309,7 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
 
         if subject_setting:
             info["subject_title"] = subject_setting.get("title") or info.get("subject_title")
-            info["subject_emoji"] = subject_setting.get("emoji") or info.get("subject_emoji") or "📚"
+            info["subject_emoji"] = subject_setting.get("emoji") or info.get("subject_emoji") or ""
 
     return info
 
@@ -362,11 +362,11 @@ def is_unassigned_subject_id(subject_id: str | None) -> bool:
     return str(subject_id or "").strip().lower() in UNASSIGNED_SUBJECT_IDS
 
 
-def add_subject_override(subject_id: str, title: str, emoji: str = "📚") -> None:
+def add_subject_override(subject_id: str, title: str, emoji: str = "") -> None:
     subject_id = _slug(subject_id)
     SUBJECTS[subject_id] = {
         "title": str(title or _clean_title(subject_id)).strip(),
-        "emoji": str(emoji or "📚").strip() or "📚",
+        "emoji": str(emoji or "").strip(),
         "order": 100,
     }
 
@@ -385,7 +385,7 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
             continue
         subjects[subject_id] = {
             "title": info.get("subject_title") or SUBJECTS.get(subject_id, {}).get("title") or _clean_title(subject_id),
-            "emoji": info.get("subject_emoji") or SUBJECTS.get(subject_id, {}).get("emoji") or "📚",
+            "emoji": info.get("subject_emoji") or SUBJECTS.get(subject_id, {}).get("emoji") or "",
             "order": SUBJECTS.get(subject_id, {}).get("order", 100),
         }
 
@@ -399,7 +399,7 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
             for subject in list_subject_settings():
                 subjects[subject["id"]] = {
                     "title": subject.get("title") or _clean_title(subject["id"]),
-                    "emoji": subject.get("emoji") or "📚",
+                    "emoji": subject.get("emoji") or "",
                     "order": 100,
                 }
         except Exception:
@@ -415,7 +415,7 @@ def get_subject_info(subject_id: str) -> dict[str, Any]:
     for current_id, info in get_subjects():
         if current_id == subject_id:
             return info
-    return SUBJECTS.get(subject_id, {"title": _clean_title(subject_id), "emoji": "📚", "order": 100})
+    return SUBJECTS.get(subject_id, {"title": _clean_title(subject_id), "emoji": "", "order": 100})
 
 
 def get_tests_for_subject(subject_id: str) -> list[tuple[str, dict[str, Any]]]:
