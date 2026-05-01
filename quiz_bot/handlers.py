@@ -101,6 +101,7 @@ async def setup_bot_commands(app) -> None:
             pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     chat_id = update.effective_chat.id
     current = datetime.now().timestamp()
 
@@ -108,12 +109,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     LAST_START_AT[chat_id] = current
-    await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
-    upsert_user(update.effective_user)
+    
+    # Выносим сборку тяжелого меню в отдельный поток
+    keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
+    await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
+    await asyncio.to_thread(upsert_user, update.effective_user)
 
 async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
-    upsert_user(update.effective_user)
+    import asyncio
+    keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
+    await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
+    await asyncio.to_thread(upsert_user, update.effective_user)
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
