@@ -17,6 +17,12 @@ from .admin import (
     handle_admin_frequent_errors,
     handle_admin_frequent_errors_all,
     handle_admin_global_user_detail,
+    handle_admin_user_history,
+    handle_admin_user_errors,
+    handle_admin_user_favorites,
+    handle_admin_export_user,
+    handle_admin_clear_user_runtime_confirm,
+    handle_admin_clear_user_runtime_do,
     handle_admin_manage,
     handle_admin_menu,
     handle_admin_rating,
@@ -181,6 +187,12 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_summary, pattern=r"^admin:summary$"))
     app.add_handler(CallbackQueryHandler(handle_admin_users, pattern=r"^admin:users:"))
     app.add_handler(CallbackQueryHandler(handle_admin_global_user_detail, pattern=r"^admin:global_user:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_user_history, pattern=r"^admin:user_history:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_user_errors, pattern=r"^admin:user_errors:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_user_favorites, pattern=r"^admin:user_favorites:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_export_user, pattern=r"^admin:export_user:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_clear_user_runtime_confirm, pattern=r"^admin:clear_user_runtime_confirm:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_clear_user_runtime_do, pattern=r"^admin:clear_user_runtime_do:"))
     app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_stats, pattern=r"^admin:test_stats:"))
     app.add_handler(CallbackQueryHandler(handle_admin_rating, pattern=r"^admin:rating:"))
