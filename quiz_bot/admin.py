@@ -1898,17 +1898,33 @@ async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     parts = query.data.split(":")
-    if len(parts) >= 4:
-        sort = _parse_users_sort(parts[2])
-        page = int(parts[3])
-    elif len(parts) >= 3:
-        sort = "recent"
-        page = int(parts[2])
-    else:
-        sort = "recent"
-        page = 0
+    sort = "recent"
+    page = 0
 
-    await query.edit_message_text(admin_users_text(page, sort), reply_markup=admin_users_keyboard(page, sort))
+    # Supported formats:
+    # admin:users:0
+    # admin:users:recent:0
+    # admin:users:result:0
+    # admin:users:attempts:0
+    # admin:users:errors:0
+    if len(parts) == 3:
+        if parts[2].isdigit():
+            page = int(parts[2])
+        else:
+            sort = _parse_users_sort(parts[2])
+    elif len(parts) >= 4:
+        sort = _parse_users_sort(parts[2])
+        page = int(parts[3]) if str(parts[3]).isdigit() else 0
+
+    text = admin_users_text(page, sort)
+    keyboard = admin_users_keyboard(page, sort)
+
+    try:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    except Exception as exc:
+        if "Message is not modified" in str(exc):
+            return
+        raise
 
 
 async def handle_admin_global_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
