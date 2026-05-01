@@ -5,7 +5,7 @@ from pathlib import Path
 
 def test_python_files_parse():
     root = Path(__file__).resolve().parents[1]
-    for path in sorted((root / "quiz_bot").glob("*.py")):
+    for path in sorted((root / "quiz_bot").rglob("*.py")):
         ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
 
 
