@@ -6,6 +6,27 @@ import sqlite3
 import time
 from typing import Any
 
+from functools import wraps
+import time
+
+def ttl_cache(ttl_seconds=5):
+    """Простой кэш, который хранит ответы от БД несколько секунд, убивая проблему N+1"""
+    def decorator(func):
+        cache = {}
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            key = str(args) + str(kwargs)
+            now = time.time()
+            if key in cache:
+                val, exp = cache[key]
+                if now < exp:
+                    return val
+            val = func(*args, **kwargs)
+            cache[key] = (val, now + ttl_seconds)
+            return val
+        return wrapper
+    return decorator
+
 from .config import DB_PATH
 
 logger = logging.getLogger(__name__)
