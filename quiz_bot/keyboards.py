@@ -16,7 +16,7 @@ from .config import (
     RESUMABLE_MODES,
     TESTS,
 )
-from .access import access_icon_for_user, can_view_test, is_code_locked_for_user
+from .access import can_view_test, is_code_locked_for_user
 from .loader import get_questions, get_subject_info, get_subjects, get_tests_for_subject, test_subject_id
 from .quiz import build_question_text
 from .state import active_session_button_text
@@ -53,11 +53,12 @@ def subject_tests_keyboard(subject_id: str, user_id: int) -> InlineKeyboardMarku
         if not can_view_test(user_id, test_id):
             continue
 
-        icon = access_icon_for_user(user_id, test_id)
-        callback = f"locked_test:{test_id}" if is_code_locked_for_user(user_id, test_id) else f"test_menu:{test_id}"
+        is_locked = is_code_locked_for_user(user_id, test_id)
+        callback = f"locked_test:{test_id}" if is_locked else f"test_menu:{test_id}"
+        title = f"🔒 {info['title']}" if is_locked else info["title"]
         rows.append([
             InlineKeyboardButton(
-                f"{icon} {info['title']} — {len(get_questions(test_id))} вопросов",
+                f"{title} — {len(get_questions(test_id))} вопросов",
                 callback_data=callback,
             )
         ])
