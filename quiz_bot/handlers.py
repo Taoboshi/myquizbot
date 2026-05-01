@@ -170,12 +170,9 @@ def profile_text(user, test_id: str) -> str:
     errors = summary.get("errors") or {}
 
     answered_questions = int(summary.get("answered_questions") or 0)
-    total_answered = int(summary.get("total_answered") or 0)
-    total_correct = int(summary.get("total_correct") or 0)
-    accuracy = _safe_percent(total_correct, total_answered)
-
     best = summary.get("best")
     latest = summary.get("latest")
+    overall = summary.get("overall") or {}
     best_line = f"{_safe_percent(best.get('correct'), best.get('answered'))}%" if best else "пока нет"
     last_line = f"{_safe_percent(latest.get('correct'), latest.get('answered'))}%" if latest else "пока нет"
 
@@ -186,10 +183,9 @@ def profile_text(user, test_id: str) -> str:
         f"📚 Тест: {title}\n\n"
         f"📌 Кратко:\n"
         f"Решено вопросов: {answered_questions} из {total_questions}\n"
-        f"Точность ответов: {accuracy}%\n"
         f"Ошибок: {int(errors.get('unresolved') or 0)}\n"
         f"Избранных: {int(summary.get('favorites') or 0)}\n"
-        f"Попыток: {int(summary.get('attempts_finished') or 0)}\n\n"
+        f"Попыток: {int(overall.get('attempts') or 0)}\n\n"
         f"🏆 Лучший результат: {best_line}\n"
         f"🕓 Последняя попытка: {last_line}"
     )
@@ -513,7 +509,11 @@ async def handle_repeat_attempt(update: Update, context: ContextTypes.DEFAULT_TY
     state = get_state(query.message.chat_id)
     start_quiz_mode(state, query.from_user.id, test_id, "repeat_attempt", order)
     index = state["order"][state["pos"]]
-    await query.edit_message_text(build_question_text(index, state), reply_markup=answer_keyboard(test_id, index, user_id=query.from_user.id), parse_mode="HTML")
+    await query.edit_message_text(
+        build_question_text(index, state),
+        reply_markup=answer_keyboard(test_id, index, attempt_id=state.get("attempt_id"), user_id=query.from_user.id),
+        parse_mode="HTML",
+    )
 
 
 async def handle_result_errors_page(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -595,6 +595,7 @@ async def handle_show_result_attempt(update: Update, context: ContextTypes.DEFAU
         "order": get_attempt_order(attempt_id) or list(range(answered)),
         "wrong_answers": get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id),
         "attempt_id": attempt_id,
+        "duration_seconds": attempt.get("duration_seconds"),
     }
     await query.edit_message_text(result_text(fake_state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, fake_state))
 
@@ -1027,7 +1028,11 @@ async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEF
 
     start_quiz_mode(state, query.from_user.id, test_id, "errors", order)
     index = state["order"][state["pos"]]
-    await query.edit_message_text(build_question_text(index, state), reply_markup=answer_keyboard(test_id, index, user_id=query.from_user.id), parse_mode="HTML")
+    await query.edit_message_text(
+        build_question_text(index, state),
+        reply_markup=answer_keyboard(test_id, index, attempt_id=state.get("attempt_id"), user_id=query.from_user.id),
+        parse_mode="HTML",
+    )
 
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query

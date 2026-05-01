@@ -967,7 +967,11 @@ def latest_attempt(user_id: int, test_id: str) -> dict[str, Any] | None:
             """
             SELECT *
             FROM attempts
-            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            WHERE user_id = ?
+              AND test_id = ?
+              AND finished_at IS NOT NULL
+              AND answered > 0
+              AND mode != 'repeat_attempt'
             ORDER BY finished_at DESC
             LIMIT 1
             """,
@@ -982,7 +986,11 @@ def best_attempt(user_id: int, test_id: str) -> dict[str, Any] | None:
             """
             SELECT *
             FROM attempts
-            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            WHERE user_id = ?
+              AND test_id = ?
+              AND finished_at IS NOT NULL
+              AND answered > 0
+              AND mode != 'repeat_attempt'
             ORDER BY (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC, correct DESC, finished_at DESC
             LIMIT 1
             """,
@@ -998,11 +1006,10 @@ def stats_summary(user_id: int, test_id: str) -> dict[str, Any]:
             "SELECT attempts_started, attempts_finished, total_answered, total_correct FROM user_stats WHERE user_id = ? AND test_id = ?",
             (user_id, test_id),
         ).fetchone()
-        overall = _avg_percent_row(conn, user_id, test_id, ("normal", "random", "reverse", "from_number", "mini", "errors", "repeat_attempt"))
+        overall = _avg_percent_row(conn, user_id, test_id, ("normal", "random", "reverse", "from_number", "mini", "errors"))
         solution = _avg_percent_row(conn, user_id, test_id, ("normal", "random", "reverse", "from_number"))
         training = _avg_percent_row(conn, user_id, test_id, ("mini",))
         errors_mode = _avg_percent_row(conn, user_id, test_id, ("errors",))
-        repeat = _avg_percent_row(conn, user_id, test_id, ("repeat_attempt",))
     stats = _dict(stats) or {}
     return {
         "attempts_started": int(stats.get("attempts_started") or 0),
@@ -1013,7 +1020,6 @@ def stats_summary(user_id: int, test_id: str) -> dict[str, Any]:
         "solution": solution,
         "training": training,
         "errors_mode": errors_mode,
-        "repeat": repeat,
         "latest": latest_attempt(user_id, test_id),
         "best": best_attempt(user_id, test_id),
         "errors": error_counts(user_id, test_id),

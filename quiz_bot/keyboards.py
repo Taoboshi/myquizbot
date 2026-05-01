@@ -160,11 +160,14 @@ def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboard
     if state.get("wrong_answers") and attempt_id is not None:
         rows.append([InlineKeyboardButton("🧠 Ошибки", callback_data=f"result_errors_page:{attempt_id}:0")])
 
-    if state.get("mode") == "errors":
+    mode = state.get("mode")
+    if mode == "errors":
         if state.get("wrong_answers"):
             rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"repeat_session_errors:{test_id}")])
-    elif state.get("mode") == "mini":
+    elif mode == "mini":
         rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"mini_start:{test_id}:10")])
+    elif mode == "repeat_attempt" and attempt_id is not None:
+        rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"repeat_attempt:{attempt_id}")])
     else:
         rows.append([InlineKeyboardButton("🔁 Повторить тест", callback_data=f"solve_menu:{test_id}")])
 
