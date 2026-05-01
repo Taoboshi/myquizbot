@@ -52,7 +52,22 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-`validate_project.py` проверяет загрузку JSON-тестов, SQLite-схему и базовую запись статистики.
+`validate_project.py` проверяет синтаксис всех Python-файлов, таблицы callback-маршрутов, загрузку JSON-тестов, SQLite-схему и базовую запись статистики.
+
+## Структура кода
+
+Ключевые модули:
+
+- `quiz_bot/app.py` — сборка приложения, polling и общий обработчик ошибок.
+- `quiz_bot/user_routes.py` — регистрация пользовательских команд и callback-ов.
+- `quiz_bot/admin_routes.py` — регистрация админских команд, guard-ов, рассылки и callback-ов.
+- `quiz_bot/admin.py` — совместимый фасад для старых импортов.
+- `quiz_bot/admin_core.py` — базовые тексты, клавиатуры, сводки, экспорт и обзор тестов.
+- `quiz_bot/admin_users.py` — пользователи, блокировки, рассылка и сброс прогресса.
+- `quiz_bot/admin_tools.py` — сервисные экраны, доступы, метаданные тестов и разделы.
+- `quiz_bot/admin_handlers.py` — Telegram-handlers админки.
+- `quiz_bot/storage.py` — SQLite/PostgreSQL слой хранения.
+- `quiz_bot/loader.py` — загрузка и нормализация JSON-тестов.
 
 ## Render
 
