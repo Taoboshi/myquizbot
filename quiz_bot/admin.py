@@ -590,31 +590,30 @@ def admin_summary_text() -> str:
         last_activity = f"{user_display_name(last_user)} · {last_user['last_seen_at']}"
 
     return (
-        "📊 Обзор\\n\\n"
-        f"👥 Пользователей: {users}\\n"
-        f"🚫 Заблокированных: {blocked_users}\\n"
-        f"📢 Получателей рассылки: {broadcast_recipients}\\n\\n"
-        f"📝 Попыток всего: {attempts}\\n"
-        f"✅ Завершено: {finished}\\n"
-        f"🎯 Средний результат: {avg_percent}%\\n"
-        f"🔢 Ответов: {answered}\\n\\n"
-        f"📚 Тестов: {len(TESTS)}\\n"
-        f"🧠 Активных ошибок: {active_errors}\\n"
-        f"⭐ Избранных вопросов: {favorites}\\n\\n"
-        f"💾 Сохранённых сессий: {active_sessions}\\n"
-        f"🔄 Runtime-сессий: {runtime_sessions}\\n"
-        f"🗄 База: {backend}\\n\\n"
-        f"🕒 Последняя активность:\\n{last_activity}"
+        "📊 Обзор\n\n"
+        f"👥 Пользователей: {users}\n"
+        f"🚫 Заблокированных: {blocked_users}\n"
+        f"📢 Получателей рассылки: {broadcast_recipients}\n\n"
+        f"📝 Попыток всего: {attempts}\n"
+        f"✅ Завершено: {finished}\n"
+        f"🎯 Средний результат: {avg_percent}%\n"
+        f"🔢 Ответов: {answered}\n\n"
+        f"📚 Тестов: {len(TESTS)}\n"
+        f"🧠 Активных ошибок: {active_errors}\n"
+        f"⭐ Избранных вопросов: {favorites}\n\n"
+        f"💾 Сохранённых сессий: {active_sessions}\n"
+        f"🔄 Runtime-сессий: {runtime_sessions}\n"
+        f"🗄 База: {backend}\n\n"
+        f"🕒 Последняя активность:\n{last_activity}"
     )
-
 
 def safe_admin_summary_text() -> str:
     try:
         return admin_summary_text()
     except Exception as exc:
         return (
-            "📊 Обзор\\n\\n"
-            "⚠️ Обзор не загрузился.\\n"
+            "📊 Обзор\n\n"
+            "⚠️ Обзор не загрузился.\n"
             f"Ошибка: {type(exc).__name__}: {exc}\\n\\n"
             "Открой 🐞 Debug или пришли этот текст."
         )
