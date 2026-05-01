@@ -884,25 +884,23 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     import asyncio
     query = update.callback_query
     
-    # Выносим обновление юзера в фон
-    await asyncio.to_thread(upsert_user, query.from_user)
+    # Отправляем апдейт юзера в фон, не ждем!
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
 
     _, test_id, index_str, answer_str = query.data.split(":")
     index = int(index_str)
     selected = int(answer_str)
     
-    # Чтение состояния тоже кидаем в фон
-    state = await asyncio.to_thread(get_state_or_restore, query.message.chat_id, query.from_user.id, test_id)
+    # Берем прогресс прямо из оперативной памяти (это мгновенно)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
     if not state.get("active"):
         await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
         return
     if state.get("awaiting_next"):
-        await query.answer("Нажми «Следующий»")
         return
     if state.get("test_id") != test_id or state.get("pos", 0) >= len(state.get("order", [])) or state["order"][state["pos"]] != index:
-        await query.answer("Этот вопрос уже обработан")
         return
 
     correct_index = int(get_questions(test_id)[index]["correct_index"])
@@ -917,99 +915,81 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         if state["pos"] >= len(state["order"]):
             state["active"] = False
-            # Запись прогресса и завершения в фон
-            await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, True, save_session=False)
-            await asyncio.to_thread(finish_attempt_if_needed, query.from_user.id, state)
-            
-            await query.edit_message_text(
-                answered_text,
-                parse_mode="HTML",
-            )
+            # ПЕРВЫМ ДЕЛОМ ОТДАЕМ ИНТЕРФЕЙС
+            await query.edit_message_text(answered_text, parse_mode="HTML")
             await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
+            # ПОТОМ СОХРАНЯЕМ В ФОНЕ
+            asyncio.create_task(asyncio.to_thread(save_question_progress, query.from_user.id, dict(state), index, True, save_session=False))
+            asyncio.create_task(asyncio.to_thread(finish_attempt_if_needed, query.from_user.id, dict(state)))
             return
 
-        # Запись промежуточного прогресса в фон
-        await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, True)
-        
         next_index = state["order"][state["pos"]]
-        await query.edit_message_text(
-            answered_text,
-            parse_mode="HTML",
-        )
+        # ПЕРВЫМ ДЕЛОМ ОТРИСОВЫВАЕМ СЛЕДУЮЩИЙ ВОПРОС
+        await query.edit_message_text(answered_text, parse_mode="HTML")
         await query.message.reply_text(
             build_question_text(next_index, state),
             reply_markup=answer_keyboard(test_id, next_index, user_id=query.from_user.id),
             parse_mode="HTML",
         )
+        # ОТПРАВЛЯЕМ СОХРАНЕНИЕ ПРОГРЕССА В ФОН
+        asyncio.create_task(asyncio.to_thread(save_question_progress, query.from_user.id, dict(state), index, True))
         return
 
     add_session_wrong_answer(state, index, selected)
     state["awaiting_next"] = True
     
-    # Запись ошибки в фон
-    await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, False, selected)
-
+    # СНАЧАЛА КРАСИМ КНОПКУ В КРАСНЫЙ
     await query.edit_message_text(
         build_question_text(index, state, selected_index=selected, show_correct=True),
         reply_markup=next_keyboard(test_id, index, user_id=query.from_user.id),
         parse_mode="HTML",
     )
+    # СОХРАНЯЕМ ОШИБКУ В ФОНЕ
+    asyncio.create_task(asyncio.to_thread(save_question_progress, query.from_user.id, dict(state), index, False, selected))
+
 
 async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     import asyncio
     query = update.callback_query
-    await asyncio.to_thread(upsert_user, query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
 
     _, test_id, index_str = query.data.split(":")
     index = int(index_str)
-    
-    # Чтение состояния в фоне
-    state = await asyncio.to_thread(get_state_or_restore, query.message.chat_id, query.from_user.id, test_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
-    if not state.get("active"):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
-        return
-    if state.get("awaiting_next"):
-        await query.answer("Нажми «Следующий»")
+    if not state.get("active") or state.get("awaiting_next"):
         return
     if state.get("test_id") != test_id or state.get("pos", 0) >= len(state.get("order", [])) or state["order"][state["pos"]] != index:
-        await query.answer("Этот вопрос уже обработан")
         return
 
     state["total"] += 1
     add_session_wrong_answer(state, index, None)
     state["awaiting_next"] = True
     
-    # Сохранение в фоне
-    await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, False, None)
-
+    # СНАЧАЛА ПОКАЗЫВАЕМ ОТВЕТ
     await query.edit_message_text(
         build_question_text(index, state, selected_index=None, show_correct=True),
         reply_markup=next_keyboard(test_id, index, user_id=query.from_user.id),
         parse_mode="HTML",
     )
+    # ПОТОМ СОХРАНЯЕМ В ФОНЕ
+    asyncio.create_task(asyncio.to_thread(save_question_progress, query.from_user.id, dict(state), index, False, None))
+
 
 async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     import asyncio
     query = update.callback_query
-    await asyncio.to_thread(upsert_user, query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
 
     _, test_id, index_str = query.data.split(":")
     index = int(index_str)
-    
-    # Чтение состояния в фоне
-    state = await asyncio.to_thread(get_state_or_restore, query.message.chat_id, query.from_user.id, test_id)
+    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
 
-    if not state.get("active"):
-        await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
-        return
-    if not state.get("awaiting_next"):
-        await query.answer("Следующий вопрос уже открыт")
+    if not state.get("active") or not state.get("awaiting_next"):
         return
     if state.get("test_id") != test_id or state.get("pos", 0) >= len(state.get("order", [])) or state["order"][state["pos"]] != index:
-        await query.answer("Этот вопрос уже обработан")
         return
 
     await query.edit_message_reply_markup(reply_markup=None)
@@ -1019,20 +999,21 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if state["pos"] >= len(state["order"]):
         state["active"] = False
-        # Завершение в фоне
         await asyncio.to_thread(finish_attempt_if_needed, query.from_user.id, state)
         await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
         return
 
-    # Сохранение сессии в фоне
-    await asyncio.to_thread(save_active_session, query.from_user.id, state)
     next_index = state["order"][state["pos"]]
     
+    # СНАЧАЛА ПОКАЗЫВАЕМ СЛЕДУЮЩИЙ ВОПРОС
     await query.message.reply_text(
         build_question_text(next_index, state),
         reply_markup=answer_keyboard(test_id, next_index, user_id=query.from_user.id),
         parse_mode="HTML",
     )
+    # СОХРАНЯЕМ В ФОНЕ
+    asyncio.create_task(asyncio.to_thread(save_active_session, query.from_user.id, dict(state)))
+
 
 async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
