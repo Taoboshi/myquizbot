@@ -9,7 +9,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Upda
 from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
-from .helpers import attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
+from .helpers import _percent, attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
 from .access import access_label, access_type_label, can_view_test, effective_test_access, effective_access_type, effective_access_code
 from .loader import add_subject_override, apply_test_metadata_override, effective_test_info, get_questions, get_subject_info, get_subjects, get_tests_for_subject, get_unassigned_tests, _slug
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
@@ -646,13 +646,6 @@ def admin_frequent_errors_text(test_id: str) -> str:
 
 def _today_start() -> str:
     return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def _percent(correct: int | float | None, total: int | float | None) -> float:
-    total = total or 0
-    if not total:
-        return 0.0
-    return round(float(correct or 0) / float(total) * 100, 1)
 
 
 def _safe_scalar(conn, sql: str, params: tuple = (), default=0):

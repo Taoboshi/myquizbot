@@ -124,6 +124,13 @@ def user_display_name(row: sqlite3.Row | dict[str, Any]) -> str:
         return full
     return f"Без имени — ID {user_id}"
 
+def _percent(correct: int | float | None, total: int | float | None) -> float:
+    total = total or 0
+    if not total:
+        return 0.0
+    return round(float(correct or 0) / float(total) * 100, 1)
+
+
 def attempt_percent(attempt: sqlite3.Row | None) -> float:
     if not attempt or not attempt["answered"]:
         return 0.0
