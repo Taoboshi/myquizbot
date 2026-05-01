@@ -50,7 +50,7 @@ from .admin import (
     handle_admin_tests,
     handle_admin_users,
 )
-from .config import BOT_TOKEN
+from .config import ADMIN_IDS, BOT_TOKEN
 from .handlers import (
     finish_command,
     handle_answer,
@@ -123,10 +123,22 @@ async def error_handler(update, context) -> None:
 
     try:
         if update and update.effective_chat:
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="Произошла ошибка. Нажми /start.",
-            )
+            user_id = update.effective_user.id if update.effective_user else None
+            if user_id in ADMIN_IDS:
+                err = context.error
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=(
+                        "⚠️ Ошибка в боте\n\n"
+                        f"{type(err).__name__}: {err}\n\n"
+                        "Пришли этот текст, если нужно исправить кнопку."
+                    ),
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="Произошла ошибка. Нажми /start.",
+                )
     except Exception:
         logger.exception("Failed to send error message to user")
 
