@@ -1930,24 +1930,41 @@ async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE)
         raise
 
 
+async def _show_admin_users_sorted(update: Update, context: ContextTypes.DEFAULT_TYPE, sort: str) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    sort = _parse_users_sort(sort)
+    page = 0
+    message_text = admin_users_text(page, sort)
+    keyboard = admin_users_keyboard(page, sort)
+
+    try:
+        await query.edit_message_text(message_text, reply_markup=keyboard)
+    except Exception as exc:
+        if "Message is not modified" in str(exc):
+            return
+        raise
+
+
 async def handle_admin_users_recent(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    update.callback_query.data = "admin:users:recent:0"
-    await handle_admin_users(update, context)
+    await _show_admin_users_sorted(update, context, "recent")
 
 
 async def handle_admin_users_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    update.callback_query.data = "admin:users:result:0"
-    await handle_admin_users(update, context)
+    await _show_admin_users_sorted(update, context, "result")
 
 
 async def handle_admin_users_attempts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    update.callback_query.data = "admin:users:attempts:0"
-    await handle_admin_users(update, context)
+    await _show_admin_users_sorted(update, context, "attempts")
 
 
 async def handle_admin_users_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    update.callback_query.data = "admin:users:errors:0"
-    await handle_admin_users(update, context)
+    await _show_admin_users_sorted(update, context, "errors")
 
 
 async def handle_admin_global_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
