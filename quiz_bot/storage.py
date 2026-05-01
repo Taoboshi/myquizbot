@@ -292,6 +292,37 @@ def _add_column_if_missing(conn, table_name: str, column_sql: str) -> None:
     conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_sql}")
 
 
+
+def _column_exists(conn, table_name: str, column_name: str) -> bool:
+    if DATABASE_URL:
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = ? AND column_name = ?
+            LIMIT 1
+            """,
+            (table_name, column_name),
+        ).fetchone()
+        return row is not None
+
+    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(row["name"] == column_name for row in rows)
+
+
+def _ensure_subject_settings_columns(conn) -> None:
+    if not _table_exists(conn, "subject_settings"):
+        return
+
+    for column_name, column_sql in [
+        ("emoji", "TEXT DEFAULT ''"),
+        ("access_type", "TEXT NOT NULL DEFAULT 'public'"),
+        ("code", "TEXT"),
+    ]:
+        if not _column_exists(conn, "subject_settings", column_name):
+            conn.execute(f"ALTER TABLE subject_settings ADD COLUMN {column_name} {column_sql}")
+
+
 def _init_postgres_db() -> None:
     with db_connect() as conn:
         conn.execute(
