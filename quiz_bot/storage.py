@@ -99,6 +99,21 @@ def _get_pg_pool():
     return _PG_POOL
 
 
+def reset_pg_pool() -> None:
+    global _PG_POOL
+
+    if _PG_POOL is None:
+        return
+
+    try:
+        _PG_POOL.close()
+    except Exception:
+        pass
+
+    _PG_POOL = None
+
+
+
 class PgConnectionWrapper:
     def __init__(self):
         if psycopg is None:
@@ -113,11 +128,16 @@ class PgConnectionWrapper:
             self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
     def __enter__(self):
-        if self._pool_context is not None:
-            self.conn = self._pool_context.__enter__()
-        else:
-            self.conn.__enter__()
-        return self
+        try:
+            if self._pool_context is not None:
+                self.conn = self._pool_context.__enter__()
+            else:
+                self.conn.__enter__()
+            return self
+        except Exception:
+            if DATABASE_URL:
+                reset_pg_pool()
+            raise
 
     def __exit__(self, exc_type, exc, tb):
         if self._pool_context is not None:
@@ -125,8 +145,17 @@ class PgConnectionWrapper:
         return self.conn.__exit__(exc_type, exc, tb)
 
     def execute(self, sql: str, params: tuple[Any, ...] | list[Any] | None = None):
-        cur = self.conn.execute(_pg_sql(sql), params)
-        return PgCursorWrapper(cur)
+        try:
+            cur = self.conn.execute(_pg_sql(sql), params)
+            return PgCursorWrapper(cur)
+        except Exception:
+            if DATABASE_URL:
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
+                reset_pg_pool()
+            raise
 
     def executescript(self, script: str) -> None:
         for statement in script.split(";"):
