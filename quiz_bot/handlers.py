@@ -593,7 +593,7 @@ async def handle_show_result_attempt(update: Update, context: ContextTypes.DEFAU
         "attempt_id": attempt_id,
         "duration_seconds": attempt.get("duration_seconds"),
     }
-    await query.edit_message_text(result_text(fake_state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, fake_state))
+    await query.edit_message_text(result_text(fake_state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, fake_state), parse_mode="HTML")
 
 
 async def handle_toggle_favorite(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -756,7 +756,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 answered_text,
                 parse_mode="HTML",
             )
-            await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
+            await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
             return
 
         save_question_progress(query.from_user.id, state, index, True)
@@ -839,7 +839,7 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
     if state["pos"] >= len(state["order"]):
         state["active"] = False
         finish_attempt_if_needed(query.from_user.id, state)
-        await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
+        await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
         return
 
     save_active_session(query.from_user.id, state)
@@ -944,7 +944,7 @@ async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYP
     state["active"] = False
     state["awaiting_next"] = False
     finish_attempt_if_needed(query.from_user.id, state, finished_by_user=True)
-    await query.edit_message_text(result_text(state, query.from_user.id, finished_by_user=True), reply_markup=after_finish_keyboard(query.from_user.id, state))
+    await query.edit_message_text(result_text(state, query.from_user.id, finished_by_user=True), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
 
 async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
@@ -957,7 +957,7 @@ async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     state["active"] = False
     state["awaiting_next"] = False
     finish_attempt_if_needed(update.effective_user.id, state, finished_by_user=True)
-    await update.message.reply_text(result_text(state, update.effective_user.id, finished_by_user=True), reply_markup=after_finish_keyboard(update.effective_user.id, state))
+    await update.message.reply_text(result_text(state, update.effective_user.id, finished_by_user=True), reply_markup=after_finish_keyboard(update.effective_user.id, state), parse_mode="HTML")
 
 async def handle_session_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -995,7 +995,7 @@ async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     await query.edit_message_reply_markup(reply_markup=None)
-    await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
+    await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
 
 async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
