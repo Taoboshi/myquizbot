@@ -41,6 +41,8 @@ from .admin import (
     handle_admin_rating,
     handle_admin_summary,
     handle_admin_test_menu,
+    handle_admin_test_overview,
+    handle_admin_validate_test,
     handle_admin_test_stats,
     handle_admin_test_user_detail,
     handle_admin_test_users,
@@ -221,6 +223,8 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_reset_user_do, pattern=r"^admin:reset_user_do:"))
     app.add_handler(CallbackQueryHandler(handle_admin_validate_tests, pattern=r"^admin:validate_tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_test_overview, pattern=r"^admin:test_overview:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_validate_test, pattern=r"^admin:validate_test:"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_stats, pattern=r"^admin:test_stats:"))
     app.add_handler(CallbackQueryHandler(handle_admin_rating, pattern=r"^admin:rating:"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_users, pattern=r"^admin:test_users:"))

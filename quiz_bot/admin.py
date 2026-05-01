@@ -26,17 +26,25 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
     ])
 
 def admin_tests_keyboard() -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton(f"📚 {info['title']}", callback_data=f"admin:test:{test_id}")] for test_id, info in TESTS.items()]
+    rows = []
+    for test_id, info in TESTS.items():
+        rows.append([InlineKeyboardButton(f"📚 {info['title']}", callback_data=f"admin:test:{test_id}")])
+    rows.append([InlineKeyboardButton("🧪 Проверить все тесты", callback_data="admin:validate_tests")])
     rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(rows)
 
 def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📈 Статистика", callback_data=f"admin:test_stats:{test_id}")],
-        [InlineKeyboardButton("👥 Пользователи", callback_data=f"admin:test_users:{test_id}:0")],
-        [InlineKeyboardButton("🏆 Рейтинг топ-10", callback_data=f"admin:rating:{test_id}")],
-        [InlineKeyboardButton("🧠 Частые ошибки", callback_data=f"admin:frequent_errors:{test_id}")],
-        [InlineKeyboardButton("📤 Экспорт по тесту", callback_data=f"admin:export_test:{test_id}")],
+        [InlineKeyboardButton("📊 Обзор теста", callback_data=f"admin:test_overview:{test_id}")],
+        [
+            InlineKeyboardButton("👥 Пользователи", callback_data=f"admin:test_users:{test_id}:0"),
+            InlineKeyboardButton("🏆 Рейтинг", callback_data=f"admin:rating:{test_id}"),
+        ],
+        [
+            InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:frequent_errors:{test_id}"),
+            InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_test:{test_id}"),
+        ],
+        [InlineKeyboardButton("🧪 Проверить тест", callback_data=f"admin:validate_test:{test_id}")],
         [InlineKeyboardButton("📚 К тестам", callback_data="admin:tests")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
@@ -44,6 +52,7 @@ def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
 def admin_back_to_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
+        [InlineKeyboardButton("📚 К тестам", callback_data="admin:tests")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
 
@@ -56,40 +65,71 @@ def admin_test_users_text(test_id: str, page: int = 0) -> str:
         total = conn.execute("SELECT COUNT(*) AS c FROM user_stats WHERE test_id = ?", (test_id,)).fetchone()["c"] or 0
         rows = conn.execute(
             """
-            SELECT u.user_id, u.username, u.first_name, u.last_name,
-                   COALESCE(s.total_answered, 0) AS answered,
-                   COALESCE(s.total_correct, 0) AS correct,
-                   s.last_activity_at AS last_activity_at
+            SELECT
+                u.user_id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.last_seen_at,
+                COALESCE(s.attempts_started, 0) AS attempts_started,
+                COALESCE(s.attempts_finished, 0) AS attempts_finished,
+                COALESCE(s.total_answered, 0) AS answered,
+                COALESCE(s.total_correct, 0) AS correct,
+                s.last_activity_at AS last_activity_at,
+                COUNT(DISTINCT e.question_index) AS active_errors,
+                COUNT(DISTINCT f.question_index) AS favorites
             FROM user_stats s
             LEFT JOIN users u ON u.user_id = s.user_id
+            LEFT JOIN all_time_errors e
+                ON e.user_id = s.user_id
+               AND e.test_id = s.test_id
+               AND COALESCE(e.is_resolved, 0) = 0
+            LEFT JOIN favorites f
+                ON f.user_id = s.user_id
+               AND f.test_id = s.test_id
             WHERE s.test_id = ?
-            ORDER BY s.total_answered DESC, s.last_activity_at DESC
+            GROUP BY
+                u.user_id, u.username, u.first_name, u.last_name, u.last_seen_at,
+                s.attempts_started, s.attempts_finished, s.total_answered,
+                s.total_correct, s.last_activity_at
+            ORDER BY s.last_activity_at DESC, s.total_answered DESC
             LIMIT ? OFFSET ?
             """,
             (test_id, ADMIN_USERS_PAGE_SIZE, offset),
         ).fetchall()
 
-    lines = ["👥 Пользователи", title, ""]
+    total_pages = _admin_user_pages(total)
+    start_num = offset + 1 if total else 0
+    end_num = min(offset + len(rows), total)
+
+    lines = [
+        "👥 Пользователи теста",
+        "",
+        f"📚 {title}",
+        f"Показано: {start_num}–{end_num} из {total}",
+        "",
+    ]
+
     if total == 0:
         lines.append("Пока нет пользователей по этому тесту.")
         return "\n".join(lines)
 
-    start_num = offset + 1
-    end_num = min(offset + len(rows), total)
-    total_pages = max(1, (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+    for n, row in enumerate(rows, start=start_num):
+        answered = int(row["answered"] or 0)
+        correct = int(row["correct"] or 0)
+        percent = _percent(correct, answered)
+        started = int(row["attempts_started"] or 0)
+        finished = int(row["attempts_finished"] or 0)
+        active_errors = int(row["active_errors"] or 0)
+        favorites = int(row["favorites"] or 0)
 
-    lines.append(f"{start_num}–{end_num} из {total}")
-    lines.append(f"Страница {page + 1} из {total_pages}")
-    lines.append("")
+        lines.append(f"{n}. {user_display_name(row)}")
+        lines.append(f"   🎯 {percent}% · ✅ {correct}/{answered}")
+        lines.append(f"   📝 попытки: {finished}/{started} · 🧠 ошибки: {active_errors} · ⭐ {favorites}")
+        lines.append(f"   🕒 {row['last_activity_at'] or row['last_seen_at'] or '—'}")
 
-    for row in rows:
-        answered = row["answered"] or 0
-        correct = row["correct"] or 0
-        percent = round(correct / answered * 100, 1) if answered else 0
-        lines.append(f"• {user_display_name(row)} — {correct}/{answered} ({percent}%)")
-
-    lines.extend(["", "Нажми кнопку ниже, чтобы открыть карточку пользователя."])
     return "\n".join(lines)
+
 
 def admin_test_users_keyboard(test_id: str, page: int = 0) -> InlineKeyboardMarkup:
     page = max(0, page)
@@ -101,34 +141,27 @@ def admin_test_users_keyboard(test_id: str, page: int = 0) -> InlineKeyboardMark
             """
             SELECT u.user_id, u.username, u.first_name, u.last_name,
                    COALESCE(s.total_answered, 0) AS answered,
-                   COALESCE(s.total_correct, 0) AS correct,
-                   s.last_activity_at AS last_activity_at
+                   COALESCE(s.total_correct, 0) AS correct
             FROM user_stats s
             LEFT JOIN users u ON u.user_id = s.user_id
             WHERE s.test_id = ?
-            ORDER BY s.total_answered DESC, s.last_activity_at DESC
+            ORDER BY s.last_activity_at DESC, s.total_answered DESC
             LIMIT ? OFFSET ?
             """,
             (test_id, ADMIN_USERS_PAGE_SIZE, offset),
         ).fetchall()
 
     buttons = []
-    user_buttons = []
-
     for row in rows:
-        answered = row["answered"] or 0
-        correct = row["correct"] or 0
-        percent = round(correct / answered * 100, 1) if answered else 0
+        answered = int(row["answered"] or 0)
+        correct = int(row["correct"] or 0)
+        percent = _percent(correct, answered)
         label = f"👤 {user_display_name(row)} · {percent}%"
-        if len(label) > 30:
-            label = label[:27].rstrip() + "…"
+        if len(label) > 38:
+            label = label[:35].rstrip() + "…"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"admin:user:{test_id}:{row['user_id']}:{page}")])
 
-        user_buttons.append(InlineKeyboardButton(label, callback_data=f"admin:user:{test_id}:{row['user_id']}:{page}"))
-
-    for i in range(0, len(user_buttons), 2):
-        buttons.append(user_buttons[i:i + 2])
-
-    total_pages = max(1, (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+    total_pages = _admin_user_pages(total)
     nav = []
     if page > 0:
         nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:test_users:{test_id}:{page - 1}"))
@@ -137,10 +170,13 @@ def admin_test_users_keyboard(test_id: str, page: int = 0) -> InlineKeyboardMark
     if nav:
         buttons.append(nav)
 
-    buttons.append([InlineKeyboardButton("🏠 Назад к тесту", callback_data=f"admin:test:{test_id}")])
+    buttons.append([InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")])
+    buttons.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(buttons)
 
 def admin_user_detail_text(test_id: str, user_id: int) -> str:
+    title = TESTS[test_id]["title"]
+
     with db_connect() as conn:
         user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
         stats = conn.execute("SELECT * FROM user_stats WHERE user_id = ? AND test_id = ?", (user_id, test_id)).fetchone()
@@ -149,23 +185,23 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
             """
             SELECT COUNT(*) AS active_errors, COALESCE(SUM(wrong_count), 0) AS wrong_clicks
             FROM all_time_errors
-            WHERE user_id = ? AND test_id = ?
+            WHERE user_id = ? AND test_id = ? AND COALESCE(is_resolved, 0) = 0
             """,
             (user_id, test_id),
         ).fetchone()
 
-        attempt_counts = conn.execute(
+        favorites = _safe_count(conn, "favorites", f"WHERE user_id = {int(user_id)} AND test_id = '{test_id}'") or 0
+        saved_sessions = _safe_count(conn, "active_sessions", f"WHERE user_id = {int(user_id)} AND test_id = '{test_id}'") or 0
+
+        attempts = conn.execute(
             """
-            SELECT
-                COUNT(*) AS started_total,
-                SUM(CASE WHEN finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished_total,
-                SUM(CASE WHEN mode IN (?, ?, ?, ?) AND finished_at IS NOT NULL THEN 1 ELSE 0 END) AS solution_finished,
-                SUM(CASE WHEN mode = 'mini' AND finished_at IS NOT NULL THEN 1 ELSE 0 END) AS training_finished,
-                SUM(CASE WHEN mode = 'errors' AND finished_at IS NOT NULL THEN 1 ELSE 0 END) AS errors_finished
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished,
+                   SUM(CASE WHEN finished_at IS NULL THEN 1 ELSE 0 END) AS unfinished
             FROM attempts
             WHERE user_id = ? AND test_id = ?
             """,
-            (*SOLUTION_MODES, user_id, test_id),
+            (user_id, test_id),
         ).fetchone()
 
         best_solution = conn.execute(
@@ -178,186 +214,274 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
               AND finished_at IS NOT NULL
               AND answered > 0
             ORDER BY
+                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
                 answered DESC,
-                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
                 duration_seconds ASC
             LIMIT 1
             """,
             (user_id, test_id, *SOLUTION_MODES),
         ).fetchone()
 
-        last_solution = conn.execute(
+        last_attempt = conn.execute(
             """
             SELECT *
             FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode IN (?, ?, ?, ?)
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY finished_at DESC
-            LIMIT 1
-            """,
-            (user_id, test_id, *SOLUTION_MODES),
-        ).fetchone()
-
-        best_training = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode = 'mini'
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY
-                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
-                correct DESC,
-                duration_seconds ASC
+            WHERE user_id = ? AND test_id = ?
+            ORDER BY started_at DESC
             LIMIT 1
             """,
             (user_id, test_id),
         ).fetchone()
 
-        last_training = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode = 'mini'
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY finished_at DESC
-            LIMIT 1
-            """,
-            (user_id, test_id),
-        ).fetchone()
+    display_name = user_display_name(user) if user else f"ID {user_id}"
+    username = f"@{user['username']}" if user and user["username"] else "—"
 
-    title = TESTS[test_id]["title"]
-
-    if user:
-        display_name = user_display_name(user)
-        first_activity = user["first_seen_at"] or "—"
-        last_activity = stats["last_activity_at"] if stats else (user["last_seen_at"] or "—")
-    else:
-        display_name = f"ID {user_id}"
-        first_activity = "—"
-        last_activity = stats["last_activity_at"] if stats else "—"
-
-    started_total = attempt_counts["started_total"] or 0
-    finished_total = attempt_counts["finished_total"] or 0
-    unfinished_total = max(0, started_total - finished_total)
-    solution_finished = attempt_counts["solution_finished"] or 0
-    training_finished = attempt_counts["training_finished"] or 0
-    errors_finished = attempt_counts["errors_finished"] or 0
-
-    def solution_with_date(attempt: sqlite3.Row | None) -> str:
-        if not attempt or not attempt["answered"]:
-            return "Пока нет завершённых решений"
-        percent = round(attempt["correct"] / attempt["answered"] * 100, 1)
-        return (
-            f"{attempt['correct']}/{attempt['answered']} — {percent}%\n"
-            f"Время: {seconds_to_text(attempt['duration_seconds'])}\n"
-            f"Дата: {attempt['finished_at']}"
-        )
+    answered = int(stats["total_answered"] or 0) if stats else 0
+    correct = int(stats["total_correct"] or 0) if stats else 0
+    percent = _percent(correct, answered)
+    started = int(stats["attempts_started"] or 0) if stats else 0
+    finished = int(stats["attempts_finished"] or 0) if stats else 0
+    unfinished = int(attempts["unfinished"] or 0) if attempts else 0
+    active_errors = int(errors["active_errors"] or 0) if errors else 0
+    wrong_clicks = int(errors["wrong_clicks"] or 0) if errors else 0
 
     lines = [
-        "👤 Пользователь",
+        "👤 Пользователь в тесте",
         "",
-        f"Имя: {display_name}",
+        f"{display_name}",
+        f"Username: {username}",
         f"ID: {user_id}",
         "",
-        title,
+        f"📚 {title}",
         "",
-        "🕒 Активность:",
-        f"Первая: {first_activity}",
-        f"Последняя: {last_activity}",
+        "📊 Результат",
+        f"🎯 Средний результат: {percent}%",
+        f"✅ Правильно: {correct} из {answered}",
+        f"📝 Попытки: {finished} завершено из {started}",
+        f"⏳ Незавершённых: {unfinished}",
         "",
-        "📌 Попытки:",
-        f"Завершено: {finished_total} из {started_total}",
-        f"Решение: {solution_finished}",
-        f"Тренировка: {training_finished}",
-        f"Разбор ошибок: {errors_finished}",
-        f"Незавершённых: {unfinished_total}",
-        "",
-        "🏆 Лучшее решение:",
-        solution_with_date(best_solution),
-        "",
-        "🕘 Последнее решение:",
-        solution_with_date(last_solution),
-        "",
-        "⚡ Тренировка:",
-        f"Лучшая: {format_training_attempt(best_training)}",
-        f"Последняя: {format_training_attempt(last_training)}",
-        f"Всего тренировок: {training_finished}",
-        "",
-        "🧠 Ошибки:",
-        f"Активных ошибок: {errors['active_errors'] or 0}",
-        f"Всего ошибочных ответов: {errors['wrong_clicks'] or 0}",
+        "🧠 Ошибки и вопросы",
+        f"Активных ошибок: {active_errors}",
+        f"Всего ошибочных ответов: {wrong_clicks}",
+        f"Избранных вопросов: {favorites}",
+        f"Сохранённых сессий: {saved_sessions}",
     ]
+
+    if best_solution:
+        lines.extend([
+            "",
+            "🏆 Лучшее решение",
+            _attempt_row_text(best_solution),
+        ])
+
+    if last_attempt:
+        lines.extend([
+            "",
+            "🕘 Последняя попытка",
+            f"{mode_title(last_attempt['mode'])}",
+            _attempt_row_text(last_attempt),
+        ])
 
     return "\n".join(lines)
 
-def admin_test_stats_text(test_id: str) -> str:
+def admin_test_overview_text(test_id: str) -> str:
     title = TESTS[test_id]["title"]
     questions_count = len(get_questions(test_id))
 
     with db_connect() as conn:
-        stats = conn.execute(
-            """
-            SELECT COUNT(DISTINCT user_id) AS users,
-                   COALESCE(SUM(attempts_started), 0) AS attempts_started,
-                   COALESCE(SUM(attempts_finished), 0) AS attempts_finished,
-                   COALESCE(SUM(total_answered), 0) AS answered,
-                   COALESCE(SUM(total_correct), 0) AS correct
-            FROM user_stats
-            WHERE test_id = ?
-            """,
-            (test_id,),
-        ).fetchone()
+        stats = None
+        errors = None
+        completed_solutions = None
+        modes = []
 
-        errors = conn.execute(
-            """
-            SELECT COUNT(*) AS active_errors,
-                   COALESCE(SUM(wrong_count), 0) AS wrong_clicks
-            FROM all_time_errors
-            WHERE test_id = ?
-            """,
-            (test_id,),
-        ).fetchone()
+        try:
+            stats = conn.execute(
+                """
+                SELECT COUNT(DISTINCT user_id) AS users,
+                       COALESCE(SUM(attempts_started), 0) AS attempts_started,
+                       COALESCE(SUM(attempts_finished), 0) AS attempts_finished,
+                       COALESCE(SUM(total_answered), 0) AS answered,
+                       COALESCE(SUM(total_correct), 0) AS correct
+                FROM user_stats
+                WHERE test_id = ?
+                """,
+                (test_id,),
+            ).fetchone()
+        except Exception:
+            _rollback_if_possible(conn)
 
-        completed_solutions = conn.execute(
-            """
-            SELECT COUNT(*) AS c,
-                   AVG(duration_seconds) AS avg_time
-            FROM attempts
-            WHERE test_id = ?
-              AND mode IN (?, ?, ?, ?)
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            """,
-            (test_id, *SOLUTION_MODES),
-        ).fetchone()
+        try:
+            errors = conn.execute(
+                """
+                SELECT COUNT(*) AS active_errors,
+                       COALESCE(SUM(wrong_count), 0) AS wrong_clicks
+                FROM all_time_errors
+                WHERE test_id = ? AND COALESCE(is_resolved, 0) = 0
+                """,
+                (test_id,),
+            ).fetchone()
+        except Exception:
+            _rollback_if_possible(conn)
 
-    answered = stats["answered"] or 0
-    correct = stats["correct"] or 0
-    percent = round(correct / answered * 100, 1) if answered else 0
+        try:
+            completed_solutions = conn.execute(
+                """
+                SELECT COUNT(*) AS c,
+                       AVG(duration_seconds) AS avg_time,
+                       MIN(duration_seconds) AS best_time
+                FROM attempts
+                WHERE test_id = ?
+                  AND mode IN (?, ?, ?, ?)
+                  AND finished_at IS NOT NULL
+                  AND answered > 0
+                """,
+                (test_id, *SOLUTION_MODES),
+            ).fetchone()
+        except Exception:
+            _rollback_if_possible(conn)
 
-    return (
-        f"📈 Статистика по тесту\n{title}\n\n"
-        f"Количество вопросов: {questions_count}\n"
-        f"Пользователей решали: {stats['users'] or 0}\n"
-        f"Попыток начато: {stats['attempts_started'] or 0}\n"
-        f"Попыток завершено: {stats['attempts_finished'] or 0}\n"
-        f"Завершённых решений: {completed_solutions['c'] or 0}\n"
-        f"Среднее время решения: {seconds_to_text(completed_solutions['avg_time'])}\n"
-        f"Всего ответов: {answered}\n"
-        f"Правильных ответов: {correct}\n"
-        f"Средний процент: {percent}%\n"
-        f"Активных ошибок за всё время: {errors['active_errors'] or 0}\n"
-        f"Всего ошибочных ответов: {errors['wrong_clicks'] or 0}"
-    )
+        try:
+            modes = conn.execute(
+                """
+                SELECT mode,
+                       COUNT(*) AS attempts,
+                       SUM(CASE WHEN finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished,
+                       COALESCE(SUM(answered), 0) AS answered,
+                       COALESCE(SUM(correct), 0) AS correct
+                FROM attempts
+                WHERE test_id = ?
+                GROUP BY mode
+                ORDER BY attempts DESC
+                """,
+                (test_id,),
+            ).fetchall()
+        except Exception:
+            _rollback_if_possible(conn)
+
+    users = int(stats["users"] or 0) if stats else 0
+    attempts_started = int(stats["attempts_started"] or 0) if stats else 0
+    attempts_finished = int(stats["attempts_finished"] or 0) if stats else 0
+    answered = int(stats["answered"] or 0) if stats else 0
+    correct = int(stats["correct"] or 0) if stats else 0
+    percent = _percent(correct, answered)
+
+    active_errors = int(errors["active_errors"] or 0) if errors else 0
+    wrong_clicks = int(errors["wrong_clicks"] or 0) if errors else 0
+
+    completed_count = int(completed_solutions["c"] or 0) if completed_solutions else 0
+    avg_time = completed_solutions["avg_time"] if completed_solutions else None
+    best_time = completed_solutions["best_time"] if completed_solutions else None
+
+    completion_percent = _percent(attempts_finished, attempts_started)
+
+    lines = [
+        "📊 Обзор теста",
+        "",
+        f"📚 {title}",
+        f"Вопросов: {questions_count}",
+        "",
+        "👥 Пользователи",
+        f"Решали тест: {users}",
+        f"Попыток начато: {attempts_started}",
+        f"Попыток завершено: {attempts_finished} ({completion_percent}%)",
+        "",
+        "🎯 Результаты",
+        f"Правильно: {correct} из {answered}",
+        f"Средний результат: {percent}%",
+        f"Завершённых полных решений: {completed_count}",
+        f"Среднее время: {seconds_to_text(avg_time)}",
+        f"Лучшее время: {seconds_to_text(best_time)}",
+        "",
+        "🧠 Ошибки",
+        f"Активных ошибочных вопросов: {active_errors}",
+        f"Всего ошибочных ответов: {wrong_clicks}",
+    ]
+
+    if modes:
+        lines.extend(["", "🎮 По режимам"])
+        for row in modes:
+            mode_answered = int(row["answered"] or 0)
+            mode_correct = int(row["correct"] or 0)
+            mode_percent = _percent(mode_correct, mode_answered)
+            lines.append(
+                f"• {mode_title(row['mode'])}: "
+                f"{int(row['finished'] or 0)}/{int(row['attempts'] or 0)} заверш. · "
+                f"{mode_percent}%"
+            )
+
+    return "\\n".join(lines)
+
+
+def admin_test_stats_text(test_id: str) -> str:
+    return admin_test_overview_text(test_id)
+
+
+def validate_single_test_text(test_id: str) -> str:
+    info = TESTS[test_id]
+    title = info["title"]
+
+    lines = ["🧪 Проверка теста", "", f"📚 {title}", f"ID: {test_id}", ""]
+
+    try:
+        questions = get_questions(test_id)
+    except Exception as exc:
+        return "\\n".join(lines + [f"❌ Не удалось загрузить: {type(exc).__name__}: {exc}"])
+
+    invalid_items = []
+    seen: dict[str, int] = {}
+    duplicates = []
+
+    for index, question in enumerate(questions):
+        q_text = str(question.get("question") or "").strip()
+        options = question.get("options") or []
+        correct_index = question.get("correct_index")
+
+        problems = []
+        if not q_text:
+            problems.append("нет текста вопроса")
+        if not isinstance(options, list) or len(options) < 2:
+            problems.append("меньше 2 вариантов")
+        if correct_index is None:
+            problems.append("нет correct_index")
+        else:
+            try:
+                correct_int = int(correct_index)
+                if correct_int < 0 or correct_int >= len(options):
+                    problems.append("correct_index вне диапазона")
+            except (TypeError, ValueError):
+                problems.append("correct_index не число")
+
+        normalized = " ".join(q_text.lower().split())
+        if normalized:
+            if normalized in seen:
+                duplicates.append((seen[normalized] + 1, index + 1))
+            else:
+                seen[normalized] = index
+
+        if problems:
+            invalid_items.append((index + 1, ", ".join(problems)))
+
+    lines.append(f"Вопросов: {len(questions)}")
+
+    if invalid_items:
+        lines.append(f"❌ Проблемных вопросов: {len(invalid_items)}")
+        for num, problem in invalid_items[:15]:
+            lines.append(f"• Вопрос {num}: {problem}")
+        if len(invalid_items) > 15:
+            lines.append(f"• ещё {len(invalid_items) - 15}")
+    else:
+        lines.append("✅ Структура вопросов: OK")
+
+    if duplicates:
+        lines.append(f"⚠️ Дубликатов: {len(duplicates)}")
+        for first, second in duplicates[:15]:
+            lines.append(f"• Вопрос {first} повторяется в вопросе {second}")
+        if len(duplicates) > 15:
+            lines.append(f"• ещё {len(duplicates) - 15}")
+    else:
+        lines.append("✅ Дубликатов не найдено")
+
+    return "\\n".join(lines)
 
 def admin_rating_text(test_id: str) -> str:
     return public_rating_text(test_id)
@@ -402,71 +526,99 @@ def _percent(correct: int | float | None, total: int | float | None) -> float:
     return round(float(correct or 0) / float(total) * 100, 1)
 
 
+def _safe_scalar(conn, sql: str, params: tuple = (), default=0):
+    try:
+        row = conn.execute(sql, params).fetchone()
+        if not row:
+            return default
+        # sqlite.Row and psycopg dict_row both support keys
+        value = row[0] if not hasattr(row, "keys") else next(iter(dict(row).values()))
+        return default if value is None else value
+    except Exception:
+        _rollback_if_possible(conn)
+        return default
+
+
 def admin_summary_text() -> str:
     ensure_admin_tables()
-    today_start = _today_start()
+
+    backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
 
     with db_connect() as conn:
-        users = _safe_count(conn, "users")
-        active_today = _safe_count(conn, "users", "WHERE last_seen_at >= '%s'" % today_start)
-        attempts = _safe_count(conn, "attempts")
-        finished = _safe_count(conn, "attempts", "WHERE finished_at IS NOT NULL")
-        attempts_today = _safe_count(conn, "attempts", "WHERE started_at >= '%s'" % today_start)
-        finished_today = _safe_count(conn, "attempts", "WHERE finished_at IS NOT NULL AND finished_at >= '%s'" % today_start)
-        active_sessions = _safe_count(conn, "active_sessions")
-        runtime_sessions = _safe_count(conn, "runtime_sessions")
-        active_errors = _safe_count(conn, "all_time_errors", "WHERE COALESCE(is_resolved, 0) = 0")
-        favorites = _safe_count(conn, "favorites")
-        blocked_users = _safe_count(conn, "blocked_users")
-        broadcast_recipients = max(0, (users or 0) - (blocked_users or 0))
+        users = _safe_count(conn, "users") or 0
+        attempts = _safe_count(conn, "attempts") or 0
+        finished = _safe_count(conn, "attempts", "WHERE finished_at IS NOT NULL") or 0
+        active_sessions = _safe_count(conn, "active_sessions") or 0
+        runtime_sessions = _safe_count(conn, "runtime_sessions") or 0
+        active_errors = _safe_count(conn, "all_time_errors", "WHERE COALESCE(is_resolved, 0) = 0") or 0
+        favorites = _safe_count(conn, "favorites") or 0
+        blocked_users = _safe_count(conn, "blocked_users") or 0
 
-        totals = conn.execute(
-            """
-            SELECT COALESCE(SUM(answered), 0) AS answered,
-                   COALESCE(SUM(correct), 0) AS correct
-            FROM attempts
-            WHERE finished_at IS NOT NULL
-            """
-        ).fetchone()
+        totals = None
+        try:
+            totals = conn.execute(
+                """
+                SELECT COALESCE(SUM(answered), 0) AS answered,
+                       COALESCE(SUM(correct), 0) AS correct
+                FROM attempts
+                WHERE finished_at IS NOT NULL
+                """
+            ).fetchone()
+        except Exception:
+            _rollback_if_possible(conn)
 
-        last_user = conn.execute(
-            """
-            SELECT user_id, username, first_name, last_name, last_seen_at
-            FROM users
-            ORDER BY last_seen_at DESC
-            LIMIT 1
-            """
-        ).fetchone()
+        last_user = None
+        try:
+            last_user = conn.execute(
+                """
+                SELECT user_id, username, first_name, last_name, last_seen_at
+                FROM users
+                ORDER BY last_seen_at DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        except Exception:
+            _rollback_if_possible(conn)
 
     answered = int(totals["answered"] or 0) if totals else 0
     correct = int(totals["correct"] or 0) if totals else 0
     avg_percent = _percent(correct, answered)
-    backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
+    broadcast_recipients = max(0, users - blocked_users)
+
     last_activity = "—"
     if last_user:
         last_activity = f"{user_display_name(last_user)} · {last_user['last_seen_at']}"
 
     return (
-        "🛠 Админ-панель\n\n"
-        "📊 Обзор\n\n"
-        f"👥 Пользователей: {users or 0}\n"
-        f"🟢 Активных сегодня: {active_today or 0}\n"
-        f"📝 Попыток всего: {attempts or 0}\n"
-        f"✅ Завершено всего: {finished or 0}\n"
-        f"📅 Попыток сегодня: {attempts_today or 0}\n"
-        f"🏁 Завершено сегодня: {finished_today or 0}\n\n"
-        f"🎯 Средний результат: {avg_percent}%\n"
-        f"🔢 Ответов в завершённых попытках: {answered}\n\n"
-        f"📚 Тестов: {len(TESTS)}\n"
-        f"🧠 Активных ошибок: {active_errors or 0}\n"
-        f"⭐ Избранных вопросов: {favorites or 0}\n"
-        f"🚫 Заблокированных: {blocked_users or 0}\n"
-        f"📢 Получателей рассылки: {broadcast_recipients}\n"
-        f"💾 Сохранённых сессий: {active_sessions or 0}\n"
-        f"🔄 Runtime-сессий: {runtime_sessions or 0}\n\n"
-        f"🗄 База: {backend}\n"
-        f"🕒 Последняя активность: {last_activity}"
+        "📊 Обзор\\n\\n"
+        f"👥 Пользователей: {users}\\n"
+        f"🚫 Заблокированных: {blocked_users}\\n"
+        f"📢 Получателей рассылки: {broadcast_recipients}\\n\\n"
+        f"📝 Попыток всего: {attempts}\\n"
+        f"✅ Завершено: {finished}\\n"
+        f"🎯 Средний результат: {avg_percent}%\\n"
+        f"🔢 Ответов: {answered}\\n\\n"
+        f"📚 Тестов: {len(TESTS)}\\n"
+        f"🧠 Активных ошибок: {active_errors}\\n"
+        f"⭐ Избранных вопросов: {favorites}\\n\\n"
+        f"💾 Сохранённых сессий: {active_sessions}\\n"
+        f"🔄 Runtime-сессий: {runtime_sessions}\\n"
+        f"🗄 База: {backend}\\n\\n"
+        f"🕒 Последняя активность:\\n{last_activity}"
     )
+
+
+def safe_admin_summary_text() -> str:
+    try:
+        return admin_summary_text()
+    except Exception as exc:
+        return (
+            "📊 Обзор\\n\\n"
+            "⚠️ Обзор не загрузился.\\n"
+            f"Ошибка: {type(exc).__name__}: {exc}\\n\\n"
+            "Открой 🐞 Debug или пришли этот текст."
+        )
+
 
 def _rollback_if_possible(conn) -> None:
     try:
@@ -734,37 +886,82 @@ async def blocked_user_guard(update: Update, context: ContextTypes.DEFAULT_TYPE)
     raise ApplicationHandlerStop
 
 
-def admin_users_text(page: int = 0) -> str:
+def _parse_users_sort(value: str | None) -> str:
+    allowed = {"recent", "result", "attempts", "errors"}
+    return value if value in allowed else "recent"
+
+
+def _users_sort_title(sort: str) -> str:
+    return {
+        "recent": "последняя активность",
+        "result": "лучший средний результат",
+        "attempts": "больше всего попыток",
+        "errors": "больше всего ошибок",
+    }.get(sort, "последняя активность")
+
+
+def _users_order_sql(sort: str) -> str:
+    if sort == "result":
+        return "percent DESC, finished_attempts DESC, u.last_seen_at DESC"
+    if sort == "attempts":
+        return "attempts_total DESC, u.last_seen_at DESC"
+    if sort == "errors":
+        return "active_errors DESC, u.last_seen_at DESC"
+    return "u.last_seen_at DESC"
+
+
+def _users_query(sort: str) -> str:
+    order_sql = _users_order_sql(sort)
+    return f"""
+        SELECT
+            u.user_id,
+            u.username,
+            u.first_name,
+            u.last_name,
+            u.last_seen_at,
+            COUNT(DISTINCT a.attempt_id) AS attempts_total,
+            SUM(CASE WHEN a.finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished_attempts,
+            COALESCE(SUM(a.answered), 0) AS answered,
+            COALESCE(SUM(a.correct), 0) AS correct,
+            CASE
+                WHEN COALESCE(SUM(a.answered), 0) > 0
+                THEN ROUND(COALESCE(SUM(a.correct), 0) * 100.0 / COALESCE(SUM(a.answered), 0), 1)
+                ELSE 0
+            END AS percent,
+            COUNT(DISTINCT e.question_index) AS active_errors,
+            COUNT(DISTINCT f.question_index) AS favorites,
+            CASE WHEN b.user_id IS NULL THEN 0 ELSE 1 END AS is_blocked
+        FROM users u
+        LEFT JOIN attempts a ON a.user_id = u.user_id
+        LEFT JOIN all_time_errors e
+            ON e.user_id = u.user_id AND COALESCE(e.is_resolved, 0) = 0
+        LEFT JOIN favorites f ON f.user_id = u.user_id
+        LEFT JOIN blocked_users b ON b.user_id = u.user_id
+        GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.last_seen_at, b.user_id
+        ORDER BY {order_sql}
+        LIMIT ? OFFSET ?
+    """
+
+
+def admin_users_text(page: int = 0, sort: str = "recent") -> str:
+    ensure_admin_tables()
+    sort = _parse_users_sort(sort)
     page = max(0, page)
     offset = page * ADMIN_USERS_PAGE_SIZE
 
     with db_connect() as conn:
         total = _safe_count(conn, "users") or 0
-        rows = conn.execute(
-            """
-            SELECT u.user_id, u.username, u.first_name, u.last_name, u.last_seen_at,
-                   COUNT(a.attempt_id) AS attempts_total,
-                   SUM(CASE WHEN a.finished_at IS NOT NULL THEN 1 ELSE 0 END) AS attempts_finished,
-                   COALESCE(SUM(a.answered), 0) AS answered,
-                   COALESCE(SUM(a.correct), 0) AS correct
-            FROM users u
-            LEFT JOIN attempts a ON a.user_id = u.user_id
-            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.last_seen_at
-            ORDER BY u.last_seen_at DESC
-            LIMIT ? OFFSET ?
-            """,
-            (ADMIN_USERS_PAGE_SIZE, offset),
-        ).fetchall()
+        rows = conn.execute(_users_query(sort), (ADMIN_USERS_PAGE_SIZE, offset)).fetchall()
 
-    total_pages = max(1, (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+    total_pages = _admin_user_pages(total)
     start_num = offset + 1 if total else 0
     end_num = min(offset + len(rows), total)
 
     lines = [
         "👥 Пользователи",
         "",
-        f"{start_num}–{end_num} из {total}",
-        f"Страница {page + 1} из {total_pages}",
+        f"Показано: {start_num}–{end_num} из {total}",
+        f"Сортировка: {_users_sort_title(sort)}",
         "",
     ]
 
@@ -773,54 +970,85 @@ def admin_users_text(page: int = 0) -> str:
         return "\n".join(lines)
 
     for n, row in enumerate(rows, start=start_num):
+        name = user_display_name(row)
+        percent = float(row["percent"] or 0)
         answered = int(row["answered"] or 0)
         correct = int(row["correct"] or 0)
-        percent = _percent(correct, answered)
-        finished = int(row["attempts_finished"] or 0)
         attempts_total = int(row["attempts_total"] or 0)
-        lines.append(
-            f"{n}. {user_display_name(row)} — {percent}% · "
-            f"{finished}/{attempts_total} попыток · {row['last_seen_at'] or '—'}"
-        )
+        finished_attempts = int(row["finished_attempts"] or 0)
+        active_errors = int(row["active_errors"] or 0)
+        favorites = int(row["favorites"] or 0)
+        blocked = " 🚫" if int(row["is_blocked"] or 0) else ""
 
-    lines.extend(["", "Открой карточку пользователя кнопкой ниже."])
+        lines.append(f"{n}. {name}{blocked}")
+        lines.append(f"   🎯 {percent}% · ✅ {correct}/{answered}")
+        lines.append(f"   📝 попытки: {finished_attempts}/{attempts_total} · 🧠 ошибки: {active_errors} · ⭐ {favorites}")
+        lines.append(f"   🕒 {row['last_seen_at'] or '—'}")
+
+    lines.extend([
+        "",
+        "Подсказка:",
+        "🎯 — средний результат по всем ответам",
+        "🧠 — активные ошибки пользователя",
+    ])
     return "\n".join(lines)
 
 
-def admin_users_keyboard(page: int = 0) -> InlineKeyboardMarkup:
+def admin_users_keyboard(page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
+    ensure_admin_tables()
+    sort = _parse_users_sort(sort)
     page = max(0, page)
     offset = page * ADMIN_USERS_PAGE_SIZE
 
     with db_connect() as conn:
         total = _safe_count(conn, "users") or 0
-        rows = conn.execute(
-            """
-            SELECT user_id, username, first_name, last_name
-            FROM users
-            ORDER BY last_seen_at DESC
-            LIMIT ? OFFSET ?
-            """,
-            (ADMIN_USERS_PAGE_SIZE, offset),
-        ).fetchall()
+        rows = conn.execute(_users_query(sort), (ADMIN_USERS_PAGE_SIZE, offset)).fetchall()
 
     buttons = []
     for row in rows:
-        label = f"👤 {user_display_name(row)}"
-        if len(label) > 34:
-            label = label[:31].rstrip() + "…"
-        buttons.append([InlineKeyboardButton(label, callback_data=f"admin:global_user:{row['user_id']}:{page}")])
+        name = user_display_name(row)
+        percent = float(row["percent"] or 0)
+        label = f"{'🚫 ' if int(row['is_blocked'] or 0) else '👤 '}{name} · {percent}%"
+        if len(label) > 38:
+            label = label[:35].rstrip() + "…"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"admin:global_user:{row['user_id']}:{page}:{sort}")])
 
-    total_pages = max(1, (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+    buttons.extend([
+        [
+            InlineKeyboardButton("🕒 Активность", callback_data="admin:users:recent:0"),
+            InlineKeyboardButton("🎯 Результат", callback_data="admin:users:result:0"),
+        ],
+        [
+            InlineKeyboardButton("📝 Попытки", callback_data="admin:users:attempts:0"),
+            InlineKeyboardButton("🧠 Ошибки", callback_data="admin:users:errors:0"),
+        ],
+    ])
+
+    total_pages = _admin_user_pages(total)
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:users:{page - 1}"))
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:users:{sort}:{page - 1}"))
     if page + 1 < total_pages:
-        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:users:{page + 1}"))
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:users:{sort}:{page + 1}"))
     if nav:
         buttons.append(nav)
 
     buttons.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(buttons)
+
+
+def _attempt_row_text(row) -> str:
+    if not row:
+        return "пока нет"
+    answered = int(row["answered"] or 0)
+    correct = int(row["correct"] or 0)
+    percent = _percent(correct, answered)
+    status = "завершена" if row["finished_at"] else "не завершена"
+    return (
+        f"{correct}/{answered} · {percent}% · {status}\\n"
+        f"Время: {seconds_to_text(row['duration_seconds'])}\\n"
+        f"Дата: {row['started_at']}"
+    )
 
 
 def admin_global_user_text(user_id: int) -> str:
@@ -842,6 +1070,28 @@ def admin_global_user_text(user_id: int) -> str:
             (user_id,),
         ).fetchone()
 
+        best_attempt = conn.execute(
+            """
+            SELECT test_id, mode, started_at, finished_at, duration_seconds, answered, correct
+            FROM attempts
+            WHERE user_id = ? AND finished_at IS NOT NULL AND answered > 0
+            ORDER BY (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC, answered DESC, duration_seconds ASC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+
+        last_attempt = conn.execute(
+            """
+            SELECT test_id, mode, started_at, finished_at, duration_seconds, answered, correct
+            FROM attempts
+            WHERE user_id = ?
+            ORDER BY started_at DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+
         per_tests = conn.execute(
             """
             SELECT test_id, attempts_started, attempts_finished, total_answered, total_correct, last_activity_at
@@ -852,25 +1102,11 @@ def admin_global_user_text(user_id: int) -> str:
             (user_id,),
         ).fetchall()
 
-        favorites = _safe_count(conn, "favorites", f"WHERE user_id = {int(user_id)}")
-        active_errors = _safe_count(conn, "all_time_errors", f"WHERE user_id = {int(user_id)} AND COALESCE(is_resolved, 0) = 0")
-        saved_sessions = _safe_count(conn, "active_sessions", f"WHERE user_id = {int(user_id)}")
-        runtime_sessions = _safe_count(conn, "runtime_sessions", f"WHERE user_id = {int(user_id)}")
-        blocked = conn.execute(
-            "SELECT * FROM blocked_users WHERE user_id = ?",
-            (user_id,),
-        ).fetchone()
-
-        last_attempts = conn.execute(
-            """
-            SELECT test_id, mode, started_at, finished_at, answered, correct, duration_seconds
-            FROM attempts
-            WHERE user_id = ?
-            ORDER BY started_at DESC
-            LIMIT 5
-            """,
-            (user_id,),
-        ).fetchall()
+        favorites = _safe_count(conn, "favorites", f"WHERE user_id = {int(user_id)}") or 0
+        active_errors = _safe_count(conn, "all_time_errors", f"WHERE user_id = {int(user_id)} AND COALESCE(is_resolved, 0) = 0") or 0
+        saved_sessions = _safe_count(conn, "active_sessions", f"WHERE user_id = {int(user_id)}") or 0
+        runtime_sessions = _safe_count(conn, "runtime_sessions", f"WHERE user_id = {int(user_id)}") or 0
+        blocked = conn.execute("SELECT * FROM blocked_users WHERE user_id = ?", (user_id,)).fetchone()
 
     display_name = user_display_name(user) if user else f"ID {user_id}"
     username = f"@{user['username']}" if user and user["username"] else "—"
@@ -881,15 +1117,15 @@ def admin_global_user_text(user_id: int) -> str:
     answered = int(totals["answered"] or 0) if totals else 0
     correct = int(totals["correct"] or 0) if totals else 0
     percent = _percent(correct, answered)
+    unfinished = max(0, attempts_total - attempts_finished)
 
     lines = [
-        "👤 Карточка пользователя",
+        "👤 Пользователь",
         "",
-        f"Имя: {display_name}",
+        f"{display_name}",
         f"Username: {username}",
         f"ID: {user_id}",
         f"Статус: {status}",
-        f"Первый запуск: {user['first_seen_at'] if user else '—'}",
         f"Последняя активность: {user['last_seen_at'] if user else '—'}",
     ]
 
@@ -901,17 +1137,38 @@ def admin_global_user_text(user_id: int) -> str:
 
     lines.extend([
         "",
-        "📊 Общий результат",
-        f"Попыток: {attempts_finished} завершено из {attempts_total}",
-        f"Правильно: {correct} из {answered}",
-        f"Средний результат: {percent}%",
+        "📊 Учебная статистика",
+        f"🎯 Средний результат: {percent}%",
+        f"✅ Правильно: {correct} из {answered}",
+        f"📝 Попытки: {attempts_finished} завершено из {attempts_total}",
+        f"⏳ Незавершённых: {unfinished}",
         "",
-        "🧠 Данные",
-        f"Актуальных ошибок: {active_errors or 0}",
-        f"Избранных вопросов: {favorites or 0}",
-        f"Сохранённых сессий: {saved_sessions or 0}",
-        f"Runtime-сессий: {runtime_sessions or 0}",
+        "🧠 Работа с вопросами",
+        f"Активных ошибок: {active_errors}",
+        f"Избранных вопросов: {favorites}",
+        "",
+        "💾 Сессии",
+        f"Сохранённых: {saved_sessions}",
+        f"Runtime: {runtime_sessions}",
     ])
+
+    if best_attempt:
+        title = TESTS.get(best_attempt["test_id"], {}).get("title", best_attempt["test_id"])
+        lines.extend([
+            "",
+            "🏆 Лучший результат",
+            f"{title} · {mode_title(best_attempt['mode'])}",
+            _attempt_row_text(best_attempt),
+        ])
+
+    if last_attempt:
+        title = TESTS.get(last_attempt["test_id"], {}).get("title", last_attempt["test_id"])
+        lines.extend([
+            "",
+            "🕘 Последняя попытка",
+            f"{title} · {mode_title(last_attempt['mode'])}",
+            _attempt_row_text(last_attempt),
+        ])
 
     if per_tests:
         lines.extend(["", "📚 По тестам"])
@@ -921,54 +1178,45 @@ def admin_global_user_text(user_id: int) -> str:
             test_correct = int(row["total_correct"] or 0)
             test_percent = _percent(test_correct, test_answered)
             lines.append(
-                f"• {title}: {test_correct}/{test_answered} · {test_percent}% · "
+                f"• {title}: {test_percent}% · {test_correct}/{test_answered} · "
                 f"{int(row['attempts_finished'] or 0)} заверш."
-            )
-
-    if last_attempts:
-        lines.extend(["", "🕘 Последние попытки"])
-        for row in last_attempts:
-            title = TESTS.get(row["test_id"], {}).get("title", row["test_id"])
-            status_text = "завершена" if row["finished_at"] else "не завершена"
-            attempt_percent_value = _percent(row["correct"], row["answered"])
-            lines.append(
-                f"• {title} · {mode_title(row['mode'])}: "
-                f"{row['correct']}/{row['answered']} ({attempt_percent_value}%) · {status_text}"
             )
 
     return "\n".join(lines)
 
 
-def admin_global_user_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_global_user_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
+    sort = _parse_users_sort(sort)
     rows = [
         [
-            InlineKeyboardButton("📜 История", callback_data=f"admin:user_history:{user_id}:0:{page}"),
-            InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:user_errors:{user_id}:0:{page}"),
+            InlineKeyboardButton("📜 История", callback_data=f"admin:user_history:{user_id}:0:{page}:{sort}"),
+            InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:user_errors:{user_id}:0:{page}:{sort}"),
         ],
         [
-            InlineKeyboardButton("⭐ Избранное", callback_data=f"admin:user_favorites:{user_id}:0:{page}"),
-            InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}"),
+            InlineKeyboardButton("⭐ Избранное", callback_data=f"admin:user_favorites:{user_id}:0:{page}:{sort}"),
+            InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}:{sort}"),
         ],
     ]
 
     if is_user_blocked(user_id):
-        rows.append([InlineKeyboardButton("✅ Разблокировать", callback_data=f"admin:unblock_user:{user_id}:{page}")])
+        rows.append([InlineKeyboardButton("✅ Разблокировать", callback_data=f"admin:unblock_user:{user_id}:{page}:{sort}")])
     else:
-        rows.append([InlineKeyboardButton("🚫 Заблокировать", callback_data=f"admin:block_user_confirm:{user_id}:{page}")])
+        rows.append([InlineKeyboardButton("🚫 Заблокировать", callback_data=f"admin:block_user_confirm:{user_id}:{page}:{sort}")])
 
     rows.extend([
-        [InlineKeyboardButton("🧹 Очистить runtime", callback_data=f"admin:clear_user_runtime_confirm:{user_id}:{page}")],
-        [InlineKeyboardButton("🗑 Сбросить прогресс", callback_data=f"admin:reset_user_confirm:{user_id}:{page}")],
-        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{page}")],
+        [InlineKeyboardButton("🧹 Очистить runtime", callback_data=f"admin:clear_user_runtime_confirm:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("🗑 Сбросить прогресс", callback_data=f"admin:reset_user_confirm:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{sort}:{page}")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
     return InlineKeyboardMarkup(rows)
 
 
-def admin_user_back_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_user_back_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
+    sort = _parse_users_sort(sort)
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}")],
-        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{page}")],
+        [InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{sort}:{page}")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
 
@@ -1032,7 +1280,7 @@ def admin_user_history_text(user_id: int, page: int = 0) -> str:
     return "\n".join(lines)
 
 
-def admin_user_history_keyboard(user_id: int, page: int = 0, back_page: int = 0) -> InlineKeyboardMarkup:
+def admin_user_history_keyboard(user_id: int, page: int = 0, back_page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     total = 0
     with db_connect() as conn:
         total = _safe_count(conn, "attempts", f"WHERE user_id = {int(user_id)}") or 0
@@ -1041,12 +1289,12 @@ def admin_user_history_keyboard(user_id: int, page: int = 0, back_page: int = 0)
     rows = []
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:user_history:{user_id}:{page - 1}:{back_page}"))
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:user_history:{user_id}:{page - 1}:{back_page}:{sort}"))
     if page + 1 < total_pages:
-        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:user_history:{user_id}:{page + 1}:{back_page}"))
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:user_history:{user_id}:{page + 1}:{back_page}:{sort}"))
     if nav:
         rows.append(nav)
-    rows.extend(admin_user_back_keyboard(user_id, back_page).inline_keyboard)
+    rows.extend(admin_user_back_keyboard(user_id, back_page, sort).inline_keyboard)
     return InlineKeyboardMarkup(rows)
 
 
@@ -1103,7 +1351,7 @@ def admin_user_errors_text(user_id: int, page: int = 0) -> str:
     return "\n".join(lines)
 
 
-def admin_user_errors_keyboard(user_id: int, page: int = 0, back_page: int = 0) -> InlineKeyboardMarkup:
+def admin_user_errors_keyboard(user_id: int, page: int = 0, back_page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     with db_connect() as conn:
         total = _safe_count(
             conn,
@@ -1115,12 +1363,12 @@ def admin_user_errors_keyboard(user_id: int, page: int = 0, back_page: int = 0) 
     rows = []
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:user_errors:{user_id}:{page - 1}:{back_page}"))
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:user_errors:{user_id}:{page - 1}:{back_page}:{sort}"))
     if page + 1 < total_pages:
-        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:user_errors:{user_id}:{page + 1}:{back_page}"))
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:user_errors:{user_id}:{page + 1}:{back_page}:{sort}"))
     if nav:
         rows.append(nav)
-    rows.extend(admin_user_back_keyboard(user_id, back_page).inline_keyboard)
+    rows.extend(admin_user_back_keyboard(user_id, back_page, sort).inline_keyboard)
     return InlineKeyboardMarkup(rows)
 
 
@@ -1173,7 +1421,7 @@ def admin_user_favorites_text(user_id: int, page: int = 0) -> str:
     return "\n".join(lines)
 
 
-def admin_user_favorites_keyboard(user_id: int, page: int = 0, back_page: int = 0) -> InlineKeyboardMarkup:
+def admin_user_favorites_keyboard(user_id: int, page: int = 0, back_page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     with db_connect() as conn:
         total = _safe_count(conn, "favorites", f"WHERE user_id = {int(user_id)}") or 0
 
@@ -1181,12 +1429,12 @@ def admin_user_favorites_keyboard(user_id: int, page: int = 0, back_page: int = 
     rows = []
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:user_favorites:{user_id}:{page - 1}:{back_page}"))
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:user_favorites:{user_id}:{page - 1}:{back_page}:{sort}"))
     if page + 1 < total_pages:
-        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:user_favorites:{user_id}:{page + 1}:{back_page}"))
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:user_favorites:{user_id}:{page + 1}:{back_page}:{sort}"))
     if nav:
         rows.append(nav)
-    rows.extend(admin_user_back_keyboard(user_id, back_page).inline_keyboard)
+    rows.extend(admin_user_back_keyboard(user_id, back_page, sort).inline_keyboard)
     return InlineKeyboardMarkup(rows)
 
 
@@ -1221,16 +1469,16 @@ def export_user_csv(user_id: int) -> Path:
     return path
 
 
-def admin_block_user_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_block_user_confirm_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🚫 Да, заблокировать", callback_data=f"admin:block_user_do:{user_id}:{page}")],
-        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+        [InlineKeyboardButton("🚫 Да, заблокировать", callback_data=f"admin:block_user_do:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
     ])
 
 
-def admin_unblock_user_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_unblock_user_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}")],
+        [InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
         [InlineKeyboardButton("🚫 Заблокированные", callback_data="admin:blocked_users:0")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
@@ -1329,17 +1577,17 @@ def admin_broadcast_cancel_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def admin_reset_user_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_reset_user_confirm_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⚠️ Продолжить", callback_data=f"admin:reset_user_second:{user_id}:{page}")],
-        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+        [InlineKeyboardButton("⚠️ Продолжить", callback_data=f"admin:reset_user_second:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
     ])
 
 
-def admin_reset_user_second_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_reset_user_second_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🗑 Да, удалить прогресс", callback_data=f"admin:reset_user_do:{user_id}:{page}")],
-        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+        [InlineKeyboardButton("🗑 Да, удалить прогресс", callback_data=f"admin:reset_user_do:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
     ])
 
 
@@ -1483,10 +1731,10 @@ def validate_tests_text() -> str:
     return "\n".join(lines)
 
 
-def admin_clear_user_runtime_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+def admin_clear_user_runtime_confirm_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Да, очистить", callback_data=f"admin:clear_user_runtime_do:{user_id}:{page}")],
-        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+        [InlineKeyboardButton("✅ Да, очистить", callback_data=f"admin:clear_user_runtime_do:{user_id}:{page}:{sort}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
     ])
 
 
@@ -1617,7 +1865,7 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Админ-панель недоступна.")
         return
-    await update.message.reply_text(admin_summary_text(), reply_markup=admin_main_keyboard())
+    await update.message.reply_text("🛠 Админ-панель", reply_markup=admin_main_keyboard())
 
 
 async def admin_debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1634,7 +1882,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    await query.edit_message_text(admin_summary_text(), reply_markup=admin_main_keyboard())
+    await query.edit_message_text("🛠 Админ-панель", reply_markup=admin_main_keyboard())
 
 
 async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1646,8 +1894,17 @@ async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     parts = query.data.split(":")
-    page = int(parts[2]) if len(parts) > 2 else 0
-    await query.edit_message_text(admin_users_text(page), reply_markup=admin_users_keyboard(page))
+    if len(parts) >= 4:
+        sort = _parse_users_sort(parts[2])
+        page = int(parts[3])
+    elif len(parts) >= 3:
+        sort = "recent"
+        page = int(parts[2])
+    else:
+        sort = "recent"
+        page = 0
+
+    await query.edit_message_text(admin_users_text(page, sort), reply_markup=admin_users_keyboard(page, sort))
 
 
 async def handle_admin_global_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1658,12 +1915,15 @@ async def handle_admin_global_user_detail(update: Update, context: ContextTypes.
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    await query.edit_message_text(
-        admin_global_user_text(int(user_id_str)),
-        reply_markup=admin_global_user_keyboard(int(user_id_str), int(page_str)),
-    )
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3]) if len(parts) > 3 else 0
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
 
+    await query.edit_message_text(
+        admin_global_user_text(user_id),
+        reply_markup=admin_global_user_keyboard(user_id, page, sort),
+    )
 
 
 async def handle_admin_user_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1674,13 +1934,14 @@ async def handle_admin_user_history(update: Update, context: ContextTypes.DEFAUL
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str, back_page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
-    back_page = int(back_page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    back_page = int(parts[4])
+    sort = _parse_users_sort(parts[5]) if len(parts) > 5 else "recent"
     await query.edit_message_text(
         admin_user_history_text(user_id, page),
-        reply_markup=admin_user_history_keyboard(user_id, page, back_page),
+        reply_markup=admin_user_history_keyboard(user_id, page, back_page, sort),
     )
 
 
@@ -1692,13 +1953,14 @@ async def handle_admin_user_errors(update: Update, context: ContextTypes.DEFAULT
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str, back_page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
-    back_page = int(back_page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    back_page = int(parts[4])
+    sort = _parse_users_sort(parts[5]) if len(parts) > 5 else "recent"
     await query.edit_message_text(
         admin_user_errors_text(user_id, page),
-        reply_markup=admin_user_errors_keyboard(user_id, page, back_page),
+        reply_markup=admin_user_errors_keyboard(user_id, page, back_page, sort),
     )
 
 
@@ -1710,13 +1972,14 @@ async def handle_admin_user_favorites(update: Update, context: ContextTypes.DEFA
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str, back_page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
-    back_page = int(back_page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    back_page = int(parts[4])
+    sort = _parse_users_sort(parts[5]) if len(parts) > 5 else "recent"
     await query.edit_message_text(
         admin_user_favorites_text(user_id, page),
-        reply_markup=admin_user_favorites_keyboard(user_id, page, back_page),
+        reply_markup=admin_user_favorites_keyboard(user_id, page, back_page, sort),
     )
 
 
@@ -1728,14 +1991,15 @@ async def handle_admin_export_user(update: Update, context: ContextTypes.DEFAULT
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
     path = export_user_csv(user_id)
     await query.message.reply_document(InputFile(path), caption=f"📤 Экспорт пользователя: {user_id}")
     await query.edit_message_text(
         admin_global_user_text(user_id),
-        reply_markup=admin_global_user_keyboard(user_id, page),
+        reply_markup=admin_global_user_keyboard(user_id, page, sort),
     )
 
 
@@ -1747,15 +2011,16 @@ async def handle_admin_clear_user_runtime_confirm(update: Update, context: Conte
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
     await query.edit_message_text(
         "🧹 Очистить runtime-сессии пользователя?\n\n"
         f"Пользователь ID: {user_id}\n\n"
         "Это удалит только временные состояния текущих прохождений. "
         "Статистика, попытки, ошибки и избранное останутся.",
-        reply_markup=admin_clear_user_runtime_confirm_keyboard(user_id, page),
+        reply_markup=admin_clear_user_runtime_confirm_keyboard(user_id, page, sort),
     )
 
 
@@ -1767,13 +2032,14 @@ async def handle_admin_clear_user_runtime_do(update: Update, context: ContextTyp
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
     count = clear_user_runtime_sessions(user_id)
     await query.edit_message_text(
         f"✅ Runtime-сессии пользователя очищены.\n\nУдалено записей: {count}",
-        reply_markup=admin_global_user_keyboard(user_id, page),
+        reply_markup=admin_global_user_keyboard(user_id, page, sort),
     )
 
 
@@ -1785,16 +2051,17 @@ async def handle_admin_block_user_confirm(update: Update, context: ContextTypes.
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
 
     await query.edit_message_text(
         "🚫 Заблокировать пользователя?\n\n"
         f"Пользователь ID: {user_id}\n\n"
         "Он не сможет пользоваться ботом, пока ты его не разблокируешь. "
         "Статистика и данные пользователя останутся.",
-        reply_markup=admin_block_user_confirm_keyboard(user_id, page),
+        reply_markup=admin_block_user_confirm_keyboard(user_id, page, sort),
     )
 
 
@@ -1806,14 +2073,15 @@ async def handle_admin_block_user_do(update: Update, context: ContextTypes.DEFAU
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
 
     block_user(user_id, query.from_user.id, "blocked from admin panel")
     await query.edit_message_text(
         "🚫 Пользователь заблокирован.",
-        reply_markup=admin_unblock_user_keyboard(user_id, page),
+        reply_markup=admin_unblock_user_keyboard(user_id, page, sort),
     )
 
 
@@ -1825,14 +2093,15 @@ async def handle_admin_unblock_user(update: Update, context: ContextTypes.DEFAUL
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
 
     unblock_user(user_id)
     await query.edit_message_text(
         "✅ Пользователь разблокирован.",
-        reply_markup=admin_global_user_keyboard(user_id, page),
+        reply_markup=admin_global_user_keyboard(user_id, page, sort),
     )
 
 
@@ -1964,16 +2233,17 @@ async def handle_admin_reset_user_confirm(update: Update, context: ContextTypes.
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
     await query.edit_message_text(
         "🗑 Сбросить прогресс пользователя?\n\n"
         f"Пользователь ID: {user_id}\n\n"
         "Будут удалены попытки, статистика, ошибки, избранное и сохранённые сессии. "
         "Сам пользователь останется в списке.\n\n"
         "Это действие нельзя отменить.",
-        reply_markup=admin_reset_user_confirm_keyboard(user_id, page),
+        reply_markup=admin_reset_user_confirm_keyboard(user_id, page, sort),
     )
 
 
@@ -1985,14 +2255,15 @@ async def handle_admin_reset_user_second(update: Update, context: ContextTypes.D
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
     await query.edit_message_text(
         "⚠️ Последнее подтверждение\n\n"
         f"Пользователь ID: {user_id}\n\n"
         "После нажатия кнопки ниже прогресс будет удалён полностью.",
-        reply_markup=admin_reset_user_second_keyboard(user_id, page),
+        reply_markup=admin_reset_user_second_keyboard(user_id, page, sort),
     )
 
 
@@ -2004,9 +2275,10 @@ async def handle_admin_reset_user_do(update: Update, context: ContextTypes.DEFAU
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, user_id_str, page_str = query.data.split(":")
-    user_id = int(user_id_str)
-    page = int(page_str)
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3])
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
     result = reset_user_progress(user_id)
 
     await query.edit_message_text(
@@ -2019,7 +2291,7 @@ async def handle_admin_reset_user_do(update: Update, context: ContextTypes.DEFAU
         f"Избранного: {result['favorites']}\n"
         f"Сохранённых сессий: {result['active_sessions']}\n"
         f"Runtime-сессий: {result['runtime_sessions']}",
-        reply_markup=admin_global_user_keyboard(user_id, page),
+        reply_markup=admin_global_user_keyboard(user_id, page, sort),
     )
 
 
@@ -2134,7 +2406,7 @@ async def handle_admin_tests(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    await query.edit_message_text("Выбери тест:", reply_markup=admin_tests_keyboard())
+    await query.edit_message_text("📚 Тесты\n\nВыбери тест для просмотра статистики и действий.", reply_markup=admin_tests_keyboard())
 
 async def handle_admin_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2144,7 +2416,12 @@ async def handle_admin_test_menu(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text("Админ-панель недоступна.")
         return
     _, _, test_id = query.data.split(":")
-    await query.edit_message_text(TESTS[test_id]["title"], reply_markup=admin_test_keyboard(test_id))
+    title = TESTS[test_id]["title"]
+    questions_count = len(get_questions(test_id))
+    await query.edit_message_text(
+        f"📚 {title}\n\nВопросов: {questions_count}\n\nВыбери действие:",
+        reply_markup=admin_test_keyboard(test_id),
+    )
 
 async def handle_admin_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2153,7 +2430,31 @@ async def handle_admin_summary(update: Update, context: ContextTypes.DEFAULT_TYP
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    await query.edit_message_text(admin_summary_text(), reply_markup=admin_main_keyboard())
+    await query.edit_message_text(safe_admin_summary_text(), reply_markup=admin_main_keyboard())
+
+async def handle_admin_test_overview(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    await query.edit_message_text(admin_test_overview_text(test_id), reply_markup=admin_back_to_test_keyboard(test_id))
+
+
+async def handle_admin_validate_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    await query.edit_message_text(validate_single_test_text(test_id), reply_markup=admin_back_to_test_keyboard(test_id))
+
 
 async def handle_admin_test_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
