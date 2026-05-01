@@ -727,7 +727,7 @@ def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None
     ]
 
 
-PAGE_SIZE = 10
+PAGE_SIZE = 5
 
 
 def _dict(row) -> dict[str, Any] | None:

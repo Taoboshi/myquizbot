@@ -332,7 +332,7 @@ def find_results_keyboard(test_id: str, indices: list[int], page: int = 0) -> In
     return InlineKeyboardMarkup(rows)
 
 
-PAGE_SIZE = 10
+PAGE_SIZE = 5
 
 
 def _number_rows(items: list[tuple[str, str]], per_row: int = 5) -> list[list[InlineKeyboardButton]]:

@@ -35,7 +35,7 @@ from .keyboards import (
     test_main_keyboard,
     test_select_keyboard,
 )
-from .keyboards import find_results_text, preview_question_text, search_question_indices
+from .keyboards import find_results_text, preview_question_text, search_question_indices, PAGE_SIZE
 from .loader import get_questions
 from .quiz import (
     add_session_wrong_answer,
@@ -276,7 +276,7 @@ async def handle_profile_favorites(update: Update, context: ContextTypes.DEFAULT
     page = int(parts[2]) if len(parts) > 2 else 0
     items, total = list_favorites(query.from_user.id, test_id, page)
     title = TESTS[test_id]["title"]
-    start = page * 10
+    start = page * PAGE_SIZE
     lines = ["⭐ Избранные", "", title, "", f"Всего: {total}"]
     if total:
         lines.append(f"Показаны: {start + 1}–{start + len(items)} из {total}")
@@ -320,7 +320,7 @@ async def handle_profile_errors(update: Update, context: ContextTypes.DEFAULT_TY
     page = int(parts[2]) if len(parts) > 2 else 0
     items, total, counts = list_profile_errors(query.from_user.id, test_id, page)
     title = TESTS[test_id]["title"]
-    start = page * 10
+    start = page * PAGE_SIZE
     lines = [
         "🧠 Ошибки",
         "",
@@ -382,7 +382,7 @@ async def handle_profile_history(update: Update, context: ContextTypes.DEFAULT_T
     test_id = parts[1]
     page = int(parts[2]) if len(parts) > 2 else 0
     attempts, total = list_attempts(query.from_user.id, test_id, page)
-    start = page * 10
+    start = page * PAGE_SIZE
     lines = ["📜 История попыток", "", TESTS[test_id]["title"]]
     if total:
         lines.extend(["", f"Показаны: {start + 1}–{start + len(attempts)} из {total}", ""])
@@ -442,8 +442,8 @@ async def handle_attempt_errors_page(update: Update, context: ContextTypes.DEFAU
     test_id = attempt["test_id"]
     all_items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
     total = len(all_items)
-    start = page * 10
-    items = all_items[start:start + 10]
+    start = page * PAGE_SIZE
+    items = all_items[start:start + PAGE_SIZE]
     lines = ["🧠 Ошибки попытки", "", f"📄 Попытка #{attempt_id}", TESTS[test_id]["title"], "", f"Ошибок: {total}"]
     if items:
         lines.append("")
@@ -530,8 +530,8 @@ async def handle_result_errors_page(update: Update, context: ContextTypes.DEFAUL
     test_id = attempt["test_id"]
     all_items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
     total = len(all_items)
-    start = page * 10
-    items = all_items[start:start + 10]
+    start = page * PAGE_SIZE
+    items = all_items[start:start + PAGE_SIZE]
     lines = ["🧠 Ошибки", "", f"📚 {TESTS[test_id]['title']}", f"📄 Попытка #{attempt_id}", "", f"Ошибок: {total}"]
     if items:
         lines.append("")
