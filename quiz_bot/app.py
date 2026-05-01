@@ -82,7 +82,7 @@ from .admin import (
     handle_admin_users_attempts,
     handle_admin_users_errors,
 )
-from .config import ADMIN_IDS, BOT_TOKEN
+from .config import get_bot_token
 from .handlers import (
     finish_command,
     handle_answer,
@@ -142,6 +142,7 @@ from .handlers import (
     stats_command,
     tests_command,
 )
+from .helpers import is_admin
 from .runtime import keep_alive
 from .storage import acquire_polling_lock, init_db, release_polling_lock
 
@@ -167,7 +168,7 @@ async def error_handler(update, context) -> None:
     try:
         if update and update.effective_chat:
             user_id = update.effective_user.id if update.effective_user else None
-            if user_id in ADMIN_IDS:
+            if user_id is not None and is_admin(user_id):
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     text=(
@@ -188,7 +189,7 @@ async def error_handler(update, context) -> None:
 def build_application():
     app = (
         ApplicationBuilder()
-        .token(BOT_TOKEN)
+        .token(get_bot_token(required=True))
         .post_init(setup_bot_commands)
         .concurrent_updates(int(os.getenv("BOT_CONCURRENT_UPDATES", "8")))
         .build()
@@ -345,14 +346,13 @@ def main() -> None:
     init_db()
     keep_alive()
 
-    if not BOT_TOKEN:
-        raise RuntimeError("Не найден TELEGRAM_BOT_TOKEN в Render Environment Variables.")
+    get_bot_token(required=True)
 
     acquire_polling_lock()
     try:
         while True:
             app = build_application()
-            print("Bot is running...")
+            logger.info("Bot is running...")
             try:
                 app.run_polling()
                 break

@@ -1,11 +1,14 @@
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import time
 from typing import Any
 
 from .config import DB_PATH
+
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -44,10 +47,10 @@ def acquire_polling_lock() -> None:
     if _POLLING_LOCK_CONN is not None:
         return
 
-    print("Waiting for Telegram polling lock...")
+    logger.info("Waiting for Telegram polling lock...")
     _POLLING_LOCK_CONN = psycopg.connect(DATABASE_URL, autocommit=True)
     _POLLING_LOCK_CONN.execute("SELECT pg_advisory_lock(%s)", (_polling_lock_key(),))
-    print("Telegram polling lock acquired.")
+    logger.info("Telegram polling lock acquired.")
 
 
 def release_polling_lock() -> None:
@@ -221,14 +224,25 @@ class PgConnectionWrapper:
 
 
 
+def _configure_sqlite_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 5000")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+    except sqlite3.OperationalError:
+        # Some filesystems do not support WAL. The bot can still work with the default journal.
+        pass
+    return conn
+
+
 def db_connect():
     if DATABASE_URL:
         return PgConnectionWrapper()
 
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return _configure_sqlite_connection(conn)
 
 
 def _row_get(row, key, default=None):
@@ -293,22 +307,6 @@ def _add_column_if_missing(conn, table_name: str, column_sql: str) -> None:
 
 
 
-def _column_exists(conn, table_name: str, column_name: str) -> bool:
-    if DATABASE_URL:
-        row = conn.execute(
-            """
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_name = ? AND column_name = ?
-            LIMIT 1
-            """,
-            (table_name, column_name),
-        ).fetchone()
-        return row is not None
-
-    rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
-    return any(row["name"] == column_name for row in rows)
-
 
 def _ensure_subject_settings_columns(conn) -> None:
     if not _table_exists(conn, "subject_settings"):
@@ -321,6 +319,25 @@ def _ensure_subject_settings_columns(conn) -> None:
     ]:
         if not _column_exists(conn, "subject_settings", column_name):
             conn.execute(f"ALTER TABLE subject_settings ADD COLUMN {column_name} {column_sql}")
+
+
+COMMON_INDEXES = (
+    "CREATE INDEX IF NOT EXISTS idx_attempts_user_test_finished ON attempts(user_id, test_id, finished_at)",
+    "CREATE INDEX IF NOT EXISTS idx_attempts_test_finished ON attempts(test_id, finished_at)",
+    "CREATE INDEX IF NOT EXISTS idx_attempts_user_started ON attempts(user_id, started_at)",
+    "CREATE INDEX IF NOT EXISTS idx_attempt_wrong_answers_attempt ON attempt_wrong_answers(user_id, test_id, attempt_id)",
+    "CREATE INDEX IF NOT EXISTS idx_attempt_wrong_answers_question ON attempt_wrong_answers(test_id, question_index)",
+    "CREATE INDEX IF NOT EXISTS idx_all_time_errors_user_test_resolved ON all_time_errors(user_id, test_id, is_resolved, last_wrong_at)",
+    "CREATE INDEX IF NOT EXISTS idx_all_time_errors_test_question ON all_time_errors(test_id, question_index)",
+    "CREATE INDEX IF NOT EXISTS idx_user_stats_test_activity ON user_stats(test_id, last_activity_at)",
+    "CREATE INDEX IF NOT EXISTS idx_user_stats_test_score ON user_stats(test_id, total_correct, total_answered)",
+    "CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen_at)",
+)
+
+
+def _create_common_indexes(conn) -> None:
+    for stmt in COMMON_INDEXES:
+        conn.execute(stmt)
 
 
 def _init_postgres_db() -> None:
@@ -492,6 +509,7 @@ def _init_postgres_db() -> None:
             conn.execute(stmt)
 
         _ensure_subject_settings_columns(conn)
+        _create_common_indexes(conn)
         conn.commit()
 
 
@@ -635,6 +653,7 @@ def _init_sqlite_db() -> None:
                 pass
 
         _ensure_subject_settings_columns(conn)
+        _create_common_indexes(conn)
         conn.commit()
 
 
@@ -1293,27 +1312,6 @@ def record_attempt_wrong_answer(
         )
         conn.commit()
 
-
-def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None) -> list[dict[str, int | None]]:
-    if attempt_id is None:
-        return []
-    with db_connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT question_index, wrong_answer_index
-            FROM attempt_wrong_answers
-            WHERE user_id = ? AND test_id = ? AND attempt_id = ?
-            ORDER BY id ASC
-            """,
-            (user_id, test_id, attempt_id),
-        ).fetchall()
-    return [
-        {
-            "question_index": int(row["question_index"]),
-            "wrong_answer_index": row["wrong_answer_index"],
-        }
-        for row in rows
-    ]
 
 
 PAGE_SIZE = 5

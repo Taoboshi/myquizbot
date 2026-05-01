@@ -2,7 +2,7 @@ import os
 import sqlite3
 from typing import Any
 
-from .config import ADMIN_IDS
+from .config import get_env_admin_ids
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -96,13 +96,7 @@ def mode_title(mode: str | None) -> str:
     }.get(mode or "", "Тест")
 
 def get_admin_ids() -> set[int]:
-    ids = set(ADMIN_IDS)
-    raw = os.getenv("TELEGRAM_ADMIN_IDS", "") or os.getenv("TELEGRAM_ADMIN_ID", "")
-    for part in raw.replace(";", ",").split(","):
-        part = part.strip()
-        if part.isdigit():
-            ids.add(int(part))
-    return ids
+    return get_env_admin_ids()
 
 def is_admin(user_id: int) -> bool:
     return user_id in get_admin_ids()

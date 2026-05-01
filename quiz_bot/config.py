@@ -4,12 +4,37 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "quiz_progress.sqlite3")))
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 
-if not BOT_TOKEN:
-    raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
+def get_bot_token(*, required: bool = False) -> str:
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if required and not token:
+        raise RuntimeError("TELEGRAM_BOT_TOKEN is not set")
+    return token
 
-ADMIN_IDS = {551500449}
+
+def parse_int_set(raw: str | None) -> set[int]:
+    result: set[int] = set()
+    for part in str(raw or "").replace(";", ",").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            result.add(int(part))
+        except ValueError:
+            continue
+    return result
+
+
+def get_env_admin_ids() -> set[int]:
+    ids: set[int] = set()
+    for env_name in ("TELEGRAM_ADMIN_IDS", "TELEGRAM_ADMIN_ID", "ADMIN_IDS"):
+        ids.update(parse_int_set(os.getenv(env_name)))
+    return ids
+
+
+# Backward-compatible constants. Runtime code should prefer get_bot_token()/get_admin_ids().
+BOT_TOKEN = get_bot_token(required=False)
+ADMIN_IDS = frozenset(get_env_admin_ids())
 
 SUBJECTS = {}
 

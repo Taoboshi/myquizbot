@@ -255,23 +255,6 @@ def admin_add_test_to_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    subject_id = effective_test_info(test_id).get("subject_id")
-    back_callback = f"admin:subject:{subject_id}" if subject_id else "admin:tests"
-
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Статистика", callback_data=f"admin:test_overview:{test_id}")],
-        [
-            InlineKeyboardButton("👥 Пользователи", callback_data=f"admin:test_users:{test_id}:0"),
-            InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:frequent_errors:{test_id}"),
-        ],
-        [
-            InlineKeyboardButton("🔐 Доступ", callback_data=f"admin:test_access:{test_id}"),
-            InlineKeyboardButton("⚙️ Настройки", callback_data=f"admin:test_meta:{test_id}"),
-        ],
-        [InlineKeyboardButton("↩️ К разделу", callback_data=back_callback)],
-        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
-    ])
 
 def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([

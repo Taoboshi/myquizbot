@@ -4,8 +4,8 @@ from datetime import datetime
 from telegram import BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from .config import ADMIN_IDS, BTN_TEST_MENU, RESUMABLE_MODES, TESTS
-from .helpers import attempt_percent, format_display_datetime, mode_title, seconds_to_text, short_question_text
+from .config import BTN_TEST_MENU, RESUMABLE_MODES, TESTS
+from .helpers import attempt_percent, format_display_datetime, get_admin_ids, mode_title, seconds_to_text, short_question_text
 from .access import can_open_subject, can_open_test, is_code_locked_for_user, verify_access_code, verify_subject_access_code
 from .keyboards import (
     after_finish_keyboard,
@@ -91,7 +91,7 @@ async def setup_bot_commands(app) -> None:
 
     await app.bot.set_my_commands(user_commands)
 
-    for admin_id in ADMIN_IDS:
+    for admin_id in get_admin_ids():
         try:
             await app.bot.set_my_commands(
                 admin_commands,
