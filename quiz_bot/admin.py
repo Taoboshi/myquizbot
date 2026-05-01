@@ -403,6 +403,7 @@ def _percent(correct: int | float | None, total: int | float | None) -> float:
 
 
 def admin_summary_text() -> str:
+    ensure_admin_tables()
     today_start = _today_start()
 
     with db_connect() as conn:
@@ -467,11 +468,48 @@ def admin_summary_text() -> str:
         f"🕒 Последняя активность: {last_activity}"
     )
 
+def _rollback_if_possible(conn) -> None:
+    try:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        elif hasattr(conn, "conn") and hasattr(conn.conn, "rollback"):
+            conn.conn.rollback()
+    except Exception:
+        pass
+
+
+def _table_exists_for_admin(conn, table_name: str) -> bool:
+    try:
+        if DATABASE_URL:
+            row = conn.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_name = ?
+                ) AS exists
+                """,
+                (table_name,),
+            ).fetchone()
+            return bool(row["exists"])
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (table_name,),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        _rollback_if_possible(conn)
+        return False
+
+
 def _safe_count(conn, table_name: str, where_sql: str = "") -> int | None:
     try:
+        if not _table_exists_for_admin(conn, table_name):
+            return 0
         row = conn.execute(f"SELECT COUNT(*) AS c FROM {table_name} {where_sql}").fetchone()
         return int(row["c"] or 0)
     except Exception:
+        _rollback_if_possible(conn)
         return None
 
 
@@ -480,6 +518,7 @@ def _fmt_count(value: int | None) -> str:
 
 
 def admin_debug_text() -> str:
+    ensure_admin_tables()
     backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
     db_place = "DATABASE_URL" if DATABASE_URL else str(DB_PATH)
 
