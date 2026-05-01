@@ -687,7 +687,7 @@ def init_db() -> None:
 VALID_ACCESS_TYPES = {"public", "private", "code", "admin_only"}
 
 
-@ttl_cache(5)
+@ttl_cache(60)
 def get_test_access_setting(test_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "test_access_settings"):
@@ -749,7 +749,7 @@ def reset_test_access_setting(test_id: str) -> None:
 
 
 
-@ttl_cache(5)
+@ttl_cache(60)
 def list_subject_settings() -> list[dict[str, Any]]:
     with db_connect() as conn:
         if not _table_exists(conn, "subject_settings"):
@@ -793,7 +793,7 @@ def delete_subject_setting(subject_id: str) -> None:
         conn.commit()
 
 
-@ttl_cache(5)
+@ttl_cache(60)
 def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "subject_settings"):
@@ -881,7 +881,7 @@ def set_subject_access_setting(subject_id: str, access_type: str, code: str | No
     )
 
 
-@ttl_cache(5)
+@ttl_cache(60)
 def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "test_metadata_settings"):
@@ -962,7 +962,7 @@ def reset_test_metadata_setting(test_id: str) -> None:
         conn.commit()
 
 
-@ttl_cache(5)
+@ttl_cache(60)
 def has_user_test_access(user_id: int, test_id: str) -> bool:
     with db_connect() as conn:
         if not _table_exists(conn, "user_test_access"):
