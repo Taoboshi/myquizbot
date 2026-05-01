@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 from telegram.error import Conflict
@@ -73,7 +74,7 @@ from .handlers import (
     tests_command,
 )
 from .runtime import keep_alive
-from .storage import init_db
+from .storage import acquire_polling_lock, init_db, release_polling_lock
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,13 @@ async def error_handler(update, context) -> None:
 
 
 def build_application():
-    app = ApplicationBuilder().token(BOT_TOKEN).post_init(setup_bot_commands).build()
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .post_init(setup_bot_commands)
+        .concurrent_updates(int(os.getenv("BOT_CONCURRENT_UPDATES", "8")))
+        .build()
+    )
 
     # Commands
     app.add_handler(CommandHandler("start", start))
@@ -188,14 +195,18 @@ def main() -> None:
     if not BOT_TOKEN:
         raise RuntimeError("Не найден TELEGRAM_BOT_TOKEN в Render Environment Variables.")
 
-    while True:
-        app = build_application()
-        print("Bot is running...")
-        try:
-            app.run_polling()
-            break
-        except Conflict:
-            logger.warning(
-                "Telegram polling conflict: another bot instance is still running. Waiting 15 seconds..."
-            )
-            time.sleep(15)
+    acquire_polling_lock()
+    try:
+        while True:
+            app = build_application()
+            print("Bot is running...")
+            try:
+                app.run_polling()
+                break
+            except Conflict:
+                logger.warning(
+                    "Telegram polling conflict: another bot instance is still running. Waiting 15 seconds..."
+                )
+                time.sleep(15)
+    finally:
+        release_polling_lock()

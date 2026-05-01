@@ -12,12 +12,17 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 try:
     import psycopg
     from psycopg.rows import dict_row
+    from psycopg_pool import ConnectionPool
 except ImportError:  # локальный запуск без PostgreSQL всё ещё сможет работать на SQLite
     psycopg = None
     dict_row = None
+    ConnectionPool = None
 
 
 _POLLING_LOCK_CONN = None
+_PG_POOL = None
+PG_POOL_MIN_SIZE = int(os.getenv("PG_POOL_MIN_SIZE", "1"))
+PG_POOL_MAX_SIZE = int(os.getenv("PG_POOL_MAX_SIZE", "5"))
 _USER_UPSERT_CACHE: dict[int, float] = {}
 USER_UPSERT_CACHE_TTL_SECONDS = int(os.getenv("USER_UPSERT_CACHE_TTL_SECONDS", "600"))
 
@@ -77,17 +82,46 @@ class PgCursorWrapper:
         return iter(self.cursor)
 
 
+def _get_pg_pool():
+    global _PG_POOL
+
+    if psycopg is None or ConnectionPool is None:
+        raise RuntimeError("Для PostgreSQL установи зависимости: psycopg[binary] и psycopg_pool")
+
+    if _PG_POOL is None:
+        _PG_POOL = ConnectionPool(
+            DATABASE_URL,
+            min_size=PG_POOL_MIN_SIZE,
+            max_size=PG_POOL_MAX_SIZE,
+            kwargs={"row_factory": dict_row},
+            open=True,
+        )
+    return _PG_POOL
+
+
 class PgConnectionWrapper:
     def __init__(self):
         if psycopg is None:
             raise RuntimeError("Для PostgreSQL установи зависимость: psycopg[binary]")
-        self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+
+        self.conn = None
+        self._pool_context = None
+
+        if ConnectionPool is not None:
+            self._pool_context = _get_pg_pool().connection()
+        else:
+            self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
     def __enter__(self):
-        self.conn.__enter__()
+        if self._pool_context is not None:
+            self.conn = self._pool_context.__enter__()
+        else:
+            self.conn.__enter__()
         return self
 
     def __exit__(self, exc_type, exc, tb):
+        if self._pool_context is not None:
+            return self._pool_context.__exit__(exc_type, exc, tb)
         return self.conn.__exit__(exc_type, exc, tb)
 
     def execute(self, sql: str, params: tuple[Any, ...] | list[Any] | None = None):

@@ -48,9 +48,8 @@ from .quiz import (
     wrong_index_for_question,
 )
 from .runtime import LAST_START_AT, USER_STATE
-from .state import clear_text_waiting_state, delete_active_session, get_state, load_active_session, restore_state, save_active_session, start_quiz_mode
+from .state import clear_text_waiting_state, delete_active_session, get_state, load_active_session, restore_state, save_active_session, save_question_progress, start_quiz_mode
 from .storage import (
-    add_all_time_error,
     clear_all_time_errors,
     get_all_time_error_indices,
     get_answered_question_count,
@@ -68,9 +67,6 @@ from .storage import (
     error_counts,
     stats_summary,
     db_connect,
-    record_answer,
-    record_attempt_wrong_answer,
-    remove_all_time_error,
     upsert_user,
 )
 
@@ -745,29 +741,26 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     correct_index = int(get_questions(test_id)[index]["correct_index"])
     is_correct = selected == correct_index
 
-    record_answer(query.from_user.id, test_id, is_correct, index)
     state["total"] += 1
 
     if is_correct:
         state["correct"] += 1
-        remove_all_time_error(query.from_user.id, test_id, index)
-
-        await query.edit_message_text(
-            build_question_text(index, state, selected_index=selected, show_correct=True),
-            parse_mode="HTML",
-        )
-
         state["pos"] += 1
 
         if state["pos"] >= len(state["order"]):
             state["active"] = False
+            save_question_progress(query.from_user.id, state, index, True, save_session=False)
             finish_attempt_if_needed(query.from_user.id, state)
+            await query.edit_message_text(
+                build_question_text(index, state, selected_index=selected, show_correct=True),
+                parse_mode="HTML",
+            )
             await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
             return
 
-        save_active_session(query.from_user.id, state)
+        save_question_progress(query.from_user.id, state, index, True)
         next_index = state["order"][state["pos"]]
-        await query.message.reply_text(
+        await query.edit_message_text(
             build_question_text(next_index, state),
             reply_markup=answer_keyboard(test_id, next_index, user_id=query.from_user.id),
             parse_mode="HTML",
@@ -775,10 +768,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     add_session_wrong_answer(state, index, selected)
-    record_attempt_wrong_answer(state.get("attempt_id"), query.from_user.id, test_id, index, selected)
-    add_all_time_error(query.from_user.id, test_id, index, selected)
     state["awaiting_next"] = True
-    save_active_session(query.from_user.id, state)
+    save_question_progress(query.from_user.id, state, index, False, selected)
 
     await query.edit_message_text(
         build_question_text(index, state, selected_index=selected, show_correct=True),
@@ -805,13 +796,10 @@ async def handle_show_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await query.answer("Этот вопрос уже обработан")
         return
 
-    record_answer(query.from_user.id, test_id, False, index)
     state["total"] += 1
     add_session_wrong_answer(state, index, None)
-    record_attempt_wrong_answer(state.get("attempt_id"), query.from_user.id, test_id, index, None)
-    add_all_time_error(query.from_user.id, test_id, index, None)
     state["awaiting_next"] = True
-    save_active_session(query.from_user.id, state)
+    save_question_progress(query.from_user.id, state, index, False, None)
 
     await query.edit_message_text(
         build_question_text(index, state, selected_index=None, show_correct=True),
