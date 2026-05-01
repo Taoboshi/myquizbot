@@ -745,6 +745,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if is_correct:
         state["correct"] += 1
+        answered_text = build_question_text(index, state, selected_index=selected, show_correct=True)
         state["pos"] += 1
 
         if state["pos"] >= len(state["order"]):
@@ -752,7 +753,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             save_question_progress(query.from_user.id, state, index, True, save_session=False)
             finish_attempt_if_needed(query.from_user.id, state)
             await query.edit_message_text(
-                build_question_text(index, state, selected_index=selected, show_correct=True),
+                answered_text,
                 parse_mode="HTML",
             )
             await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state))
@@ -761,6 +762,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         save_question_progress(query.from_user.id, state, index, True)
         next_index = state["order"][state["pos"]]
         await query.edit_message_text(
+            answered_text,
+            parse_mode="HTML",
+        )
+        await query.message.reply_text(
             build_question_text(next_index, state),
             reply_markup=answer_keyboard(test_id, next_index, user_id=query.from_user.id),
             parse_mode="HTML",
