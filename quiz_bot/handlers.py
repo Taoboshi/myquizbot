@@ -81,11 +81,11 @@ from .storage import (
 
 async def setup_bot_commands(app) -> None:
     user_commands = [
-        BotCommand("start", "🎯 Запуск"),
+        BotCommand("start", "Запуск🎯"),
     ]
 
     admin_commands = [
-        BotCommand("start", "🎯 Запуск"),
+        BotCommand("start", "Запуск🎯"),
         BotCommand("admin", "Админ-панель"),
     ]
 
@@ -101,7 +101,6 @@ async def setup_bot_commands(app) -> None:
             pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
     chat_id = update.effective_chat.id
     current = datetime.now().timestamp()
 
@@ -110,10 +109,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     LAST_START_AT[chat_id] = current
     await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
+    upsert_user(update.effective_user)
 
 async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
     await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
+    upsert_user(update.effective_user)
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
