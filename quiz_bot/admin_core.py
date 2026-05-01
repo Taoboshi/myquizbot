@@ -768,6 +768,7 @@ def _safe_scalar(conn, sql: str, params: tuple = (), default=0):
 
 
 def admin_summary_text() -> str:
+    from .admin_users import ensure_admin_tables
     ensure_admin_tables()
 
     backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
@@ -897,6 +898,7 @@ def _fmt_count(value: int | None) -> str:
 
 
 def admin_debug_text() -> str:
+    from .admin_users import ensure_admin_tables
     ensure_admin_tables()
     backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
     db_place = "DATABASE_URL" if DATABASE_URL else str(DB_PATH)
