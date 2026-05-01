@@ -10,9 +10,10 @@ from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
-from .loader import get_questions
+from .access import access_label, can_view_test
+from .loader import get_questions, get_subjects, get_tests_for_subject
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
-from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, upsert_user
+from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, revoke_user_test_access, upsert_user
 
 
 def fmt_msk(value) -> str:
@@ -56,6 +57,7 @@ def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:frequent_errors:{test_id}"),
             InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_test:{test_id}"),
         ],
+        [InlineKeyboardButton("🔐 Доступ", callback_data=f"admin:test_access:{test_id}")],
         [InlineKeyboardButton("🧪 Проверить тест", callback_data=f"admin:validate_test:{test_id}")],
         [InlineKeyboardButton("📚 К тестам", callback_data="admin:tests")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
@@ -1206,6 +1208,7 @@ def admin_global_user_keyboard(user_id: int, page: int = 0, sort: str = "recent"
             InlineKeyboardButton("⭐ Избранное", callback_data=f"admin:user_favorites:{user_id}:0:{page}:{sort}"),
             InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}:{sort}"),
         ],
+        [InlineKeyboardButton("🔐 Доступы", callback_data=f"admin:user_access:{user_id}:{page}:{sort}")],
     ]
 
     if is_user_blocked(user_id):
@@ -1870,6 +1873,237 @@ def clear_runtime_sessions() -> int:
             return 0
 
 
+
+def _access_icon_for_admin(test_id: str) -> str:
+    access_type = TESTS[test_id].get("access", {}).get("type", "public")
+    return {
+        "public": "🌍",
+        "private": "🔐",
+        "code": "🔑",
+        "admin_only": "🙈",
+    }.get(access_type, "🌍")
+
+
+def admin_test_access_text(test_id: str) -> str:
+    info = TESTS[test_id]
+    access = info.get("access", {}) or {}
+    access_type = access.get("type", "public")
+    code = access.get("code") or "—"
+
+    granted_users = list_test_access_users(test_id)
+    allowed_users = access.get("users") or []
+    try:
+        allowed_users = [int(x) for x in allowed_users]
+    except Exception:
+        allowed_users = []
+
+    total_with_access = len(set(granted_users) | set(allowed_users))
+
+    lines = [
+        "🔐 Доступ к тесту",
+        "",
+        f"📚 {info['title']}",
+        f"Тип доступа: {access_label(test_id)}",
+        f"Код доступа: {code if access_type == 'code' else '—'}",
+        f"Пользователей с доступом: {total_with_access}",
+        "",
+    ]
+
+    if access_type == "public":
+        lines.extend([
+            "🌍 Тест открыт всем.",
+            "Выдавать доступ вручную не нужно.",
+        ])
+    elif access_type == "private":
+        lines.extend([
+            "🔐 Приватный тест видят только админ и пользователи с доступом.",
+            "Доступ можно выдать из карточки пользователя.",
+        ])
+    elif access_type == "code":
+        lines.extend([
+            "🔑 Тест виден всем как закрытый.",
+            "После правильного кода доступ сохраняется в базе.",
+            "Доступ также можно выдать вручную из карточки пользователя.",
+        ])
+    elif access_type == "admin_only":
+        lines.extend([
+            "🙈 Тест видит только админ.",
+        ])
+
+    if total_with_access:
+        lines.extend(["", "👥 Пользователи с доступом:"])
+        with db_connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT user_id, username, first_name, last_name
+                FROM users
+                WHERE user_id IN ({})
+                ORDER BY last_seen_at DESC
+                """.format(",".join(["?"] * len(set(granted_users) | set(allowed_users)))),
+                tuple(set(granted_users) | set(allowed_users)),
+            ).fetchall()
+        for row in rows[:15]:
+            lines.append(f"• {user_display_name(row)}")
+        if len(rows) > 15:
+            lines.append(f"• ещё {len(rows) - 15}")
+
+    return "\n".join(lines)
+
+
+def admin_test_access_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👥 Пользователи с доступом", callback_data=f"admin:test_access_users:{test_id}:0")],
+        [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
+def admin_test_access_users_text(test_id: str, page: int = 0) -> str:
+    info = TESTS[test_id]
+    access = info.get("access", {}) or {}
+    granted_users = list_test_access_users(test_id)
+    allowed_users = access.get("users") or []
+    try:
+        allowed_users = [int(x) for x in allowed_users]
+    except Exception:
+        allowed_users = []
+
+    user_ids = sorted(set(granted_users) | set(allowed_users))
+    page = max(0, page)
+    offset = page * ADMIN_USERS_PAGE_SIZE
+    chunk = user_ids[offset:offset + ADMIN_USERS_PAGE_SIZE]
+
+    lines = [
+        "👥 Пользователи с доступом",
+        "",
+        f"📚 {info['title']}",
+        f"Всего: {len(user_ids)}",
+        "",
+    ]
+
+    if not chunk:
+        lines.append("Пока никому не выдан доступ.")
+        return "\n".join(lines)
+
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT user_id, username, first_name, last_name, last_seen_at
+            FROM users
+            WHERE user_id IN ({})
+            ORDER BY last_seen_at DESC
+            """.format(",".join(["?"] * len(chunk))),
+            tuple(chunk),
+        ).fetchall()
+
+    by_id = {int(row["user_id"]): row for row in rows}
+    for n, user_id in enumerate(chunk, start=offset + 1):
+        row = by_id.get(user_id)
+        name = user_display_name(row) if row else f"ID {user_id}"
+        lines.append(f"{n}. {name}")
+
+    return "\n".join(lines)
+
+
+def admin_test_access_users_keyboard(test_id: str, page: int = 0) -> InlineKeyboardMarkup:
+    access = TESTS[test_id].get("access", {}) or {}
+    granted_users = list_test_access_users(test_id)
+    allowed_users = access.get("users") or []
+    try:
+        allowed_users = [int(x) for x in allowed_users]
+    except Exception:
+        allowed_users = []
+
+    user_ids = sorted(set(granted_users) | set(allowed_users))
+    total_pages = max(1, (len(user_ids) + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+
+    rows = []
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:test_access_users:{test_id}:{page - 1}"))
+    if page + 1 < total_pages:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:test_access_users:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+
+    rows.append([InlineKeyboardButton("🔐 К доступу теста", callback_data=f"admin:test_access:{test_id}")])
+    rows.append([InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_user_access_text(user_id: int) -> str:
+    with db_connect() as conn:
+        user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+
+    explicit_access = set(list_user_test_access(user_id))
+    lines = [
+        "🔐 Доступы пользователя",
+        "",
+        f"Пользователь: {user_display_name(user) if user else f'ID {user_id}'}",
+        "",
+    ]
+
+    for subject_id, subject in get_subjects():
+        subject_tests = get_tests_for_subject(subject_id)
+        if not subject_tests:
+            continue
+
+        lines.append(f"{subject.get('emoji', '📚')} {subject.get('title', subject_id)}")
+        for test_id, info in subject_tests:
+            access_type = info.get("access", {}).get("type", "public")
+            has_access = has_user_test_access(user_id, test_id)
+            built_in_users = info.get("access", {}).get("users") or []
+            try:
+                built_in = int(user_id) in [int(x) for x in built_in_users]
+            except Exception:
+                built_in = False
+
+            if access_type == "public":
+                status = "🌍 открыт всем"
+            elif access_type == "admin_only":
+                status = "🙈 только админ"
+            elif has_access or built_in:
+                status = "✅ доступ есть"
+            elif access_type == "code":
+                status = "🔒 по коду"
+            else:
+                status = "❌ доступа нет"
+
+            lines.append(f"• {info['title']}: {status}")
+        lines.append("")
+
+    return "\n".join(lines).rstrip()
+
+
+def admin_user_access_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
+    rows = []
+
+    for subject_id, subject in get_subjects():
+        for test_id, info in get_tests_for_subject(subject_id):
+            access_type = info.get("access", {}).get("type", "public")
+            if access_type in {"public", "admin_only"}:
+                continue
+
+            has_access = has_user_test_access(user_id, test_id)
+            if has_access:
+                label = f"➖ Забрать: {info['title']}"
+                callback = f"admin:revoke_access:{user_id}:{test_id}:{page}:{sort}"
+            else:
+                label = f"➕ Выдать: {info['title']}"
+                callback = f"admin:grant_access:{user_id}:{test_id}:{page}:{sort}"
+
+            if len(label) > 45:
+                label = label[:42].rstrip() + "…"
+            rows.append([InlineKeyboardButton(label, callback_data=callback)])
+
+    if not rows:
+        rows.append([InlineKeyboardButton("Нет закрытых тестов для управления", callback_data="admin:noop")])
+
+    rows.append([InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")])
+    rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
+    return InlineKeyboardMarkup(rows)
+
+
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     if not is_admin(update.effective_user.id):
@@ -2462,6 +2696,97 @@ async def handle_admin_clear_runtime_do(update: Update, context: ContextTypes.DE
     await query.edit_message_text(
         f"✅ Runtime-сессии очищены.\n\nУдалено записей: {count}",
         reply_markup=admin_manage_keyboard(),
+    )
+
+
+
+async def handle_admin_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+
+async def handle_admin_test_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":", 2)
+    await query.edit_message_text(admin_test_access_text(test_id), reply_markup=admin_test_access_keyboard(test_id))
+
+
+async def handle_admin_test_access_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id, page_str = query.data.split(":")
+    page = int(page_str)
+    await query.edit_message_text(
+        admin_test_access_users_text(test_id, page),
+        reply_markup=admin_test_access_users_keyboard(test_id, page),
+    )
+
+
+async def handle_admin_user_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3]) if len(parts) > 3 else 0
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
+
+    await query.edit_message_text(
+        admin_user_access_text(user_id),
+        reply_markup=admin_user_access_keyboard(user_id, page, sort),
+    )
+
+
+async def handle_admin_grant_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, test_id, page_str, sort = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+    grant_user_test_access(user_id, test_id, access_source="admin", granted_by=query.from_user.id)
+
+    await query.edit_message_text(
+        f"✅ Доступ выдан.\n\n{admin_user_access_text(user_id)}",
+        reply_markup=admin_user_access_keyboard(user_id, page, sort),
+    )
+
+
+async def handle_admin_revoke_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, test_id, page_str, sort = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+    revoke_user_test_access(user_id, test_id)
+
+    await query.edit_message_text(
+        f"✅ Доступ забран.\n\n{admin_user_access_text(user_id)}",
+        reply_markup=admin_user_access_keyboard(user_id, page, sort),
     )
 
 

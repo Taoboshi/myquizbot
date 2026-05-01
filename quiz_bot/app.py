@@ -48,6 +48,12 @@ from .admin import (
     handle_admin_test_users,
     handle_admin_unblock_user,
     handle_admin_tests,
+    handle_admin_noop,
+    handle_admin_test_access,
+    handle_admin_test_access_users,
+    handle_admin_user_access,
+    handle_admin_grant_access,
+    handle_admin_revoke_access,
     handle_admin_users,
     handle_admin_users_recent,
     handle_admin_users_result,
@@ -69,7 +75,6 @@ from .handlers import (
     handle_mini_start,
     handle_my_profile,
     handle_my_stats,
-    handle_noop,
     handle_next_question,
     handle_pause_to_menu,
     handle_profile_favorites,
@@ -99,9 +104,6 @@ from .handlers import (
     handle_start_quiz,
     handle_test_menu,
     handle_tests_menu,
-    handle_subject_menu,
-    handle_locked_test,
-    handle_enter_access_code,
     handle_text_input,
     handle_view_question,
     myid,
@@ -180,11 +182,7 @@ def build_application():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
     # User callbacks
-    app.add_handler(CallbackQueryHandler(handle_noop, pattern=r"^noop$"))
     app.add_handler(CallbackQueryHandler(handle_tests_menu, pattern=r"^tests:menu$"))
-    app.add_handler(CallbackQueryHandler(handle_subject_menu, pattern=r"^subject_menu:"))
-    app.add_handler(CallbackQueryHandler(handle_locked_test, pattern=r"^locked_test:"))
-    app.add_handler(CallbackQueryHandler(handle_enter_access_code, pattern=r"^enter_access_code:"))
     app.add_handler(CallbackQueryHandler(handle_test_menu, pattern=r"^test_menu:"))
     app.add_handler(CallbackQueryHandler(handle_learn_menu, pattern=r"^learn_menu:"))
     app.add_handler(CallbackQueryHandler(handle_my_profile, pattern=r"^my_profile:"))
@@ -272,6 +270,12 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_manage, pattern=r"^admin:manage$"))
     app.add_handler(CallbackQueryHandler(handle_admin_clear_runtime_confirm, pattern=r"^admin:clear_runtime_confirm$"))
     app.add_handler(CallbackQueryHandler(handle_admin_clear_runtime_do, pattern=r"^admin:clear_runtime_do$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_noop, pattern=r"^admin:noop$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_test_access_users, pattern=r"^admin:test_access_users:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_test_access, pattern=r"^admin:test_access:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_user_access, pattern=r"^admin:user_access:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_grant_access, pattern=r"^admin:grant_access:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_revoke_access, pattern=r"^admin:revoke_access:"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_menu, pattern=r"^admin:test:"))
 
     app.add_error_handler(error_handler)
