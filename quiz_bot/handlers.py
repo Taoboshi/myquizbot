@@ -81,11 +81,11 @@ from .storage import (
 
 async def setup_bot_commands(app) -> None:
     user_commands = [
-        BotCommand("start", "Запуск🎯"),
+        BotCommand("start", "🎯 Запуск"),
     ]
 
     admin_commands = [
-        BotCommand("start", "Запуск🎯"),
+        BotCommand("start", "🎯 Запуск"),
         BotCommand("admin", "Админ-панель"),
     ]
 
