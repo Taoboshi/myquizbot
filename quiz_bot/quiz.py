@@ -128,6 +128,11 @@ def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int 
 
     return "\n".join(lines)
 
+def _result_bar(percent: int, size: int = 10) -> str:
+    filled = max(0, min(size, round(percent / 100 * size)))
+    return "█" * filled + "░" * (size - filled)
+
+
 def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = False) -> str:
     total = int(state.get("total", 0))
     correct = int(state.get("correct", 0))
@@ -136,11 +141,9 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
     test_id = state.get("test_id")
 
     if test_id:
-        title = TESTS[test_id]["title"]
-        total_questions = len(state.get("order", [])) or total
+        title = html.escape(TESTS[test_id]["title"])
     else:
         title = "тест не выбран"
-        total_questions = total
 
     duration = state.get("duration_seconds")
     if duration is None and state.get("attempt_id") is not None:
@@ -148,19 +151,24 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
         if attempt:
             duration = attempt.get("duration_seconds")
 
-    header = "⏹ Решение завершено" if finished_by_user else "🎉 Тест завершён"
-    mode = mode_title(state.get("mode"))
-    return (
-        f"{header}\n\n"
-        f"📚 {title}\n"
-        f"🎮 {mode}\n"
-        f"⏱ Время: {seconds_to_text(duration)}\n\n"
-        f"📊 Результат\n"
-        f"🏆 {percent}%\n"
-        f"✅ Правильно: {correct}\n"
-        f"❌ Ошибок: {wrong_count}\n"
-        f"📝 Решено: {total}/{total_questions}"
-    )
+    mode = html.escape(mode_title(state.get("mode")))
+    header = "⏹ <b>Решение завершено</b>" if finished_by_user else "🎉 <b>Тест завершён</b>"
+    bar = _result_bar(percent)
+
+    return "\n".join([
+        header,
+        "",
+        f"📚 <b>{title}</b>",
+        f"🎮 {mode}",
+        f"⏱ {html.escape(seconds_to_text(duration))}",
+        "",
+        f"<code>{bar}</code> <b>{percent}%</b>",
+        "",
+        "📊 <b>Итог</b>",
+        f"✅ Правильно: <b>{correct} из {total}</b>",
+        f"❌ Ошибок: <b>{wrong_count}</b>",
+    ])
+
 
 def format_solution_attempt(attempt: sqlite3.Row | None) -> str:
     if not attempt or not attempt["answered"]:
