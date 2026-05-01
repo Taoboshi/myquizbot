@@ -22,7 +22,7 @@ SUBJECTS = {
 TESTS = {
     "first_test": {
         "title": "ОЗИЗ модуль 2",
-        "file": "tests/oziz_module_2.json",
+        "file": "tests/oziz/oziz_module_2.json",
         "subject_id": "oziz",
         "subject_title": "ОЗИЗ",
         "subject_emoji": "📚",
