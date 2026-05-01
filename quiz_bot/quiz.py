@@ -222,12 +222,6 @@ def my_stats_text(user_id: int, test_id: str) -> str:
         f"Решено вопросов: {answered_questions} из {total_questions}",
         f"Пройдено: {progress}%",
         "",
-        "🏆 Результаты",
-        f"Попыток всего: {int(overall.get('attempts') or 0)}",
-        f"Лучший результат: {_attempt_percent_line(summary.get('best'))}",
-        f"Средний результат: {_round_percent(overall.get('avg_percent'))}%",
-        f"Последний результат: {_attempt_percent_line(summary.get('latest'))}",
-        "",
     ]
 
     for block in [
