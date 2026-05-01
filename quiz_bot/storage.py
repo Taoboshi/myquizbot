@@ -114,8 +114,16 @@ def db_connect():
     return conn
 
 
+def _row_get(row, key, default=None):
+    if row is None:
+        return default
+    try:
+        return row[key]
+    except (KeyError, TypeError, IndexError):
+        return default
+
+
 def _table_exists(conn, table_name: str) -> bool:
-    """Return True if a table exists in SQLite or PostgreSQL."""
     try:
         if DATABASE_URL:
             row = conn.execute(
@@ -123,30 +131,48 @@ def _table_exists(conn, table_name: str) -> bool:
                 SELECT EXISTS (
                     SELECT 1
                     FROM information_schema.tables
-                    WHERE table_schema = current_schema()
-                      AND table_name = ?
-                ) AS exists_flag
+                    WHERE table_schema = 'public' AND table_name = ?
+                ) AS exists
                 """,
                 (table_name,),
             ).fetchone()
-        else:
+            return bool(_row_get(row, "exists", False))
+
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (table_name,),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        return False
+
+
+def _column_exists(conn, table_name: str, column_name: str) -> bool:
+    try:
+        if DATABASE_URL:
             row = conn.execute(
                 """
                 SELECT EXISTS (
                     SELECT 1
-                    FROM sqlite_master
-                    WHERE type = 'table'
-                      AND name = ?
-                ) AS exists_flag
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = ? AND column_name = ?
+                ) AS exists
                 """,
-                (table_name,),
+                (table_name, column_name),
             ).fetchone()
+            return bool(_row_get(row, "exists", False))
 
-        if row is None:
-            return False
-        return bool(row["exists_flag"])
+        rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+        return any(_row_get(row, "name") == column_name for row in rows)
     except Exception:
         return False
+
+
+def _add_column_if_missing(conn, table_name: str, column_sql: str) -> None:
+    column_name = column_sql.split()[0]
+    if _column_exists(conn, table_name, column_name):
+        return
+    conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_sql}")
 
 
 def _init_postgres_db() -> None:
@@ -200,7 +226,6 @@ def _init_postgres_db() -> None:
                 started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 finished_at TIMESTAMP,
                 duration_seconds INTEGER,
-                order_json TEXT,
                 answered INTEGER NOT NULL DEFAULT 0,
                 correct INTEGER NOT NULL DEFAULT 0,
                 completed_full_test INTEGER NOT NULL DEFAULT 0,
@@ -217,8 +242,6 @@ def _init_postgres_db() -> None:
                 wrong_count INTEGER NOT NULL DEFAULT 1,
                 last_wrong_answer_index INTEGER,
                 last_wrong_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                is_resolved INTEGER NOT NULL DEFAULT 0,
-                resolved_at TIMESTAMP,
                 PRIMARY KEY (user_id, test_id, question_index)
             )
             """
@@ -238,17 +261,6 @@ def _init_postgres_db() -> None:
         )
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS favorite_questions (
-                user_id BIGINT NOT NULL,
-                test_id TEXT NOT NULL,
-                question_index INTEGER NOT NULL,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (user_id, test_id, question_index)
-            )
-            """
-        )
-        conn.execute(
-            """
             CREATE TABLE IF NOT EXISTS active_sessions (
                 user_id BIGINT NOT NULL,
                 test_id TEXT NOT NULL,
@@ -258,14 +270,26 @@ def _init_postgres_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS favorites (
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, test_id, question_index)
+            )
+            """
+        )
 
         for stmt in [
             "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS last_wrong_answer_index INTEGER",
-            "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS is_resolved INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP",
             "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS finished_by_user INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS order_json TEXT",
             "ALTER TABLE active_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+            "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS first_wrong_at TIMESTAMP",
+            "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP",
+            "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS is_resolved INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS question_order_json TEXT",
         ]:
             conn.execute(stmt)
 
@@ -315,7 +339,6 @@ def _init_sqlite_db() -> None:
                 started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 finished_at TEXT,
                 duration_seconds INTEGER,
-                order_json TEXT,
                 answered INTEGER NOT NULL DEFAULT 0,
                 correct INTEGER NOT NULL DEFAULT 0,
                 completed_full_test INTEGER NOT NULL DEFAULT 0,
@@ -329,8 +352,6 @@ def _init_sqlite_db() -> None:
                 wrong_count INTEGER NOT NULL DEFAULT 1,
                 last_wrong_answer_index INTEGER,
                 last_wrong_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                is_resolved INTEGER NOT NULL DEFAULT 0,
-                resolved_at TEXT,
                 PRIMARY KEY (user_id, test_id, question_index)
             );
 
@@ -344,14 +365,6 @@ def _init_sqlite_db() -> None:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE IF NOT EXISTS favorite_questions (
-                user_id INTEGER NOT NULL,
-                test_id TEXT NOT NULL,
-                question_index INTEGER NOT NULL,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (user_id, test_id, question_index)
-            );
-
             CREATE TABLE IF NOT EXISTS active_sessions (
                 user_id INTEGER NOT NULL,
                 test_id TEXT NOT NULL,
@@ -359,16 +372,25 @@ def _init_sqlite_db() -> None:
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, test_id)
             );
+
+            CREATE TABLE IF NOT EXISTS favorites (
+                user_id INTEGER NOT NULL,
+                test_id TEXT NOT NULL,
+                question_index INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, test_id, question_index)
+            );
             """
         )
 
         for stmt in [
             "ALTER TABLE all_time_errors ADD COLUMN last_wrong_answer_index INTEGER",
-            "ALTER TABLE all_time_errors ADD COLUMN is_resolved INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE all_time_errors ADD COLUMN resolved_at TEXT",
             "ALTER TABLE attempts ADD COLUMN finished_by_user INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE attempts ADD COLUMN order_json TEXT",
             "ALTER TABLE active_sessions ADD COLUMN updated_at TEXT",
+            "ALTER TABLE all_time_errors ADD COLUMN first_wrong_at TEXT",
+            "ALTER TABLE all_time_errors ADD COLUMN resolved_at TEXT",
+            "ALTER TABLE all_time_errors ADD COLUMN is_resolved INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE attempts ADD COLUMN question_order_json TEXT",
         ]:
             try:
                 conn.execute(stmt)
@@ -426,7 +448,7 @@ def ensure_user_stats(user_id: int, test_id: str) -> None:
         conn.commit()
 
 
-def record_attempt_start(user_id: int, test_id: str, mode: str, order: list[int] | None = None) -> int:
+def record_attempt_start(user_id: int, test_id: str, mode: str) -> int:
     ensure_user_stats(user_id, test_id)
     with db_connect() as conn:
         conn.execute(
@@ -439,20 +461,18 @@ def record_attempt_start(user_id: int, test_id: str, mode: str, order: list[int]
             (user_id, test_id),
         )
 
-        order_json = json.dumps(order or [], ensure_ascii=False)
-
         if DATABASE_URL:
             row = conn.execute(
                 """
-                INSERT INTO attempts (user_id, test_id, mode, order_json)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO attempts (user_id, test_id, mode)
+                VALUES (?, ?, ?)
                 RETURNING attempt_id
                 """,
-                (user_id, test_id, mode, order_json),
+                (user_id, test_id, mode),
             ).fetchone()
             attempt_id = int(row["attempt_id"])
         else:
-            cur = conn.execute("INSERT INTO attempts (user_id, test_id, mode, order_json) VALUES (?, ?, ?, ?)", (user_id, test_id, mode, order_json))
+            cur = conn.execute("INSERT INTO attempts (user_id, test_id, mode) VALUES (?, ?, ?)", (user_id, test_id, mode))
             attempt_id = int(cur.lastrowid)
 
         conn.commit()
@@ -494,14 +514,13 @@ def _answered_indices_from_session_json(state_json: str | None) -> set[int]:
 def get_answered_question_count(user_id: int, test_id: str) -> int:
     """Return count of different questions the user has answered in this test.
 
-    This function is deliberately defensive: old deployments may have tables with
-    slightly different schemas, and the profile screen must not crash because of
-    one optional progress source.
+    Old builds only stored total answer clicks. The session fallback lets the profile
+    show current in-progress progress even if the detailed table was added later.
     """
     indices: set[int] = set()
 
     with db_connect() as conn:
-        try:
+        if _table_exists(conn, "user_answered_questions"):
             rows = conn.execute(
                 """
                 SELECT question_index
@@ -513,29 +532,21 @@ def get_answered_question_count(user_id: int, test_id: str) -> int:
             for row in rows:
                 try:
                     indices.add(int(row["question_index"]))
-                except (TypeError, ValueError, KeyError):
+                except (TypeError, ValueError):
                     pass
-        except Exception:
-            pass
 
-        try:
-            session_rows = conn.execute(
-                """
-                SELECT state_json
-                FROM active_sessions
-                WHERE user_id = ? AND test_id = ?
-                """,
-                (user_id, test_id),
-            ).fetchall()
-            for row in session_rows:
-                try:
-                    indices.update(_answered_indices_from_session_json(row["state_json"]))
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        session_rows = conn.execute(
+            """
+            SELECT state_json
+            FROM active_sessions
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (user_id, test_id),
+        ).fetchall()
+        for row in session_rows:
+            indices.update(_answered_indices_from_session_json(row["state_json"]))
 
-        try:
+        if _table_exists(conn, "runtime_sessions"):
             runtime_rows = conn.execute(
                 """
                 SELECT state_json
@@ -545,12 +556,7 @@ def get_answered_question_count(user_id: int, test_id: str) -> int:
                 (user_id, test_id),
             ).fetchall()
             for row in runtime_rows:
-                try:
-                    indices.update(_answered_indices_from_session_json(row["state_json"]))
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                indices.update(_answered_indices_from_session_json(row["state_json"]))
 
     return len(indices)
 
@@ -631,11 +637,8 @@ def add_all_time_error(user_id: int, test_id: str, question_index: int, wrong_an
     with db_connect() as conn:
         conn.execute(
             """
-            INSERT INTO all_time_errors (
-                user_id, test_id, question_index, wrong_count,
-                last_wrong_answer_index, last_wrong_at, is_resolved, resolved_at
-            )
-            VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP, 0, NULL)
+            INSERT INTO all_time_errors (user_id, test_id, question_index, wrong_count, last_wrong_answer_index, first_wrong_at, last_wrong_at, is_resolved, resolved_at)
+            VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, NULL)
             ON CONFLICT(user_id, test_id, question_index)
             DO UPDATE SET
                 wrong_count = all_time_errors.wrong_count + 1,
@@ -650,7 +653,7 @@ def add_all_time_error(user_id: int, test_id: str, question_index: int, wrong_an
 
 
 def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> None:
-    """Mark an all-time error as resolved, but keep it visible in profile history."""
+    # Ошибка остаётся в истории профиля, но больше не попадает в «Разобрать ошибки».
     with db_connect() as conn:
         conn.execute(
             """
@@ -666,15 +669,7 @@ def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> No
 
 def clear_all_time_errors(user_id: int, test_id: str) -> None:
     with db_connect() as conn:
-        conn.execute(
-            """
-            UPDATE all_time_errors
-            SET is_resolved = 1,
-                resolved_at = CURRENT_TIMESTAMP
-            WHERE user_id = ? AND test_id = ?
-            """,
-            (user_id, test_id),
-        )
+        conn.execute("DELETE FROM all_time_errors WHERE user_id = ? AND test_id = ?", (user_id, test_id))
         conn.commit()
 
 
@@ -684,8 +679,7 @@ def get_all_time_error_indices(user_id: int, test_id: str) -> list[int]:
             """
             SELECT question_index
             FROM all_time_errors
-            WHERE user_id = ? AND test_id = ?
-              AND COALESCE(is_resolved, 0) = 0
+            WHERE user_id = ? AND test_id = ? AND COALESCE(is_resolved, 0) = 0
             ORDER BY last_wrong_at ASC
             """,
             (user_id, test_id),
@@ -732,154 +726,297 @@ def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None
         for row in rows
     ]
 
-def get_favorite_count(user_id: int, test_id: str) -> int:
-    with db_connect() as conn:
-        row = conn.execute(
-            "SELECT COUNT(*) AS c FROM favorite_questions WHERE user_id = ? AND test_id = ?",
-            (user_id, test_id),
-        ).fetchone()
-    return int(row["c"] or 0) if row else 0
+
+PAGE_SIZE = 10
 
 
-def is_favorite_question(user_id: int, test_id: str, question_index: int) -> bool:
-    with db_connect() as conn:
-        row = conn.execute(
-            """
-            SELECT 1 AS exists_flag
-            FROM favorite_questions
-            WHERE user_id = ? AND test_id = ? AND question_index = ?
-            LIMIT 1
-            """,
-            (user_id, test_id, question_index),
-        ).fetchone()
-    return bool(row)
+def _dict(row) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    try:
+        return dict(row)
+    except Exception:
+        return {k: row[k] for k in row.keys()}
 
 
-def add_favorite_question(user_id: int, test_id: str, question_index: int) -> None:
+def record_attempt_order(attempt_id: int | None, order: list[int]) -> None:
+    if attempt_id is None:
+        return
     with db_connect() as conn:
         conn.execute(
             """
-            INSERT INTO favorite_questions (user_id, test_id, question_index, created_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id, test_id, question_index) DO NOTHING
+            UPDATE attempts
+            SET question_order_json = ?
+            WHERE attempt_id = ?
             """,
-            (user_id, test_id, question_index),
+            (json.dumps([int(x) for x in order], ensure_ascii=False), attempt_id),
         )
         conn.commit()
 
 
-def remove_favorite_question(user_id: int, test_id: str, question_index: int) -> None:
+def get_attempt(attempt_id: int | None) -> dict[str, Any] | None:
+    if attempt_id is None:
+        return None
     with db_connect() as conn:
-        conn.execute(
-            "DELETE FROM favorite_questions WHERE user_id = ? AND test_id = ? AND question_index = ?",
-            (user_id, test_id, question_index),
-        )
-        conn.commit()
+        row = conn.execute("SELECT * FROM attempts WHERE attempt_id = ?", (attempt_id,)).fetchone()
+    return _dict(row)
 
 
-def toggle_favorite_question(user_id: int, test_id: str, question_index: int) -> bool:
-    if is_favorite_question(user_id, test_id, question_index):
-        remove_favorite_question(user_id, test_id, question_index)
-        return False
-    add_favorite_question(user_id, test_id, question_index)
-    return True
-
-
-def get_favorite_indices(user_id: int, test_id: str) -> list[int]:
-    with db_connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT question_index
-            FROM favorite_questions
-            WHERE user_id = ? AND test_id = ?
-            ORDER BY created_at DESC, question_index ASC
-            """,
-            (user_id, test_id),
-        ).fetchall()
-    return [int(row["question_index"]) for row in rows]
-
-
-def get_profile_error_rows(user_id: int, test_id: str) -> list[dict[str, Any]]:
-    with db_connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT question_index, wrong_count, last_wrong_answer_index, last_wrong_at,
-                   COALESCE(is_resolved, 0) AS is_resolved, resolved_at
-            FROM all_time_errors
-            WHERE user_id = ? AND test_id = ?
-            ORDER BY last_wrong_at DESC, question_index ASC
-            """,
-            (user_id, test_id),
-        ).fetchall()
-
-    return [dict(row) for row in rows]
-
-
-def get_profile_error_counts(user_id: int, test_id: str) -> dict[str, int]:
-    rows = get_profile_error_rows(user_id, test_id)
-    total = len(rows)
-    resolved = sum(1 for row in rows if int(row.get("is_resolved") or 0) == 1)
-    return {"total": total, "resolved": resolved, "unresolved": total - resolved}
-
-
-def get_attempt_history_count(user_id: int, test_id: str) -> int:
-    with db_connect() as conn:
-        row = conn.execute(
-            """
-            SELECT COUNT(*) AS c
-            FROM attempts
-            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
-            """,
-            (user_id, test_id),
-        ).fetchone()
-    return int(row["c"] or 0) if row else 0
-
-
-def get_attempt_history(user_id: int, test_id: str, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
-    with db_connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT a.*,
-                   (SELECT COUNT(*) FROM attempt_wrong_answers w WHERE w.attempt_id = a.attempt_id) AS wrong_count
-            FROM attempts a
-            WHERE a.user_id = ? AND a.test_id = ? AND a.finished_at IS NOT NULL AND a.answered > 0
-            ORDER BY a.finished_at DESC, a.attempt_id DESC
-            LIMIT ? OFFSET ?
-            """,
-            (user_id, test_id, limit, offset),
-        ).fetchall()
-    return [dict(row) for row in rows]
-
-
-def get_attempt_detail(user_id: int, test_id: str, attempt_id: int) -> dict[str, Any] | None:
-    with db_connect() as conn:
-        row = conn.execute(
-            """
-            SELECT a.*,
-                   (SELECT COUNT(*) FROM attempt_wrong_answers w WHERE w.attempt_id = a.attempt_id) AS wrong_count
-            FROM attempts a
-            WHERE a.user_id = ? AND a.test_id = ? AND a.attempt_id = ?
-            LIMIT 1
-            """,
-            (user_id, test_id, attempt_id),
-        ).fetchone()
-    return dict(row) if row else None
-
-
-def get_attempt_order(attempt: dict[str, Any] | None) -> list[int]:
-    if not attempt:
+def get_attempt_order(attempt_id: int | None) -> list[int]:
+    row = get_attempt(attempt_id)
+    if not row:
         return []
-    raw = attempt.get("order_json")
+    raw = row.get("question_order_json")
     if not raw:
         return []
     try:
         data = json.loads(raw)
     except (TypeError, json.JSONDecodeError):
         return []
-    order: list[int] = []
+    order = []
     for item in data:
         try:
             order.append(int(item))
         except (TypeError, ValueError):
             pass
     return order
+
+
+def list_attempts(user_id: int, test_id: str, page: int = 0, page_size: int = PAGE_SIZE) -> tuple[list[dict[str, Any]], int]:
+    page = max(0, int(page or 0))
+    offset = page * page_size
+    with db_connect() as conn:
+        total = conn.execute(
+            """
+            SELECT COUNT(*) AS c
+            FROM attempts
+            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            """,
+            (user_id, test_id),
+        ).fetchone()["c"] or 0
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM attempts
+            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            ORDER BY finished_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, test_id, page_size, offset),
+        ).fetchall()
+    return [_dict(row) for row in rows], int(total)
+
+
+def get_attempt_wrong_answers(user_id: int, test_id: str, attempt_id: int | None) -> list[dict[str, Any]]:
+    if attempt_id is None:
+        return []
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT question_index, wrong_answer_index, created_at
+            FROM attempt_wrong_answers
+            WHERE user_id = ? AND test_id = ? AND attempt_id = ?
+            ORDER BY id ASC
+            """,
+            (user_id, test_id, attempt_id),
+        ).fetchall()
+    return [_dict(row) for row in rows]
+
+
+def favorite_count(user_id: int, test_id: str) -> int:
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS c FROM favorites WHERE user_id = ? AND test_id = ?",
+            (user_id, test_id),
+        ).fetchone()
+    return int(row["c"] or 0)
+
+
+def is_favorite(user_id: int, test_id: str, question_index: int) -> bool:
+    with db_connect() as conn:
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM favorites
+            WHERE user_id = ? AND test_id = ? AND question_index = ?
+            LIMIT 1
+            """,
+            (user_id, test_id, question_index),
+        ).fetchone()
+    return row is not None
+
+
+def set_favorite(user_id: int, test_id: str, question_index: int, value: bool) -> bool:
+    with db_connect() as conn:
+        if value:
+            conn.execute(
+                """
+                INSERT INTO favorites (user_id, test_id, question_index, created_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id, test_id, question_index) DO NOTHING
+                """,
+                (user_id, test_id, question_index),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM favorites WHERE user_id = ? AND test_id = ? AND question_index = ?",
+                (user_id, test_id, question_index),
+            )
+        conn.commit()
+    return value
+
+
+def toggle_favorite(user_id: int, test_id: str, question_index: int) -> bool:
+    new_value = not is_favorite(user_id, test_id, question_index)
+    return set_favorite(user_id, test_id, question_index, new_value)
+
+
+def list_favorites(user_id: int, test_id: str, page: int = 0, page_size: int = PAGE_SIZE) -> tuple[list[int], int]:
+    page = max(0, int(page or 0))
+    offset = page * page_size
+    with db_connect() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS c FROM favorites WHERE user_id = ? AND test_id = ?",
+            (user_id, test_id),
+        ).fetchone()["c"] or 0
+        rows = conn.execute(
+            """
+            SELECT question_index
+            FROM favorites
+            WHERE user_id = ? AND test_id = ?
+            ORDER BY created_at DESC, question_index ASC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, test_id, page_size, offset),
+        ).fetchall()
+    return [int(row["question_index"]) for row in rows], int(total)
+
+
+def error_counts(user_id: int, test_id: str) -> dict[str, int]:
+    with db_connect() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(CASE WHEN COALESCE(is_resolved, 0) = 0 THEN 1 ELSE 0 END), 0) AS unresolved,
+                COALESCE(SUM(CASE WHEN COALESCE(is_resolved, 0) = 1 THEN 1 ELSE 0 END), 0) AS resolved
+            FROM all_time_errors
+            WHERE user_id = ? AND test_id = ?
+            """,
+            (user_id, test_id),
+        ).fetchone()
+    return {
+        "total": int(row["total"] or 0),
+        "unresolved": int(row["unresolved"] or 0),
+        "resolved": int(row["resolved"] or 0),
+    }
+
+
+def list_profile_errors(user_id: int, test_id: str, page: int = 0, page_size: int = PAGE_SIZE) -> tuple[list[dict[str, Any]], int, dict[str, int]]:
+    page = max(0, int(page or 0))
+    offset = page * page_size
+    counts = error_counts(user_id, test_id)
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT question_index, wrong_count, last_wrong_answer_index, first_wrong_at, last_wrong_at, resolved_at, COALESCE(is_resolved, 0) AS is_resolved
+            FROM all_time_errors
+            WHERE user_id = ? AND test_id = ?
+            ORDER BY COALESCE(is_resolved, 0) ASC, last_wrong_at DESC, question_index ASC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, test_id, page_size, offset),
+        ).fetchall()
+    return [_dict(row) for row in rows], counts["total"], counts
+
+
+def get_profile_error_items(user_id: int, test_id: str) -> list[dict[str, Any]]:
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT question_index, wrong_count, last_wrong_answer_index, first_wrong_at, last_wrong_at, resolved_at, COALESCE(is_resolved, 0) AS is_resolved
+            FROM all_time_errors
+            WHERE user_id = ? AND test_id = ?
+            ORDER BY COALESCE(is_resolved, 0) ASC, last_wrong_at DESC, question_index ASC
+            """,
+            (user_id, test_id),
+        ).fetchall()
+    return [_dict(row) for row in rows]
+
+
+def _avg_percent_row(conn, user_id: int, test_id: str, modes: tuple[str, ...]) -> dict[str, Any]:
+    placeholders = ",".join(["?"] * len(modes))
+    params = (user_id, test_id, *modes)
+    row = conn.execute(
+        f"""
+        SELECT
+            COUNT(*) AS attempts,
+            COALESCE(AVG(CASE WHEN answered > 0 THEN CAST(correct AS REAL) / answered * 100 ELSE 0 END), 0) AS avg_percent,
+            COALESCE(MAX(CASE WHEN answered > 0 THEN CAST(correct AS REAL) / answered * 100 ELSE 0 END), 0) AS best_percent
+        FROM attempts
+        WHERE user_id = ? AND test_id = ? AND mode IN ({placeholders}) AND finished_at IS NOT NULL AND answered > 0
+        """,
+        params,
+    ).fetchone()
+    return _dict(row) or {"attempts": 0, "avg_percent": 0, "best_percent": 0}
+
+
+def latest_attempt(user_id: int, test_id: str) -> dict[str, Any] | None:
+    with db_connect() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM attempts
+            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            ORDER BY finished_at DESC
+            LIMIT 1
+            """,
+            (user_id, test_id),
+        ).fetchone()
+    return _dict(row)
+
+
+def best_attempt(user_id: int, test_id: str) -> dict[str, Any] | None:
+    with db_connect() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM attempts
+            WHERE user_id = ? AND test_id = ? AND finished_at IS NOT NULL AND answered > 0
+            ORDER BY (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC, correct DESC, finished_at DESC
+            LIMIT 1
+            """,
+            (user_id, test_id),
+        ).fetchone()
+    return _dict(row)
+
+
+def stats_summary(user_id: int, test_id: str) -> dict[str, Any]:
+    ensure_user_stats(user_id, test_id)
+    with db_connect() as conn:
+        stats = conn.execute(
+            "SELECT attempts_started, attempts_finished, total_answered, total_correct FROM user_stats WHERE user_id = ? AND test_id = ?",
+            (user_id, test_id),
+        ).fetchone()
+        overall = _avg_percent_row(conn, user_id, test_id, ("normal", "random", "reverse", "from_number", "mini", "errors", "repeat_attempt"))
+        solution = _avg_percent_row(conn, user_id, test_id, ("normal", "random", "reverse", "from_number"))
+        training = _avg_percent_row(conn, user_id, test_id, ("mini",))
+        errors_mode = _avg_percent_row(conn, user_id, test_id, ("errors",))
+        repeat = _avg_percent_row(conn, user_id, test_id, ("repeat_attempt",))
+    stats = _dict(stats) or {}
+    return {
+        "attempts_started": int(stats.get("attempts_started") or 0),
+        "attempts_finished": int(stats.get("attempts_finished") or 0),
+        "total_answered": int(stats.get("total_answered") or 0),
+        "total_correct": int(stats.get("total_correct") or 0),
+        "overall": overall,
+        "solution": solution,
+        "training": training,
+        "errors_mode": errors_mode,
+        "repeat": repeat,
+        "latest": latest_attempt(user_id, test_id),
+        "best": best_attempt(user_id, test_id),
+        "errors": error_counts(user_id, test_id),
+        "favorites": favorite_count(user_id, test_id),
+        "answered_questions": get_answered_question_count(user_id, test_id),
+    }

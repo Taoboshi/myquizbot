@@ -4,9 +4,9 @@ from typing import Any
 from .config import RESUMABLE_MODES
 from .loader import get_questions
 from .runtime import USER_STATE
-from .storage import db_connect, record_attempt_start
+from .storage import db_connect, record_attempt_start, record_attempt_order
 
-RUNTIME_MODES = set(RESUMABLE_MODES) | {"mini", "errors", "repeat"}
+RUNTIME_MODES = set(RESUMABLE_MODES) | {"mini", "errors"}
 _RUNTIME_TABLE_READY = False
 
 
@@ -328,6 +328,20 @@ def save_question_progress(
             (1 if is_correct else 0, user_id, test_id),
         )
 
+        conn.execute(
+            """
+            INSERT INTO user_answered_questions (
+                user_id, test_id, question_index, first_answered_at, last_answered_at, answer_count
+            )
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+            ON CONFLICT(user_id, test_id, question_index)
+            DO UPDATE SET
+                last_answered_at = CURRENT_TIMESTAMP,
+                answer_count = user_answered_questions.answer_count + 1
+            """,
+            (user_id, test_id, question_index),
+        )
+
         if is_correct:
             conn.execute(
                 """
@@ -348,11 +362,8 @@ def save_question_progress(
             )
             conn.execute(
                 """
-                INSERT INTO all_time_errors (
-                    user_id, test_id, question_index, wrong_count,
-                    last_wrong_answer_index, last_wrong_at, is_resolved, resolved_at
-                )
-                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP, 0, NULL)
+                INSERT INTO all_time_errors (user_id, test_id, question_index, wrong_count, last_wrong_answer_index, first_wrong_at, last_wrong_at, is_resolved, resolved_at)
+                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, NULL)
                 ON CONFLICT(user_id, test_id, question_index)
                 DO UPDATE SET
                     wrong_count = all_time_errors.wrong_count + 1,
@@ -443,6 +454,9 @@ def start_quiz_mode(state: dict[str, Any], user_id: int, test_id: str, mode: str
         delete_active_session(user_id, test_id)
     delete_runtime_session(user_id, test_id, mode)
 
+    attempt_id = record_attempt_start(user_id, test_id, mode)
+    record_attempt_order(attempt_id, order)
+
     state.update({
         "test_id": test_id,
         "mode": mode,
@@ -454,7 +468,7 @@ def start_quiz_mode(state: dict[str, Any], user_id: int, test_id: str, mode: str
         "awaiting_next": False,
         "active": True,
         "finish_recorded": False,
-        "attempt_id": record_attempt_start(user_id, test_id, mode, order),
+        "attempt_id": attempt_id,
         "pending_start_from_number_test_id": None,
         "find_mode": None,
     })

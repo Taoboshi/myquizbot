@@ -33,21 +33,21 @@ from .handlers import (
     handle_mini_start,
     handle_my_profile,
     handle_my_stats,
-    handle_profile_favorites,
-    handle_favorite_question,
-    handle_favorite_remove,
-    handle_profile_errors,
-    handle_profile_error,
-    handle_profile_error_favorite_toggle,
-    handle_profile_history,
-    handle_profile_attempt,
-    handle_repeat_attempt,
-    handle_attempt_errors,
-    handle_attempt_error,
-    handle_attempt_error_favorite_toggle,
-    handle_question_favorite_toggle,
     handle_next_question,
     handle_pause_to_menu,
+    handle_profile_favorites,
+    handle_favorite_show,
+    handle_profile_errors,
+    handle_profile_error_show,
+    handle_profile_history,
+    handle_history_attempt,
+    handle_attempt_errors_page,
+    handle_attempt_error_show,
+    handle_repeat_attempt,
+    handle_result_errors_page,
+    handle_result_error_show,
+    handle_show_result_attempt,
+    handle_toggle_favorite,
     handle_public_rating,
     handle_question_continue,
     handle_question_menu,
@@ -121,18 +121,18 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_learn_menu, pattern=r"^learn_menu:"))
     app.add_handler(CallbackQueryHandler(handle_my_profile, pattern=r"^my_profile:"))
     app.add_handler(CallbackQueryHandler(handle_profile_favorites, pattern=r"^profile_favorites:"))
-    app.add_handler(CallbackQueryHandler(handle_favorite_question, pattern=r"^favorite_question:"))
-    app.add_handler(CallbackQueryHandler(handle_favorite_remove, pattern=r"^favorite_remove:"))
+    app.add_handler(CallbackQueryHandler(handle_favorite_show, pattern=r"^favorite_show:"))
     app.add_handler(CallbackQueryHandler(handle_profile_errors, pattern=r"^profile_errors:"))
-    app.add_handler(CallbackQueryHandler(handle_profile_error, pattern=r"^profile_error:"))
-    app.add_handler(CallbackQueryHandler(handle_profile_error_favorite_toggle, pattern=r"^profile_error_favorite_toggle:"))
+    app.add_handler(CallbackQueryHandler(handle_profile_error_show, pattern=r"^profile_error_show:"))
     app.add_handler(CallbackQueryHandler(handle_profile_history, pattern=r"^profile_history:"))
-    app.add_handler(CallbackQueryHandler(handle_profile_attempt, pattern=r"^profile_attempt:"))
+    app.add_handler(CallbackQueryHandler(handle_history_attempt, pattern=r"^history_attempt:"))
+    app.add_handler(CallbackQueryHandler(handle_attempt_errors_page, pattern=r"^attempt_errors_page:"))
+    app.add_handler(CallbackQueryHandler(handle_attempt_error_show, pattern=r"^attempt_error_show:"))
     app.add_handler(CallbackQueryHandler(handle_repeat_attempt, pattern=r"^repeat_attempt:"))
-    app.add_handler(CallbackQueryHandler(handle_attempt_errors, pattern=r"^attempt_errors:"))
-    app.add_handler(CallbackQueryHandler(handle_attempt_error, pattern=r"^attempt_error:"))
-    app.add_handler(CallbackQueryHandler(handle_attempt_error_favorite_toggle, pattern=r"^attempt_error_favorite_toggle:"))
-    app.add_handler(CallbackQueryHandler(handle_question_favorite_toggle, pattern=r"^question_favorite_toggle:"))
+    app.add_handler(CallbackQueryHandler(handle_result_errors_page, pattern=r"^result_errors_page:"))
+    app.add_handler(CallbackQueryHandler(handle_result_error_show, pattern=r"^result_error_show:"))
+    app.add_handler(CallbackQueryHandler(handle_show_result_attempt, pattern=r"^show_result_attempt:"))
+    app.add_handler(CallbackQueryHandler(handle_toggle_favorite, pattern=r"^toggle_favorite:"))
     app.add_handler(CallbackQueryHandler(handle_solve_menu, pattern=r"^solve_menu:"))
     app.add_handler(CallbackQueryHandler(handle_start_quiz, pattern=r"^start:"))
     app.add_handler(CallbackQueryHandler(handle_start_from_number_menu, pattern=r"^start_from_number:"))

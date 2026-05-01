@@ -19,6 +19,7 @@ from .config import (
 from .loader import get_questions
 from .quiz import build_question_text
 from .state import active_session_button_text
+from .storage import is_favorite
 
 def test_select_keyboard() -> InlineKeyboardMarkup:
     rows = []
@@ -44,18 +45,15 @@ def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
 def profile_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Статистика", callback_data=f"my_stats:{test_id}")],
-        [InlineKeyboardButton("⭐ Избранные", callback_data=f"profile_favorites:{test_id}:0")],
-        [InlineKeyboardButton("🧠 Ошибки", callback_data=f"profile_errors:{test_id}:0")],
-        [InlineKeyboardButton("📜 История", callback_data=f"profile_history:{test_id}:0")],
+        [InlineKeyboardButton("⭐ Избранные вопросы", callback_data=f"profile_favorites:{test_id}")],
+        [InlineKeyboardButton("🧠 Ошибки", callback_data=f"profile_errors:{test_id}")],
+        [InlineKeyboardButton("📜 История попыток", callback_data=f"profile_history:{test_id}")],
         [InlineKeyboardButton(BTN_BACK, callback_data=f"test_menu:{test_id}")],
     ])
 
 
 def profile_section_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")],
-        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
-    ])
+    return InlineKeyboardMarkup([[InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")]])
 
 def learn_menu_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -87,7 +85,15 @@ def solve_menu_keyboard(test_id: str, user_id: int | None = None) -> InlineKeybo
     ])
     return InlineKeyboardMarkup(rows)
 
-def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
+def _favorite_button(user_id: int | None, test_id: str, index: int) -> InlineKeyboardButton:
+    if user_id is not None and is_favorite(user_id, test_id, index):
+        text = "⭐ Убрать"
+    else:
+        text = "⭐ В избранное"
+    return InlineKeyboardButton(text, callback_data=f"toggle_favorite:{test_id}:{index}")
+
+
+def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
     q = get_questions(test_id)[index]
     buttons = []
     for i, _ in enumerate(q["options"]):
@@ -101,27 +107,27 @@ def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None) -> 
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
     if attempt_id is not None:
         rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
-        rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
     else:
         rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
-        rows.append([InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
     return InlineKeyboardMarkup(rows)
 
 
-def next_keyboard(test_id: str, index: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
+def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
     if attempt_id is not None:
         return InlineKeyboardMarkup([
             [InlineKeyboardButton(BTN_NEXT, callback_data=f"next_question:{attempt_id}:{test_id}:{index}")],
-            [InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")],
+            [_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")],
         ])
 
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(BTN_NEXT, callback_data=f"next_question:{test_id}:{index}")],
-        [InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")],
+        [_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")],
     ])
 
 
-def question_menu_keyboard(test_id: str, index: int, mode: str | None = None, attempt_id: int | None = None, is_favorite: bool = False) -> InlineKeyboardMarkup:
+def question_menu_keyboard(test_id: str, index: int, mode: str | None = None, attempt_id: int | None = None) -> InlineKeyboardMarkup:
     if attempt_id is not None:
         continue_cb = f"question_continue:{attempt_id}:{test_id}:{index}"
         pause_cb = f"pause_to_menu:{attempt_id}:{test_id}"
@@ -131,44 +137,33 @@ def question_menu_keyboard(test_id: str, index: int, mode: str | None = None, at
         pause_cb = f"pause_to_menu:{test_id}"
         finish_cb = "finish"
 
-    favorite_text = "⭐ Убрать из избранного" if is_favorite else "⭐ В избранное"
-    favorite_cb = f"question_favorite_toggle:{test_id}:{index}"
-
     if mode in RESUMABLE_MODES:
         return InlineKeyboardMarkup([
             [InlineKeyboardButton(BTN_CONTINUE, callback_data=continue_cb)],
-            [InlineKeyboardButton(favorite_text, callback_data=favorite_cb)],
             [InlineKeyboardButton(BTN_SAVE_EXIT, callback_data=pause_cb)],
             [InlineKeyboardButton(BTN_FINISH, callback_data=finish_cb)],
         ])
 
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(BTN_CONTINUE, callback_data=continue_cb)],
-        [InlineKeyboardButton(favorite_text, callback_data=favorite_cb)],
         [InlineKeyboardButton(BTN_TEST_MENU, callback_data=pause_cb)],
     ])
+
 
 def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboardMarkup:
     test_id = state.get("test_id")
     if not test_id:
         return InlineKeyboardMarkup([])
 
+    rows = []
+    attempt_id = state.get("attempt_id")
+    if state.get("wrong_answers") and attempt_id is not None:
+        rows.append([InlineKeyboardButton("🧠 Ошибки", callback_data=f"result_errors_page:{attempt_id}:0")])
+
     if state.get("mode") == "errors":
-        rows = []
         if state.get("wrong_answers"):
             rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"repeat_session_errors:{test_id}")])
-        rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
-        return InlineKeyboardMarkup(rows)
-
-    rows = []
-
-    attempt_id = state.get("attempt_id")
-    if state.get("wrong_answers") and attempt_id:
-        rows.append([InlineKeyboardButton("🧠 Ошибки", callback_data=f"attempt_errors:{test_id}:{attempt_id}:0:0")])
-    elif state.get("wrong_answers"):
-        rows.append([InlineKeyboardButton("🧠 Ошибки", callback_data=f"session_error_show:{test_id}:0")])
-
-    if state.get("mode") == "mini":
+    elif state.get("mode") == "mini":
         rows.append([InlineKeyboardButton("🔁 Заново", callback_data=f"mini_start:{test_id}:10")])
     else:
         rows.append([InlineKeyboardButton("🔁 Повторить тест", callback_data=f"solve_menu:{test_id}")])
@@ -176,156 +171,22 @@ def after_finish_keyboard(user_id: int, state: dict[str, Any]) -> InlineKeyboard
     rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
-def session_error_keyboard(test_id: str, pos: int, total: int) -> InlineKeyboardMarkup:
+
+def session_error_keyboard(test_id: str, pos: int, total: int, attempt_id: int | None = None) -> InlineKeyboardMarkup:
     rows = []
     if pos > 0:
-        rows.append([InlineKeyboardButton("⬅️ Предыдущий", callback_data=f"session_error_show:{test_id}:{pos - 1}")])
+        cb = f"result_error_show:{attempt_id}:{pos - 1}" if attempt_id is not None else f"session_error_show:{test_id}:{pos - 1}"
+        rows.append([InlineKeyboardButton("⬅️ Предыдущая", callback_data=cb)])
     if pos + 1 < total:
-        rows.append([InlineKeyboardButton(BTN_NEXT, callback_data=f"session_error_show:{test_id}:{pos + 1}")])
-    rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result:{test_id}")])
-    rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+        cb = f"result_error_show:{attempt_id}:{pos + 1}" if attempt_id is not None else f"session_error_show:{test_id}:{pos + 1}"
+        rows.append([InlineKeyboardButton("➡️ Следующая", callback_data=cb)])
+    if attempt_id is not None:
+        rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"result_errors_page:{attempt_id}:0")])
+        rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result_attempt:{attempt_id}")])
+    else:
+        rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
-
-def _page_number_rows(
-    indices: list[int],
-    callback_factory,
-    per_row: int = 5,
-) -> list[list[InlineKeyboardButton]]:
-    buttons = [InlineKeyboardButton(str(index + 1), callback_data=callback_factory(index)) for index in indices]
-    return [buttons[i:i + per_row] for i in range(0, len(buttons), per_row)]
-
-
-def _page_nav_row(prefix: str, test_id: str, page: int, total_pages: int) -> list[InlineKeyboardButton]:
-    row = []
-    if page > 0:
-        row.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"{prefix}:{test_id}:{page - 1}"))
-    if page + 1 < total_pages:
-        row.append(InlineKeyboardButton("➡️ Далее", callback_data=f"{prefix}:{test_id}:{page + 1}"))
-    return row
-
-
-def profile_back_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")]])
-
-
-def favorites_list_keyboard(test_id: str, visible: list[int], page: int, total_pages: int) -> InlineKeyboardMarkup:
-    rows = _page_number_rows(visible, lambda index: f"favorite_question:{test_id}:{page}:{index}")
-    nav = _page_nav_row("profile_favorites", test_id, page, total_pages)
-    if nav:
-        rows.append(nav)
-    rows.append([InlineKeyboardButton("⬅️ В профиль", callback_data=f"my_profile:{test_id}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def favorite_question_keyboard(test_id: str, index: int, page: int, previous_index: int | None, next_index: int | None) -> InlineKeyboardMarkup:
-    rows = []
-    nav = []
-    if previous_index is not None:
-        nav.append(InlineKeyboardButton("⬅️ Предыдущий", callback_data=f"favorite_question:{test_id}:{page}:{previous_index}"))
-    if next_index is not None:
-        nav.append(InlineKeyboardButton("➡️ Следующий", callback_data=f"favorite_question:{test_id}:{page}:{next_index}"))
-    if nav:
-        rows.append(nav)
-    rows.append([InlineKeyboardButton("⭐ Убрать из избранного", callback_data=f"favorite_remove:{test_id}:{page}:{index}")])
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_favorites:{test_id}:{page}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def profile_errors_keyboard(test_id: str, visible: list[int], page: int, total_pages: int) -> InlineKeyboardMarkup:
-    rows = _page_number_rows(visible, lambda index: f"profile_error:{test_id}:{page}:{index}")
-    nav = _page_nav_row("profile_errors", test_id, page, total_pages)
-    if nav:
-        rows.append(nav)
-    rows.append([InlineKeyboardButton("⬅️ В профиль", callback_data=f"my_profile:{test_id}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def profile_error_detail_keyboard(
-    test_id: str,
-    index: int,
-    page: int,
-    previous_index: int | None,
-    next_index: int | None,
-    is_favorite: bool,
-) -> InlineKeyboardMarkup:
-    rows = []
-    nav = []
-    if previous_index is not None:
-        nav.append(InlineKeyboardButton("⬅️ Предыдущая", callback_data=f"profile_error:{test_id}:{page}:{previous_index}"))
-    if next_index is not None:
-        nav.append(InlineKeyboardButton("➡️ Следующая", callback_data=f"profile_error:{test_id}:{page}:{next_index}"))
-    if nav:
-        rows.append(nav)
-    fav_text = "⭐ Убрать из избранного" if is_favorite else "⭐ В избранное"
-    rows.append([InlineKeyboardButton(fav_text, callback_data=f"profile_error_favorite_toggle:{test_id}:{page}:{index}")])
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_errors:{test_id}:{page}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def history_keyboard(test_id: str, attempts: list[dict[str, Any]], page: int, total_pages: int) -> InlineKeyboardMarkup:
-    buttons = [
-        InlineKeyboardButton(str(i + 1), callback_data=f"profile_attempt:{test_id}:{attempt['attempt_id']}:{page}")
-        for i, attempt in enumerate(attempts)
-    ]
-    rows = [buttons[i:i + 5] for i in range(0, len(buttons), 5)]
-    nav = _page_nav_row("profile_history", test_id, page, total_pages)
-    if nav:
-        rows.append(nav)
-    rows.append([InlineKeyboardButton("⬅️ В профиль", callback_data=f"my_profile:{test_id}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def attempt_detail_keyboard(test_id: str, attempt_id: int, history_page: int, wrong_count: int) -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton("🔁 Пройти заново", callback_data=f"repeat_attempt:{test_id}:{attempt_id}")]]
-    if wrong_count > 0:
-        rows.append([InlineKeyboardButton("🧠 Ошибки попытки", callback_data=f"attempt_errors:{test_id}:{attempt_id}:0:{history_page}")])
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_history:{test_id}:{history_page}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def attempt_errors_keyboard(
-    test_id: str,
-    attempt_id: int,
-    visible: list[int],
-    page: int,
-    total_pages: int,
-    history_page: int,
-) -> InlineKeyboardMarkup:
-    rows = _page_number_rows(visible, lambda index: f"attempt_error:{test_id}:{attempt_id}:{page}:{index}:{history_page}")
-    nav = []
-    if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"attempt_errors:{test_id}:{attempt_id}:{page - 1}:{history_page}"))
-    if page + 1 < total_pages:
-        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"attempt_errors:{test_id}:{attempt_id}:{page + 1}:{history_page}"))
-    if nav:
-        rows.append(nav)
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_attempt:{test_id}:{attempt_id}:{history_page}")])
-    return InlineKeyboardMarkup(rows)
-
-
-def attempt_error_detail_keyboard(
-    test_id: str,
-    attempt_id: int,
-    index: int,
-    page: int,
-    history_page: int,
-    previous_index: int | None,
-    next_index: int | None,
-    is_favorite: bool,
-) -> InlineKeyboardMarkup:
-    rows = []
-    nav = []
-    if previous_index is not None:
-        nav.append(InlineKeyboardButton("⬅️ Предыдущая", callback_data=f"attempt_error:{test_id}:{attempt_id}:{page}:{previous_index}:{history_page}"))
-    if next_index is not None:
-        nav.append(InlineKeyboardButton("➡️ Следующая", callback_data=f"attempt_error:{test_id}:{attempt_id}:{page}:{next_index}:{history_page}"))
-    if nav:
-        rows.append(nav)
-    fav_text = "⭐ Убрать из избранного" if is_favorite else "⭐ В избранное"
-    rows.append([InlineKeyboardButton(fav_text, callback_data=f"attempt_error_favorite_toggle:{test_id}:{attempt_id}:{page}:{index}:{history_page}")])
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"attempt_errors:{test_id}:{attempt_id}:{page}:{history_page}")])
-    return InlineKeyboardMarkup(rows)
 
 def stats_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return profile_section_keyboard(test_id)
@@ -465,4 +326,149 @@ def find_results_keyboard(test_id: str, indices: list[int], page: int = 0) -> In
 
     rows.append([InlineKeyboardButton("🔎 Посмотреть другой", callback_data=f"find_question:{test_id}")])
     rows.append([InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"learn_menu:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+PAGE_SIZE = 10
+
+
+def _number_rows(items: list[tuple[str, str]], per_row: int = 5) -> list[list[InlineKeyboardButton]]:
+    buttons = [InlineKeyboardButton(text, callback_data=cb) for text, cb in items]
+    return [buttons[i:i + per_row] for i in range(0, len(buttons), per_row)]
+
+
+def profile_list_keyboard(test_id: str, prefix: str, page: int, total: int) -> InlineKeyboardMarkup:
+    rows = []
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"{prefix}:{test_id}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"{prefix}:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def favorites_keyboard(test_id: str, indices: list[int], page: int, total: int) -> InlineKeyboardMarkup:
+    start = page * PAGE_SIZE
+    rows = _number_rows([(str(index + 1), f"favorite_show:{test_id}:{start + i}") for i, index in enumerate(indices)])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"profile_favorites:{test_id}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_favorites:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def favorite_detail_keyboard(test_id: str, pos: int, total: int, question_index: int) -> InlineKeyboardMarkup:
+    rows = []
+    nav = []
+    if pos > 0:
+        nav.append(InlineKeyboardButton("⬅️ Предыдущий", callback_data=f"favorite_show:{test_id}:{pos - 1}"))
+    if pos + 1 < total:
+        nav.append(InlineKeyboardButton("➡️ Следующий", callback_data=f"favorite_show:{test_id}:{pos + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton("⭐ Убрать из избранного", callback_data=f"toggle_favorite:{test_id}:{question_index}")])
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_favorites:{test_id}:{pos // PAGE_SIZE}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def profile_errors_keyboard(test_id: str, items: list[dict[str, Any]], page: int, total: int) -> InlineKeyboardMarkup:
+    start = page * PAGE_SIZE
+    rows = _number_rows([(str(int(item["question_index"]) + 1), f"profile_error_show:{test_id}:{start + i}") for i, item in enumerate(items)])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"profile_errors:{test_id}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_errors:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def profile_error_detail_keyboard(test_id: str, pos: int, total: int, question_index: int, fav: bool) -> InlineKeyboardMarkup:
+    rows = []
+    nav = []
+    if pos > 0:
+        nav.append(InlineKeyboardButton("⬅️ Предыдущая", callback_data=f"profile_error_show:{test_id}:{pos - 1}"))
+    if pos + 1 < total:
+        nav.append(InlineKeyboardButton("➡️ Следующая", callback_data=f"profile_error_show:{test_id}:{pos + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton("⭐ Убрать из избранного" if fav else "⭐ В избранное", callback_data=f"toggle_favorite:{test_id}:{question_index}")])
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_errors:{test_id}:{pos // PAGE_SIZE}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def history_keyboard(test_id: str, attempts: list[dict[str, Any]], page: int, total: int) -> InlineKeyboardMarkup:
+    rows = _number_rows([(str(page * PAGE_SIZE + i + 1), f"history_attempt:{test_id}:{int(a['attempt_id'])}:{page}") for i, a in enumerate(attempts)])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"profile_history:{test_id}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_history:{test_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def attempt_detail_keyboard(test_id: str, attempt_id: int, page: int, wrong_count: int) -> InlineKeyboardMarkup:
+    rows = [[InlineKeyboardButton("🔁 Пройти заново", callback_data=f"repeat_attempt:{attempt_id}")]]
+    if wrong_count:
+        rows.append([InlineKeyboardButton("🧠 Ошибки попытки", callback_data=f"attempt_errors_page:{attempt_id}:0")])
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"profile_history:{test_id}:{page}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def attempt_errors_keyboard(test_id: str, attempt_id: int, items: list[dict[str, Any]], page: int, total: int) -> InlineKeyboardMarkup:
+    start = page * PAGE_SIZE
+    rows = _number_rows([(str(int(item["question_index"]) + 1), f"attempt_error_show:{attempt_id}:{start + i}") for i, item in enumerate(items)])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"attempt_errors_page:{attempt_id}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"attempt_errors_page:{attempt_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"history_attempt:{test_id}:{attempt_id}:0")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def attempt_error_detail_keyboard(test_id: str, attempt_id: int, pos: int, total: int, question_index: int, fav: bool) -> InlineKeyboardMarkup:
+    rows = []
+    nav = []
+    if pos > 0:
+        nav.append(InlineKeyboardButton("⬅️ Предыдущая", callback_data=f"attempt_error_show:{attempt_id}:{pos - 1}"))
+    if pos + 1 < total:
+        nav.append(InlineKeyboardButton("➡️ Следующая", callback_data=f"attempt_error_show:{attempt_id}:{pos + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton("⭐ Убрать из избранного" if fav else "⭐ В избранное", callback_data=f"toggle_favorite:{test_id}:{question_index}")])
+    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"attempt_errors_page:{attempt_id}:{pos // PAGE_SIZE}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+def result_errors_keyboard(attempt_id: int, items: list[dict[str, Any]], page: int, total: int) -> InlineKeyboardMarkup:
+    start = page * PAGE_SIZE
+    rows = _number_rows([(str(int(item["question_index"]) + 1), f"result_error_show:{attempt_id}:{start + i}") for i, item in enumerate(items)])
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"result_errors_page:{attempt_id}:{page - 1}"))
+    if (page + 1) * PAGE_SIZE < total:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"result_errors_page:{attempt_id}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    rows.append([InlineKeyboardButton("📋 К результату", callback_data=f"show_result_attempt:{attempt_id}")])
     return InlineKeyboardMarkup(rows)

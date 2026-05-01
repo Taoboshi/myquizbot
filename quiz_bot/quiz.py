@@ -6,7 +6,7 @@ from .config import FULL_TEST_MODES, LETTERS, RESUMABLE_MODES, SOLUTION_MODES, T
 from .helpers import attempt_percent, mode_title, seconds_to_text, sep, user_display_name
 from .loader import get_questions
 from .state import delete_active_session, delete_runtime_session
-from .storage import db_connect, get_all_time_error_indices, record_attempt_finish
+from .storage import db_connect, get_all_time_error_indices, record_attempt_finish, stats_summary
 
 def add_session_wrong_answer(state: dict[str, Any], question_index: int, wrong_answer_index: int | None) -> None:
     state.setdefault("wrong_answers", []).append({
@@ -87,34 +87,6 @@ def build_question_text(
 
     return "\n".join(lines)
 
-def format_marked_question_text(
-    test_id: str,
-    index: int,
-    header_lines: list[str],
-    selected_index: int | None = None,
-    show_answer_note: bool = False,
-) -> str:
-    q = get_questions(test_id)[index]
-    correct_index = int(q["correct_index"])
-    lines = [html.escape(line) for line in header_lines]
-    lines.extend(["", f"<b>{html.escape(q['question'])}</b>", "", "···"])
-
-    for i, option in enumerate(q["options"]):
-        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        prefix = ""
-        if i == correct_index:
-            prefix = "✅ "
-        elif selected_index is not None and i == selected_index and i != correct_index:
-            prefix = "❌ "
-        lines.append(f"{prefix}{letter}) {html.escape(option)}")
-
-    if show_answer_note:
-        lines.append("")
-        lines.append("👁 Показан ответ")
-
-    return "\n".join(lines)
-
-
 def format_session_error_card(test_id: str, pos: int, items: list[dict[str, int | None]]) -> str:
     title = html.escape(TESTS[test_id]["title"])
     if not items:
@@ -160,47 +132,24 @@ def result_text(state: dict[str, Any], user_id: int, finished_by_user: bool = Fa
 
     if test_id:
         title = TESTS[test_id]["title"]
+        all_errors = len(get_all_time_error_indices(user_id, test_id))
         total_questions = len(state.get("order", [])) or total
     else:
         title = "тест не выбран"
+        all_errors = 0
         total_questions = total
-
-    duration_text = "—"
-    attempt_id = state.get("attempt_id")
-    if attempt_id is not None:
-        try:
-            with db_connect() as conn:
-                row = conn.execute(
-                    "SELECT duration_seconds FROM attempts WHERE attempt_id = ?",
-                    (attempt_id,),
-                ).fetchone()
-            if row:
-                duration_text = seconds_to_text(row["duration_seconds"])
-        except Exception:
-            duration_text = "—"
 
     header = "⏹ Решение завершено" if finished_by_user else "🎉 Тест завершён"
     mode = mode_title(state.get("mode"))
-
-    lines = [
-        header,
-        "",
-        f"📚 {title}",
-        f"🎮 {mode}",
-        f"⏱ Время: {duration_text}",
-        "",
-        "📊 Результат",
-        f"🏆 {percent}%",
-        f"✅ Правильно: {correct}",
-        f"❌ Ошибок: {wrong_count}",
-        f"📝 Решено: {total}/{total_questions}",
-    ]
-
-    if wrong_count:
-        lines.extend(["", "🧠 Ошибки этого прохождения — по кнопке ниже."])
-
-    return "\n".join(lines)
-
+    return (
+        f"{header}\n\n"
+        f"{title}\n"
+        f"🎮 Режим: {mode}\n\n"
+        f"📊 Результат: {percent}%\n"
+        f"📝 Решено: {total} из {total_questions}\n"
+        f"❌ Ошибок в этом решении: {wrong_count}\n\n"
+        f"🧠 Ошибок за всё время: {all_errors}"
+    )
 
 def format_solution_attempt(attempt: sqlite3.Row | None) -> str:
     if not attempt or not attempt["answered"]:
@@ -219,115 +168,82 @@ def format_training_attempt(attempt: sqlite3.Row | None) -> str:
     percent = round(attempt["correct"] / attempt["answered"] * 100, 1)
     return f"{attempt['correct']}/{attempt['answered']} — {percent}%"
 
+def _round_percent(value) -> int:
+    try:
+        return round(float(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _attempt_percent_line(attempt: dict[str, Any] | None) -> str:
+    if not attempt or not int(attempt.get("answered") or 0):
+        return "пока нет"
+    return f"{_round_percent(int(attempt.get('correct') or 0) / int(attempt.get('answered') or 1) * 100)}%"
+
+
+def _mode_stats_line(title: str, data: dict[str, Any]) -> list[str]:
+    attempts = int(data.get("attempts") or 0)
+    if attempts <= 0:
+        return [title, "Попыток: 0"]
+    return [
+        title,
+        f"Попыток: {attempts}",
+        f"Лучший результат: {_round_percent(data.get('best_percent'))}%",
+        f"Средний результат: {_round_percent(data.get('avg_percent'))}%",
+    ]
+
+
 def my_stats_text(user_id: int, test_id: str) -> str:
     title = TESTS[test_id]["title"]
+    total_questions = len(get_questions(test_id))
+    summary = stats_summary(user_id, test_id)
 
-    with db_connect() as conn:
-        best_solution = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode IN (?, ?, ?, ?)
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY
-                answered DESC,
-                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
-                duration_seconds ASC
-            LIMIT 1
-            """,
-            (user_id, test_id, *SOLUTION_MODES),
-        ).fetchone()
+    total_answered = int(summary.get("total_answered") or 0)
+    total_correct = int(summary.get("total_correct") or 0)
+    answered_questions = int(summary.get("answered_questions") or 0)
+    progress = round(answered_questions / total_questions * 100) if total_questions else 0
+    accuracy = round(total_correct / total_answered * 100) if total_answered else 0
+    errors = summary.get("errors") or {}
 
-        last_solution = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode IN (?, ?, ?, ?)
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY finished_at DESC
-            LIMIT 1
-            """,
-            (user_id, test_id, *SOLUTION_MODES),
-        ).fetchone()
+    lines = [
+        "📊 Статистика",
+        f"📚 {title}",
+        "",
+        "📌 Прогресс",
+        f"Решено вопросов: {answered_questions} из {total_questions}",
+        f"Пройдено: {progress}%",
+        f"Всего ответов: {total_answered}",
+        f"Точность ответов: {accuracy}%",
+        "",
+        "🏆 Результаты",
+        f"Попыток всего: {int(summary.get('attempts_started') or 0)}",
+        f"Завершённых попыток: {int(summary.get('attempts_finished') or 0)}",
+        f"Лучший результат: {_attempt_percent_line(summary.get('best'))}",
+        f"Последний результат: {_attempt_percent_line(summary.get('latest'))}",
+        "",
+    ]
 
-        best_training = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode = 'mini'
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY
-                (CAST(correct AS REAL) / NULLIF(answered, 0)) DESC,
-                correct DESC,
-                duration_seconds ASC
-            LIMIT 1
-            """,
-            (user_id, test_id),
-        ).fetchone()
+    for block in [
+        _mode_stats_line("📝 Основной тест", summary.get("solution") or {}),
+        _mode_stats_line("⚡ Тренировка", summary.get("training") or {}),
+        _mode_stats_line("🧠 Разбор ошибок", summary.get("errors_mode") or {}),
+        _mode_stats_line("🔁 Повтор попытки", summary.get("repeat") or {}),
+    ]:
+        lines.extend(block)
+        lines.append("")
 
-        last_training = conn.execute(
-            """
-            SELECT *
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode = 'mini'
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            ORDER BY finished_at DESC
-            LIMIT 1
-            """,
-            (user_id, test_id),
-        ).fetchone()
+    lines.extend([
+        "🧠 Ошибки",
+        f"Всего ошибок: {int(errors.get('total') or 0)}",
+        f"Не исправлено: {int(errors.get('unresolved') or 0)}",
+        f"Исправлено: {int(errors.get('resolved') or 0)}",
+        "",
+        "⭐ Избранное",
+        f"Избранных вопросов: {int(summary.get('favorites') or 0)}",
+    ])
 
-        training_count = conn.execute(
-            """
-            SELECT COUNT(*) AS c
-            FROM attempts
-            WHERE user_id = ?
-              AND test_id = ?
-              AND mode = 'mini'
-              AND finished_at IS NOT NULL
-              AND answered > 0
-            """,
-            (user_id, test_id),
-        ).fetchone()["c"] or 0
+    return "\n".join(lines)
 
-        errors = conn.execute(
-            """
-            SELECT COUNT(*) AS active_errors, COALESCE(SUM(wrong_count), 0) AS wrong_clicks
-            FROM all_time_errors
-            WHERE user_id = ? AND test_id = ?
-            """,
-            (user_id, test_id),
-        ).fetchone()
-
-    return (
-        f"📊 Статистика\n"
-        f"{title}\n\n"
-        f"🏆 Лучшее решение:\n"
-        f"{format_solution_attempt(best_solution)}\n\n"
-        f"🕘 Последнее решение:\n"
-        f"{format_solution_attempt(last_solution)}\n\n"
-        f"{sep()}\n\n"
-        f"⚡ Тренировка:\n"
-        f"Лучшая: {format_training_attempt(best_training)}\n"
-        f"Последняя: {format_training_attempt(last_training)}\n"
-        f"Всего тренировок: {training_count}\n\n"
-        f"{sep()}\n\n"
-        f"🧠 Ошибки:\n"
-        f"Активных ошибок: {errors['active_errors'] or 0}\n"
-        f"Всего ошибочных ответов: {errors['wrong_clicks'] or 0}"
-    )
 
 def public_rating_text(test_id: str) -> str:
     title = TESTS[test_id]["title"]
