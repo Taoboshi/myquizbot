@@ -749,7 +749,7 @@ def reset_test_access_setting(test_id: str) -> None:
 
 
 
-
+@ttl_cache(5)
 def list_subject_settings() -> list[dict[str, Any]]:
     with db_connect() as conn:
         if not _table_exists(conn, "subject_settings"):
