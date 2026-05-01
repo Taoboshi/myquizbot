@@ -19,6 +19,13 @@ def fmt_msk(value) -> str:
     return format_display_datetime(value)
 
 
+def admin_overview_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Обновить", callback_data="admin:summary")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Обзор", callback_data="admin:summary")],
@@ -57,7 +64,6 @@ def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
 def admin_back_to_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
-        [InlineKeyboardButton("📚 К тестам", callback_data="admin:tests")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
 
@@ -414,7 +420,7 @@ def admin_test_overview_text(test_id: str) -> str:
                 f"{mode_percent}%"
             )
 
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 def admin_test_stats_text(test_id: str) -> str:
@@ -430,7 +436,7 @@ def validate_single_test_text(test_id: str) -> str:
     try:
         questions = get_questions(test_id)
     except Exception as exc:
-        return "\\n".join(lines + [f"❌ Не удалось загрузить: {type(exc).__name__}: {exc}"])
+        return "\n".join(lines + [f"❌ Не удалось загрузить: {type(exc).__name__}: {exc}"])
 
     invalid_items = []
     seen: dict[str, int] = {}
@@ -486,7 +492,7 @@ def validate_single_test_text(test_id: str) -> str:
     else:
         lines.append("✅ Дубликатов не найдено")
 
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 def admin_rating_text(test_id: str) -> str:
     return public_rating_text(test_id)
@@ -619,7 +625,7 @@ def safe_admin_summary_text() -> str:
         return (
             "📊 Обзор\n\n"
             "⚠️ Обзор не загрузился.\n"
-            f"Ошибка: {type(exc).__name__}: {exc}\\n\\n"
+            f"Ошибка: {type(exc).__name__}: {exc}\n\n"
             "Открой 🐞 Debug или пришли этот текст."
         )
 
@@ -1049,8 +1055,8 @@ def _attempt_row_text(row) -> str:
     percent = _percent(correct, answered)
     status = "завершена" if row["finished_at"] else "не завершена"
     return (
-        f"{correct}/{answered} · {percent}% · {status}\\n"
-        f"Время: {seconds_to_text(row['duration_seconds'])}\\n"
+        f"{correct}/{answered} · {percent}% · {status}\n"
+        f"Время: {seconds_to_text(row['duration_seconds'])}\n"
         f"Дата: {fmt_msk(row['started_at'])}"
     )
 
@@ -2490,7 +2496,7 @@ async def handle_admin_summary(update: Update, context: ContextTypes.DEFAULT_TYP
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    await query.edit_message_text(safe_admin_summary_text(), reply_markup=admin_main_keyboard())
+    await query.edit_message_text(safe_admin_summary_text(), reply_markup=admin_overview_keyboard())
 
 async def handle_admin_test_overview(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
