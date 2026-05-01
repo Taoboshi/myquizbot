@@ -3,7 +3,7 @@ import os
 import time
 
 from telegram import Update
-from telegram.error import Conflict
+from telegram.error import BadRequest, Conflict
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, TypeHandler, filters
 
 from .admin import (
@@ -116,16 +116,20 @@ except ImportError:
 
 
 async def error_handler(update, context) -> None:
-    logger.exception("Unhandled bot error", exc_info=context.error)
+    err = context.error
 
-    if isinstance(context.error, Conflict):
+    if isinstance(err, Conflict):
         return
+
+    if isinstance(err, BadRequest) and "Message is not modified" in str(err):
+        return
+
+    logger.exception("Unhandled bot error", exc_info=err)
 
     try:
         if update and update.effective_chat:
             user_id = update.effective_user.id if update.effective_user else None
             if user_id in ADMIN_IDS:
-                err = context.error
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     text=(
