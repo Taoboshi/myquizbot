@@ -10,10 +10,10 @@ from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
-from .access import access_label, can_view_test
-from .loader import get_questions, get_subjects, get_tests_for_subject
+from .access import access_label, access_type_label, can_view_test, effective_test_access, effective_access_type, effective_access_code
+from .loader import add_subject_override, apply_test_metadata_override, effective_test_info, get_questions, get_subject_info, get_subjects, get_tests_for_subject, get_unassigned_tests, _slug
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
-from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, revoke_user_test_access, upsert_user
+from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, get_test_access_setting, get_test_metadata_setting, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, reset_test_access_setting, reset_test_metadata_setting, revoke_user_test_access, set_subject_setting, set_test_access_setting, set_test_metadata_setting, upsert_user
 
 
 def fmt_msk(value) -> str:
@@ -38,13 +38,126 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton("⚙️ Управление", callback_data="admin:manage")],
     ])
 
+def admin_tests_text() -> str:
+    subjects = get_subjects()
+    tests_count = len(TESTS)
+
+    lines = [
+        "📚 Тесты",
+        "",
+        f"Разделов: {len(subjects)}",
+        f"Тестов: {tests_count}",
+        "",
+        "Выбери раздел или добавь новый.",
+    ]
+
+    return "\n".join(lines)
+
+
 def admin_tests_keyboard() -> InlineKeyboardMarkup:
     rows = []
-    for test_id, info in TESTS.items():
-        rows.append([InlineKeyboardButton(f"📚 {info['title']}", callback_data=f"admin:test:{test_id}")])
+
+    for subject_id, info in get_subjects():
+        tests_count = len(get_tests_for_subject(subject_id))
+        emoji = info.get("emoji", "📚")
+        title = info.get("title", subject_id)
+        rows.append([
+            InlineKeyboardButton(
+                f"{emoji} {title} ({tests_count})",
+                callback_data=f"admin:subject:{subject_id}",
+            )
+        ])
+
+    rows.append([InlineKeyboardButton("➕ Добавить раздел", callback_data="admin:add_subject")])
     rows.append([InlineKeyboardButton("🧪 Проверить все тесты", callback_data="admin:validate_tests")])
     rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(rows)
+
+
+def admin_subject_text(subject_id: str) -> str:
+    info = get_subject_info(subject_id)
+    title = info.get("title", subject_id)
+    emoji = info.get("emoji", "📚")
+    tests = get_tests_for_subject(subject_id)
+    unassigned_count = len(get_unassigned_tests())
+
+    lines = [
+        f"{emoji} {title}",
+        "",
+        f"Тестов в разделе: {len(tests)}",
+        f"Непривязанных JSON-тестов: {unassigned_count}",
+        "",
+    ]
+
+    if tests:
+        lines.append("Выбери тест или добавь новый в этот раздел.")
+    else:
+        lines.append("В этом разделе пока нет тестов.")
+        lines.append("Нажми «➕ Добавить тест», чтобы привязать JSON из папки tests.")
+
+    return "\n".join(lines)
+
+
+def admin_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
+    rows = []
+
+    for test_id, info in get_tests_for_subject(subject_id):
+        rows.append([
+            InlineKeyboardButton(
+                f"📚 {info.get('title', test_id)}",
+                callback_data=f"admin:test:{test_id}",
+            )
+        ])
+
+    rows.append([InlineKeyboardButton("➕ Добавить тест", callback_data=f"admin:add_test_to_subject:{subject_id}")])
+    rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
+    rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_add_test_to_subject_text(subject_id: str) -> str:
+    subject = get_subject_info(subject_id)
+    tests = get_unassigned_tests()
+
+    lines = [
+        "➕ Добавить тест в раздел",
+        "",
+        f"Раздел: {subject.get('emoji', '📚')} {subject.get('title', subject_id)}",
+        "",
+    ]
+
+    if not tests:
+        lines.extend([
+            "Непривязанных тестов нет.",
+            "",
+            "Чтобы тест появился здесь, положи JSON-файл в папку tests без subject/раздела, затем перезапусти Render.",
+            "Например:",
+            "tests/new_test.json",
+        ])
+    else:
+        lines.append("Выбери тест, который нужно добавить в этот раздел.")
+
+    return "\n".join(lines)
+
+
+def admin_add_test_to_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
+    rows = []
+
+    for test_id, info in get_unassigned_tests():
+        title = info.get("title", test_id)
+        if len(title) > 44:
+            title = title[:41].rstrip() + "…"
+        rows.append([
+            InlineKeyboardButton(
+                f"📄 {title}",
+                callback_data=f"admin:assign_test_subject:{subject_id}:{test_id}",
+            )
+        ])
+
+    rows.append([InlineKeyboardButton("↩️ К разделу", callback_data=f"admin:subject:{subject_id}")])
+    rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
+    return InlineKeyboardMarkup(rows)
+
 
 def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -57,7 +170,10 @@ def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:frequent_errors:{test_id}"),
             InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_test:{test_id}"),
         ],
-        [InlineKeyboardButton("🔐 Доступ", callback_data=f"admin:test_access:{test_id}")],
+        [
+            InlineKeyboardButton("🔐 Доступ", callback_data=f"admin:test_access:{test_id}"),
+            InlineKeyboardButton("✏️ Название/раздел", callback_data=f"admin:test_meta:{test_id}"),
+        ],
         [InlineKeyboardButton("🧪 Проверить тест", callback_data=f"admin:validate_test:{test_id}")],
         [InlineKeyboardButton("📚 К тестам", callback_data="admin:tests")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
@@ -70,7 +186,7 @@ def admin_back_to_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     ])
 
 def admin_test_users_text(test_id: str, page: int = 0) -> str:
-    title = TESTS[test_id]["title"]
+    title = effective_test_info(test_id)["title"]
     page = max(0, page)
     offset = page * ADMIN_USERS_PAGE_SIZE
 
@@ -188,7 +304,7 @@ def admin_test_users_keyboard(test_id: str, page: int = 0) -> InlineKeyboardMark
     return InlineKeyboardMarkup(buttons)
 
 def admin_user_detail_text(test_id: str, user_id: int) -> str:
-    title = TESTS[test_id]["title"]
+    title = effective_test_info(test_id)["title"]
 
     with db_connect() as conn:
         user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
@@ -298,7 +414,7 @@ def admin_user_detail_text(test_id: str, user_id: int) -> str:
     return "\n".join(lines)
 
 def admin_test_overview_text(test_id: str) -> str:
-    title = TESTS[test_id]["title"]
+    title = effective_test_info(test_id)["title"]
     questions_count = len(get_questions(test_id))
 
     with db_connect() as conn:
@@ -500,7 +616,7 @@ def admin_rating_text(test_id: str) -> str:
     return public_rating_text(test_id)
 
 def admin_frequent_errors_text(test_id: str) -> str:
-    title = TESTS[test_id]["title"]
+    title = effective_test_info(test_id)["title"]
 
     with db_connect() as conn:
         rows = conn.execute(
@@ -1884,14 +2000,62 @@ def _access_icon_for_admin(test_id: str) -> str:
     }.get(access_type, "🌍")
 
 
+def admin_test_meta_text(test_id: str) -> str:
+    base = TESTS[test_id]
+    info = effective_test_info(test_id)
+    setting = get_test_metadata_setting(test_id)
+
+    lines = [
+        "✏️ Название и раздел теста",
+        "",
+        f"Текущее название: {info.get('title', test_id)}",
+        f"Название в JSON: {base.get('title', test_id)}",
+        "",
+        f"Текущий раздел: {info.get('subject_title') or info.get('subject_id') or '—'}",
+        f"Раздел в JSON: {base.get('subject_title') or base.get('subject_id') or '—'}",
+        f"Emoji раздела: {info.get('subject_emoji') or '📚'}",
+        "",
+        "Сортировка предметов и тестов идёт по алфавиту.",
+    ]
+
+    if setting:
+        lines.extend([
+            "",
+            f"Источник настройки: админка",
+            f"Изменено: {fmt_msk(setting.get('updated_at'))}",
+        ])
+    else:
+        lines.extend([
+            "",
+            "Источник настройки: JSON",
+        ])
+
+    return "\n".join(lines)
+
+
+def admin_test_meta_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✏️ Изменить название", callback_data=f"admin:set_test_title:{test_id}")],
+        [InlineKeyboardButton("📁 Изменить раздел", callback_data=f"admin:set_test_subject:{test_id}")],
+        [InlineKeyboardButton("↩️ Сбросить к JSON", callback_data=f"admin:reset_test_meta:{test_id}")],
+        [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
 def admin_test_access_text(test_id: str) -> str:
-    info = TESTS[test_id]
-    access = info.get("access", {}) or {}
-    access_type = access.get("type", "public")
-    code = access.get("code") or "—"
+    info = effective_test_info(test_id)
+    base = TESTS[test_id]
+    base_access = info.get("access", {}) or {}
+    effective = effective_test_access(test_id)
+    override = get_test_access_setting(test_id)
+
+    base_type = base_access.get("type", "public")
+    effective_type = effective.get("type", "public")
+    code = effective.get("code") or "—"
 
     granted_users = list_test_access_users(test_id)
-    allowed_users = access.get("users") or []
+    allowed_users = base_access.get("users") or []
     try:
         allowed_users = [int(x) for x in allowed_users]
     except Exception:
@@ -1899,39 +2063,50 @@ def admin_test_access_text(test_id: str) -> str:
 
     total_with_access = len(set(granted_users) | set(allowed_users))
 
+    source_text = "из админки" if override else "из JSON"
     lines = [
         "🔐 Доступ к тесту",
         "",
         f"📚 {info['title']}",
-        f"Тип доступа: {access_label(test_id)}",
-        f"Код доступа: {code if access_type == 'code' else '—'}",
+        f"Текущий доступ: {access_type_label(effective_type)}",
+        f"Базовый доступ в JSON: {access_type_label(base_type)}",
+        f"Источник настройки: {source_text}",
+        f"Код доступа: {code if effective_type == 'code' else '—'}",
         f"Пользователей с доступом: {total_with_access}",
         "",
     ]
 
-    if access_type == "public":
+    if effective_type == "public":
         lines.extend([
             "🌍 Тест открыт всем.",
-            "Выдавать доступ вручную не нужно.",
+            "Ручной доступ пользователям не нужен.",
         ])
-    elif access_type == "private":
+    elif effective_type == "private":
         lines.extend([
             "🔐 Приватный тест видят только админ и пользователи с доступом.",
             "Доступ можно выдать из карточки пользователя.",
         ])
-    elif access_type == "code":
+    elif effective_type == "code":
         lines.extend([
             "🔑 Тест виден всем как закрытый.",
             "После правильного кода доступ сохраняется в базе.",
             "Доступ также можно выдать вручную из карточки пользователя.",
         ])
-    elif access_type == "admin_only":
+    elif effective_type == "admin_only":
         lines.extend([
             "🙈 Тест видит только админ.",
+            "Обычные пользователи его не увидят.",
+        ])
+
+    if override:
+        lines.extend([
+            "",
+            f"Изменено: {fmt_msk(override.get('updated_at'))}",
         ])
 
     if total_with_access:
         lines.extend(["", "👥 Пользователи с доступом:"])
+        user_ids = sorted(set(granted_users) | set(allowed_users))
         with db_connect() as conn:
             rows = conn.execute(
                 """
@@ -1939,8 +2114,8 @@ def admin_test_access_text(test_id: str) -> str:
                 FROM users
                 WHERE user_id IN ({})
                 ORDER BY last_seen_at DESC
-                """.format(",".join(["?"] * len(set(granted_users) | set(allowed_users)))),
-                tuple(set(granted_users) | set(allowed_users)),
+                """.format(",".join(["?"] * len(user_ids))),
+                tuple(user_ids),
             ).fetchall()
         for row in rows[:15]:
             lines.append(f"• {user_display_name(row)}")
@@ -1952,6 +2127,16 @@ def admin_test_access_text(test_id: str) -> str:
 
 def admin_test_access_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🌍 Открытый", callback_data=f"admin:set_access:{test_id}:public"),
+            InlineKeyboardButton("🔐 Приватный", callback_data=f"admin:set_access:{test_id}:private"),
+        ],
+        [
+            InlineKeyboardButton("🔑 По коду", callback_data=f"admin:set_access:{test_id}:code"),
+            InlineKeyboardButton("🙈 Только админ", callback_data=f"admin:set_access:{test_id}:admin_only"),
+        ],
+        [InlineKeyboardButton("✏️ Изменить код", callback_data=f"admin:set_access_code:{test_id}")],
+        [InlineKeyboardButton("↩️ Сбросить к JSON", callback_data=f"admin:reset_access:{test_id}")],
         [InlineKeyboardButton("👥 Пользователи с доступом", callback_data=f"admin:test_access_users:{test_id}:0")],
         [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
@@ -1959,8 +2144,8 @@ def admin_test_access_keyboard(test_id: str) -> InlineKeyboardMarkup:
 
 
 def admin_test_access_users_text(test_id: str, page: int = 0) -> str:
-    info = TESTS[test_id]
-    access = info.get("access", {}) or {}
+    info = effective_test_info(test_id)
+    access = TESTS[test_id].get("access", {}) or {}
     granted_users = list_test_access_users(test_id)
     allowed_users = access.get("users") or []
     try:
@@ -2035,7 +2220,6 @@ def admin_user_access_text(user_id: int) -> str:
     with db_connect() as conn:
         user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
 
-    explicit_access = set(list_user_test_access(user_id))
     lines = [
         "🔐 Доступы пользователя",
         "",
@@ -2050,7 +2234,7 @@ def admin_user_access_text(user_id: int) -> str:
 
         lines.append(f"{subject.get('emoji', '📚')} {subject.get('title', subject_id)}")
         for test_id, info in subject_tests:
-            access_type = info.get("access", {}).get("type", "public")
+            access_type = effective_access_type(test_id)
             has_access = has_user_test_access(user_id, test_id)
             built_in_users = info.get("access", {}).get("users") or []
             try:
@@ -2080,7 +2264,7 @@ def admin_user_access_keyboard(user_id: int, page: int = 0, sort: str = "recent"
 
     for subject_id, subject in get_subjects():
         for test_id, info in get_tests_for_subject(subject_id):
-            access_type = info.get("access", {}).get("type", "public")
+            access_type = effective_access_type(test_id)
             if access_type in {"public", "admin_only"}:
                 continue
 
@@ -2444,6 +2628,114 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
     user = update.effective_user
     if not user or not is_admin(user.id):
         return
+
+    if context.user_data.get("admin_add_subject_waiting"):
+        text = (update.message.text or "").strip()
+        if not text:
+            await update.message.reply_text(
+                "Название раздела не может быть пустым.",
+                reply_markup=admin_tests_keyboard(),
+            )
+            raise ApplicationHandlerStop
+
+        context.user_data.pop("admin_add_subject_waiting", None)
+
+        subject_id = _slug(text)
+        set_subject_setting(subject_id, text, emoji="📚", updated_by=user.id)
+        add_subject_override(subject_id, text, emoji="📚")
+
+        await update.message.reply_text(
+            "✅ Раздел добавлен.\n\n" + admin_tests_text(),
+            reply_markup=admin_tests_keyboard(),
+        )
+        raise ApplicationHandlerStop
+
+    rename_test_id = context.user_data.get("admin_rename_test_id")
+    if rename_test_id:
+        text = (update.message.text or "").strip()
+        if not text:
+            await update.message.reply_text(
+                "Название не может быть пустым.",
+                reply_markup=admin_test_meta_keyboard(rename_test_id),
+            )
+            raise ApplicationHandlerStop
+
+        context.user_data.pop("admin_rename_test_id", None)
+        current = effective_test_info(rename_test_id)
+        set_test_metadata_setting(
+            rename_test_id,
+            title=text,
+            subject_id=current.get("subject_id"),
+            subject_title=current.get("subject_title"),
+            subject_emoji=current.get("subject_emoji"),
+            updated_by=user.id,
+        )
+        apply_test_metadata_override(rename_test_id, title=text)
+
+        await update.message.reply_text(
+            "✅ Название теста обновлено.\n\n" + admin_test_meta_text(rename_test_id),
+            reply_markup=admin_test_meta_keyboard(rename_test_id),
+        )
+        raise ApplicationHandlerStop
+
+    subject_test_id = context.user_data.get("admin_change_subject_test_id")
+    if subject_test_id:
+        text = (update.message.text or "").strip()
+        if not text:
+            await update.message.reply_text(
+                "Название раздела не может быть пустым.",
+                reply_markup=admin_test_meta_keyboard(subject_test_id),
+            )
+            raise ApplicationHandlerStop
+
+        context.user_data.pop("admin_change_subject_test_id", None)
+        current = effective_test_info(subject_test_id)
+        subject_id = _slug(text)
+
+        set_test_metadata_setting(
+            subject_test_id,
+            title=current.get("title"),
+            subject_id=subject_id,
+            subject_title=text,
+            subject_emoji=current.get("subject_emoji") or "📚",
+            updated_by=user.id,
+        )
+        apply_test_metadata_override(
+            subject_test_id,
+            subject_id=subject_id,
+            subject_title=text,
+            subject_emoji=current.get("subject_emoji") or "📚",
+        )
+
+        await update.message.reply_text(
+            "✅ Раздел теста обновлён.\n\n" + admin_test_meta_text(subject_test_id),
+            reply_markup=admin_test_meta_keyboard(subject_test_id),
+        )
+        raise ApplicationHandlerStop
+
+    access_code_test_id = context.user_data.get("admin_access_code_test_id")
+    if access_code_test_id:
+        text = (update.message.text or "").strip()
+        if not text:
+            await update.message.reply_text(
+                "Код не может быть пустым.",
+                reply_markup=admin_test_access_keyboard(access_code_test_id),
+            )
+            raise ApplicationHandlerStop
+
+        context.user_data.pop("admin_access_code_test_id", None)
+        set_test_access_setting(
+            access_code_test_id,
+            "code",
+            code=text,
+            updated_by=user.id,
+        )
+        await update.message.reply_text(
+            "✅ Код доступа обновлён.\n\n" + admin_test_access_text(access_code_test_id),
+            reply_markup=admin_test_access_keyboard(access_code_test_id),
+        )
+        raise ApplicationHandlerStop
+
     if not context.user_data.get("admin_broadcast_waiting"):
         return
 
@@ -2790,6 +3082,235 @@ async def handle_admin_revoke_access(update: Update, context: ContextTypes.DEFAU
     )
 
 
+async def handle_admin_set_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id, access_type = query.data.split(":")
+    current_code = effective_access_code(test_id)
+    set_test_access_setting(test_id, access_type, code=current_code, updated_by=query.from_user.id)
+
+    await query.edit_message_text(
+        admin_test_access_text(test_id),
+        reply_markup=admin_test_access_keyboard(test_id),
+    )
+
+
+async def handle_admin_reset_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    reset_test_access_setting(test_id)
+
+    await query.edit_message_text(
+        admin_test_access_text(test_id),
+        reply_markup=admin_test_access_keyboard(test_id),
+    )
+
+
+async def handle_admin_set_access_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    context.user_data["admin_access_code_test_id"] = test_id
+
+    await query.edit_message_text(
+        "✏️ Изменить код доступа\n\n"
+        f"Тест: {effective_test_info(test_id)['title']}\n\n"
+        "Отправь следующим сообщением новый код доступа.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:test_access:{test_id}")],
+        ]),
+    )
+
+
+async def handle_admin_test_meta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    await query.edit_message_text(
+        admin_test_meta_text(test_id),
+        reply_markup=admin_test_meta_keyboard(test_id),
+    )
+
+
+async def handle_admin_set_test_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    context.user_data["admin_rename_test_id"] = test_id
+    context.user_data.pop("admin_change_subject_test_id", None)
+
+    await query.edit_message_text(
+        "✏️ Изменить название теста\n\n"
+        f"Текущее название: {effective_test_info(test_id)['title']}\n\n"
+        "Отправь следующим сообщением новое название.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:test_meta:{test_id}")],
+        ]),
+    )
+
+
+async def handle_admin_set_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    context.user_data["admin_change_subject_test_id"] = test_id
+    context.user_data.pop("admin_rename_test_id", None)
+
+    await query.edit_message_text(
+        "📁 Изменить раздел теста\n\n"
+        f"Текущий раздел: {effective_test_info(test_id).get('subject_title') or '—'}\n\n"
+        "Отправь следующим сообщением новое название раздела.\n"
+        "Например: Анатомия или Фармакология.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:test_meta:{test_id}")],
+        ]),
+    )
+
+
+async def handle_admin_reset_test_meta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":")
+    reset_test_metadata_setting(test_id)
+
+    base = TESTS[test_id]
+    apply_test_metadata_override(
+        test_id,
+        title=base.get("title"),
+        subject_id=base.get("subject_id"),
+        subject_title=base.get("subject_title"),
+        subject_emoji=base.get("subject_emoji"),
+    )
+
+    await query.edit_message_text(
+        admin_test_meta_text(test_id),
+        reply_markup=admin_test_meta_keyboard(test_id),
+    )
+
+
+async def handle_admin_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    await query.edit_message_text(
+        admin_subject_text(subject_id),
+        reply_markup=admin_subject_keyboard(subject_id),
+    )
+
+
+async def handle_admin_add_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    context.user_data["admin_add_subject_waiting"] = True
+    context.user_data.pop("admin_rename_test_id", None)
+    context.user_data.pop("admin_change_subject_test_id", None)
+    context.user_data.pop("admin_access_code_test_id", None)
+
+    await query.edit_message_text(
+        "➕ Добавить раздел\n\n"
+        "Отправь следующим сообщением название раздела.\n\n"
+        "Например: Анатомия",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Отмена", callback_data="admin:tests")],
+        ]),
+    )
+
+
+async def handle_admin_add_test_to_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    await query.edit_message_text(
+        admin_add_test_to_subject_text(subject_id),
+        reply_markup=admin_add_test_to_subject_keyboard(subject_id),
+    )
+
+
+async def handle_admin_assign_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id, test_id = query.data.split(":", 3)
+
+    subject = get_subject_info(subject_id)
+    current = effective_test_info(test_id)
+
+    set_test_metadata_setting(
+        test_id,
+        title=current.get("title"),
+        subject_id=subject_id,
+        subject_title=subject.get("title", subject_id),
+        subject_emoji=subject.get("emoji", "📚"),
+        updated_by=query.from_user.id,
+    )
+    apply_test_metadata_override(
+        test_id,
+        subject_id=subject_id,
+        subject_title=subject.get("title", subject_id),
+        subject_emoji=subject.get("emoji", "📚"),
+    )
+
+    await query.edit_message_text(
+        "✅ Тест добавлен в раздел.\n\n" + admin_subject_text(subject_id),
+        reply_markup=admin_subject_keyboard(subject_id),
+    )
+
+
 async def handle_admin_tests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
@@ -2797,7 +3318,7 @@ async def handle_admin_tests(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    await query.edit_message_text("📚 Тесты\n\nВыбери тест для просмотра статистики и действий.", reply_markup=admin_tests_keyboard())
+    await query.edit_message_text(admin_tests_text(), reply_markup=admin_tests_keyboard())
 
 async def handle_admin_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -2807,7 +3328,7 @@ async def handle_admin_test_menu(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text("Админ-панель недоступна.")
         return
     _, _, test_id = query.data.split(":")
-    title = TESTS[test_id]["title"]
+    title = effective_test_info(test_id)["title"]
     questions_count = len(get_questions(test_id))
     await query.edit_message_text(
         f"📚 {title}\n\nВопросов: {questions_count}\n\nВыбери действие:",
@@ -2944,5 +3465,5 @@ async def handle_admin_export_test(update: Update, context: ContextTypes.DEFAULT
         return
     _, _, test_id = query.data.split(":")
     path = export_csv(test_id)
-    await query.message.reply_document(InputFile(path), caption=f"📤 Экспорт по тесту: {TESTS[test_id]['title']}")
+    await query.message.reply_document(InputFile(path), caption=f"📤 Экспорт по тесту: {effective_test_info(test_id)['title']}")
     await query.edit_message_text(admin_export_menu_text(), reply_markup=admin_export_menu_keyboard())

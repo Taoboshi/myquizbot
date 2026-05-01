@@ -5,6 +5,12 @@ from typing import Any
 
 from .config import BASE_DIR, LETTERS, SUBJECTS, TESTS
 
+try:
+    from .storage import get_test_metadata_setting, list_subject_settings
+except Exception:
+    get_test_metadata_setting = None
+    list_subject_settings = None
+
 
 def _slug(value: str) -> str:
     value = str(value or "").strip().lower()
@@ -262,24 +268,151 @@ def get_questions(test_id: str) -> list[dict[str, Any]]:
     return LOADED_TESTS[test_id]
 
 
+def effective_test_info(test_id: str) -> dict[str, Any]:
+    info = dict(TESTS[test_id])
+
+    setting = None
+    if get_test_metadata_setting is not None:
+        try:
+            setting = get_test_metadata_setting(test_id)
+        except Exception:
+            setting = None
+
+    if not setting:
+        return info
+
+    if setting.get("title"):
+        info["title"] = setting["title"]
+    if setting.get("subject_id"):
+        info["subject_id"] = setting["subject_id"]
+    if setting.get("subject_title"):
+        info["subject_title"] = setting["subject_title"]
+    if setting.get("subject_emoji"):
+        info["subject_emoji"] = setting["subject_emoji"]
+
+    return info
+
+
+def apply_test_metadata_override(
+    test_id: str,
+    title: str | None = None,
+    subject_id: str | None = None,
+    subject_title: str | None = None,
+    subject_emoji: str | None = None,
+) -> None:
+    if test_id not in TESTS:
+        return
+
+    if title is not None:
+        TESTS[test_id]["title"] = title
+    if subject_id is not None:
+        TESTS[test_id]["subject_id"] = subject_id
+    if subject_title is not None:
+        TESTS[test_id]["subject_title"] = subject_title
+    if subject_emoji is not None:
+        TESTS[test_id]["subject_emoji"] = subject_emoji
+
+
+def apply_all_test_metadata_overrides() -> None:
+    if get_test_metadata_setting is None:
+        return
+
+    for test_id in list(TESTS.keys()):
+        try:
+            setting = get_test_metadata_setting(test_id)
+        except Exception:
+            continue
+        if not setting:
+            continue
+
+        apply_test_metadata_override(
+            test_id,
+            title=setting.get("title") or None,
+            subject_id=setting.get("subject_id") or None,
+            subject_title=setting.get("subject_title") or None,
+            subject_emoji=setting.get("subject_emoji") or None,
+        )
+
+
+UNASSIGNED_SUBJECT_IDS = {"", "default", "unassigned", "none", "no_subject"}
+
+
+def is_unassigned_subject_id(subject_id: str | None) -> bool:
+    return str(subject_id or "").strip().lower() in UNASSIGNED_SUBJECT_IDS
+
+
+def add_subject_override(subject_id: str, title: str, emoji: str = "📚") -> None:
+    subject_id = _slug(subject_id)
+    SUBJECTS[subject_id] = {
+        "title": str(title or _clean_title(subject_id)).strip(),
+        "emoji": str(emoji or "📚").strip() or "📚",
+        "order": 100,
+    }
+
+
 def get_subjects() -> list[tuple[str, dict[str, Any]]]:
+    subjects: dict[str, dict[str, Any]] = {}
+
+    for test_id in TESTS:
+        info = effective_test_info(test_id)
+        subject_id = info.get("subject_id") or "default"
+        if is_unassigned_subject_id(subject_id):
+            continue
+        subjects[subject_id] = {
+            "title": info.get("subject_title") or SUBJECTS.get(subject_id, {}).get("title") or _clean_title(subject_id),
+            "emoji": info.get("subject_emoji") or SUBJECTS.get(subject_id, {}).get("emoji") or "📚",
+            "order": SUBJECTS.get(subject_id, {}).get("order", 100),
+        }
+
+    for subject_id, info in SUBJECTS.items():
+        if is_unassigned_subject_id(subject_id):
+            continue
+        subjects.setdefault(subject_id, info)
+
+    if list_subject_settings is not None:
+        try:
+            for subject in list_subject_settings():
+                subjects[subject["id"]] = {
+                    "title": subject.get("title") or _clean_title(subject["id"]),
+                    "emoji": subject.get("emoji") or "📚",
+                    "order": 100,
+                }
+        except Exception:
+            pass
+
     return sorted(
-        SUBJECTS.items(),
-        key=lambda item: (int(item[1].get("order", 100)), str(item[1].get("title", item[0])).lower()),
+        subjects.items(),
+        key=lambda item: str(item[1].get("title", item[0])).casefold(),
     )
 
 
 def get_subject_info(subject_id: str) -> dict[str, Any]:
+    for current_id, info in get_subjects():
+        if current_id == subject_id:
+            return info
     return SUBJECTS.get(subject_id, {"title": _clean_title(subject_id), "emoji": "📚", "order": 100})
 
 
 def get_tests_for_subject(subject_id: str) -> list[tuple[str, dict[str, Any]]]:
-    rows = [(test_id, info) for test_id, info in TESTS.items() if info.get("subject_id") == subject_id]
-    return sorted(rows, key=lambda item: str(item[1].get("title", item[0])).lower())
+    rows = []
+    for test_id in TESTS:
+        info = effective_test_info(test_id)
+        if info.get("subject_id") == subject_id:
+            rows.append((test_id, info))
+    return sorted(rows, key=lambda item: str(item[1].get("title", item[0])).casefold())
+
+
+def get_unassigned_tests() -> list[tuple[str, dict[str, Any]]]:
+    rows = []
+    for test_id in TESTS:
+        info = effective_test_info(test_id)
+        if is_unassigned_subject_id(info.get("subject_id")):
+            rows.append((test_id, info))
+    return sorted(rows, key=lambda item: str(item[1].get("title", item[0])).casefold())
 
 
 def test_subject_id(test_id: str) -> str:
-    return TESTS[test_id].get("subject_id", "default")
+    return effective_test_info(test_id).get("subject_id", "default")
 
 
 def test_access(test_id: str) -> dict[str, Any]:

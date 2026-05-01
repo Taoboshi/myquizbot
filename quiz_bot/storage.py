@@ -356,6 +356,42 @@ def _init_postgres_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS test_access_settings (
+                test_id TEXT PRIMARY KEY,
+                access_type TEXT NOT NULL,
+                code TEXT,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by BIGINT
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS test_metadata_settings (
+                test_id TEXT PRIMARY KEY,
+                title TEXT,
+                subject_id TEXT,
+                subject_title TEXT,
+                subject_emoji TEXT,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by BIGINT
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS subject_settings (
+                subject_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                emoji TEXT NOT NULL DEFAULT '📚',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by BIGINT
+            )
+            """
+        )
 
         for stmt in [
             "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS last_wrong_answer_index INTEGER",
@@ -464,6 +500,33 @@ def _init_sqlite_db() -> None:
                 granted_by INTEGER,
                 PRIMARY KEY (user_id, test_id)
             );
+
+            CREATE TABLE IF NOT EXISTS test_access_settings (
+                test_id TEXT PRIMARY KEY,
+                access_type TEXT NOT NULL,
+                code TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by INTEGER
+            );
+
+            CREATE TABLE IF NOT EXISTS test_metadata_settings (
+                test_id TEXT PRIMARY KEY,
+                title TEXT,
+                subject_id TEXT,
+                subject_title TEXT,
+                subject_emoji TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by INTEGER
+            );
+
+            CREATE TABLE IF NOT EXISTS subject_settings (
+                subject_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                emoji TEXT NOT NULL DEFAULT '📚',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_by INTEGER
+            );
             """
         )
 
@@ -490,6 +553,229 @@ def init_db() -> None:
     else:
         _init_sqlite_db()
 
+
+
+VALID_ACCESS_TYPES = {"public", "private", "code", "admin_only"}
+
+
+def get_test_access_setting(test_id: str) -> dict[str, Any] | None:
+    with db_connect() as conn:
+        if not _table_exists(conn, "test_access_settings"):
+            return None
+
+        row = conn.execute(
+            """
+            SELECT test_id, access_type, code, updated_at, updated_by
+            FROM test_access_settings
+            WHERE test_id = ?
+            """,
+            (test_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "test_id": row["test_id"],
+        "type": row["access_type"],
+        "code": row["code"] or "",
+        "updated_at": row["updated_at"],
+        "updated_by": row["updated_by"],
+    }
+
+
+def set_test_access_setting(test_id: str, access_type: str, code: str | None = None, updated_by: int | None = None) -> None:
+    access_type = str(access_type or "public").strip().lower()
+    if access_type not in VALID_ACCESS_TYPES:
+        access_type = "public"
+
+    code_value = (str(code).strip() if code is not None else None) or None
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO test_access_settings (test_id, access_type, code, updated_at, updated_by)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+            ON CONFLICT(test_id)
+            DO UPDATE SET
+                access_type = excluded.access_type,
+                code = excluded.code,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = excluded.updated_by
+            """,
+            (test_id, access_type, code_value, updated_by),
+        )
+        conn.commit()
+
+
+def reset_test_access_setting(test_id: str) -> None:
+    with db_connect() as conn:
+        if not _table_exists(conn, "test_access_settings"):
+            return
+
+        conn.execute("DELETE FROM test_access_settings WHERE test_id = ?", (test_id,))
+        conn.commit()
+
+
+
+
+
+def list_subject_settings() -> list[dict[str, Any]]:
+    with db_connect() as conn:
+        if not _table_exists(conn, "subject_settings"):
+            return []
+
+        rows = conn.execute(
+            """
+            SELECT subject_id, title, emoji, created_at, updated_at, updated_by
+            FROM subject_settings
+            ORDER BY LOWER(title)
+            """
+        ).fetchall()
+
+    return [
+        {
+            "id": row["subject_id"],
+            "title": row["title"],
+            "emoji": row["emoji"] or "📚",
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+            "updated_by": row["updated_by"],
+        }
+        for row in rows
+    ]
+
+
+def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
+    with db_connect() as conn:
+        if not _table_exists(conn, "subject_settings"):
+            return None
+
+        row = conn.execute(
+            """
+            SELECT subject_id, title, emoji, created_at, updated_at, updated_by
+            FROM subject_settings
+            WHERE subject_id = ?
+            """,
+            (subject_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "id": row["subject_id"],
+        "title": row["title"],
+        "emoji": row["emoji"] or "📚",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+        "updated_by": row["updated_by"],
+    }
+
+
+def set_subject_setting(subject_id: str, title: str, emoji: str = "📚", updated_by: int | None = None) -> None:
+    subject_id = str(subject_id or "").strip()
+    title = str(title or "").strip()
+    emoji = str(emoji or "📚").strip() or "📚"
+
+    if not subject_id or not title:
+        return
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO subject_settings (subject_id, title, emoji, created_at, updated_at, updated_by)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+            ON CONFLICT(subject_id)
+            DO UPDATE SET
+                title = excluded.title,
+                emoji = excluded.emoji,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = excluded.updated_by
+            """,
+            (subject_id, title, emoji, updated_by),
+        )
+        conn.commit()
+
+
+def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
+    with db_connect() as conn:
+        if not _table_exists(conn, "test_metadata_settings"):
+            return None
+
+        row = conn.execute(
+            """
+            SELECT test_id, title, subject_id, subject_title, subject_emoji, updated_at, updated_by
+            FROM test_metadata_settings
+            WHERE test_id = ?
+            """,
+            (test_id,),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "test_id": row["test_id"],
+        "title": row["title"] or "",
+        "subject_id": row["subject_id"] or "",
+        "subject_title": row["subject_title"] or "",
+        "subject_emoji": row["subject_emoji"] or "",
+        "updated_at": row["updated_at"],
+        "updated_by": row["updated_by"],
+    }
+
+
+def set_test_metadata_setting(
+    test_id: str,
+    title: str | None = None,
+    subject_id: str | None = None,
+    subject_title: str | None = None,
+    subject_emoji: str | None = None,
+    updated_by: int | None = None,
+) -> None:
+    current = get_test_metadata_setting(test_id) or {}
+
+    title_value = title if title is not None else current.get("title")
+    subject_id_value = subject_id if subject_id is not None else current.get("subject_id")
+    subject_title_value = subject_title if subject_title is not None else current.get("subject_title")
+    subject_emoji_value = subject_emoji if subject_emoji is not None else current.get("subject_emoji")
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO test_metadata_settings (
+                test_id, title, subject_id, subject_title, subject_emoji, updated_at, updated_by
+            )
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+            ON CONFLICT(test_id)
+            DO UPDATE SET
+                title = excluded.title,
+                subject_id = excluded.subject_id,
+                subject_title = excluded.subject_title,
+                subject_emoji = excluded.subject_emoji,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = excluded.updated_by
+            """,
+            (
+                test_id,
+                (title_value or None),
+                (subject_id_value or None),
+                (subject_title_value or None),
+                (subject_emoji_value or None),
+                updated_by,
+            ),
+        )
+        conn.commit()
+
+
+def reset_test_metadata_setting(test_id: str) -> None:
+    with db_connect() as conn:
+        if not _table_exists(conn, "test_metadata_settings"):
+            return
+
+        conn.execute("DELETE FROM test_metadata_settings WHERE test_id = ?", (test_id,))
+        conn.commit()
 
 
 def has_user_test_access(user_id: int, test_id: str) -> bool:
