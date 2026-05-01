@@ -6,8 +6,9 @@ from typing import Any
 from .config import BASE_DIR, LETTERS, SUBJECTS, TESTS
 
 try:
-    from .storage import get_test_metadata_setting, list_subject_settings
+    from .storage import get_subject_setting, get_test_metadata_setting, list_subject_settings
 except Exception:
+    get_subject_setting = None
     get_test_metadata_setting = None
     list_subject_settings = None
 
@@ -299,6 +300,17 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
     if setting.get("subject_emoji"):
         info["subject_emoji"] = setting["subject_emoji"]
 
+    subject_id = info.get("subject_id")
+    if subject_id and not is_unassigned_subject_id(subject_id) and get_subject_setting is not None:
+        try:
+            subject_setting = get_subject_setting(subject_id)
+        except Exception:
+            subject_setting = None
+
+        if subject_setting:
+            info["subject_title"] = subject_setting.get("title") or info.get("subject_title")
+            info["subject_emoji"] = subject_setting.get("emoji") or info.get("subject_emoji") or "📚"
+
     return info
 
 
@@ -357,6 +369,10 @@ def add_subject_override(subject_id: str, title: str, emoji: str = "📚") -> No
         "emoji": str(emoji or "📚").strip() or "📚",
         "order": 100,
     }
+
+
+def remove_subject_override(subject_id: str) -> None:
+    SUBJECTS.pop(_slug(subject_id), None)
 
 
 def get_subjects() -> list[tuple[str, dict[str, Any]]]:

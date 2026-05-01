@@ -700,6 +700,20 @@ def list_subject_settings() -> list[dict[str, Any]]:
     ]
 
 
+
+def delete_subject_setting(subject_id: str) -> None:
+    subject_id = str(subject_id or "").strip()
+    if not subject_id:
+        return
+
+    with db_connect() as conn:
+        if not _table_exists(conn, "subject_settings"):
+            return
+
+        conn.execute("DELETE FROM subject_settings WHERE subject_id = ?", (subject_id,))
+        conn.commit()
+
+
 def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "subject_settings"):

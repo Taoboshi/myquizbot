@@ -64,6 +64,14 @@ from .admin import (
     handle_admin_add_subject,
     handle_admin_add_test_to_subject,
     handle_admin_assign_test_subject,
+    handle_admin_subject_settings,
+    handle_admin_rename_subject,
+    handle_admin_delete_subject_confirm,
+    handle_admin_delete_subject_do,
+    handle_admin_move_test_subject,
+    handle_admin_move_test_subject_do,
+    handle_admin_detach_test_subject,
+    handle_admin_user_manage,
     handle_admin_tests,
     handle_admin_users,
     handle_admin_users_recent,
@@ -272,6 +280,14 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_reset_user_do, pattern=r"^admin:reset_user_do:"))
     app.add_handler(CallbackQueryHandler(handle_admin_validate_tests, pattern=r"^admin:validate_tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_subject_settings, pattern=r"^admin:subject_settings:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_rename_subject, pattern=r"^admin:rename_subject:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_delete_subject_confirm, pattern=r"^admin:delete_subject_confirm:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_delete_subject_do, pattern=r"^admin:delete_subject_do:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_move_test_subject_do, pattern=r"^admin:move_test_subject_do:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_move_test_subject, pattern=r"^admin:move_test_subject:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_detach_test_subject, pattern=r"^admin:detach_test_subject:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_user_manage, pattern=r"^admin:user_manage:"))
     app.add_handler(CallbackQueryHandler(handle_admin_subject, pattern=r"^admin:subject:"))
     app.add_handler(CallbackQueryHandler(handle_admin_add_test_to_subject, pattern=r"^admin:add_test_to_subject:"))
     app.add_handler(CallbackQueryHandler(handle_admin_assign_test_subject, pattern=r"^admin:assign_test_subject:"))

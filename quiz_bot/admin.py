@@ -11,9 +11,9 @@ from telegram.ext import ApplicationHandlerStop, ContextTypes
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
 from .access import access_label, access_type_label, can_view_test, effective_test_access, effective_access_type, effective_access_code
-from .loader import add_subject_override, apply_test_metadata_override, effective_test_info, get_questions, get_subject_info, get_subjects, get_tests_for_subject, get_unassigned_tests, _slug
+from .loader import add_subject_override, apply_test_metadata_override, effective_test_info, get_questions, get_subject_info, get_subjects, get_tests_for_subject, get_unassigned_tests, remove_subject_override, _slug
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
-from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, get_test_access_setting, get_test_metadata_setting, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, reset_test_access_setting, reset_test_metadata_setting, revoke_user_test_access, set_subject_setting, set_test_access_setting, set_test_metadata_setting, upsert_user
+from .storage import DATABASE_URL, db_connect, delete_subject_setting, get_all_time_error_indices, get_test_access_setting, get_test_metadata_setting, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, reset_test_access_setting, reset_test_metadata_setting, revoke_user_test_access, set_subject_setting, set_test_access_setting, set_test_metadata_setting, upsert_user
 
 
 def fmt_msk(value) -> str:
@@ -30,25 +30,29 @@ def admin_overview_keyboard() -> InlineKeyboardMarkup:
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Обзор", callback_data="admin:summary")],
-        [InlineKeyboardButton("👥 Пользователи", callback_data="admin:users:0")],
-        [InlineKeyboardButton("📚 Тесты", callback_data="admin:tests")],
-        [InlineKeyboardButton("🧠 Ошибки", callback_data="admin:errors")],
-        [InlineKeyboardButton("📤 Экспорт", callback_data="admin:export_menu")],
-        [InlineKeyboardButton("🐞 Debug", callback_data="admin:debug")],
-        [InlineKeyboardButton("⚙️ Управление", callback_data="admin:manage")],
+        [
+            InlineKeyboardButton("👥 Пользователи", callback_data="admin:users:0"),
+            InlineKeyboardButton("📚 Контент", callback_data="admin:tests"),
+        ],
+        [
+            InlineKeyboardButton("🧠 Ошибки", callback_data="admin:errors"),
+            InlineKeyboardButton("⚙️ Сервис", callback_data="admin:manage"),
+        ],
     ])
 
 def admin_tests_text() -> str:
     subjects = get_subjects()
     tests_count = len(TESTS)
+    unassigned_count = len(get_unassigned_tests())
 
     lines = [
-        "📚 Тесты",
+        "📚 Контент",
         "",
         f"Разделов: {len(subjects)}",
         f"Тестов: {tests_count}",
+        f"Непривязанных: {unassigned_count}",
         "",
-        "Выбери раздел или добавь новый.",
+        "Здесь создаются разделы и раскладываются тесты.",
     ]
 
     return "\n".join(lines)
@@ -69,7 +73,7 @@ def admin_tests_keyboard() -> InlineKeyboardMarkup:
         ])
 
     rows.append([InlineKeyboardButton("➕ Добавить раздел", callback_data="admin:add_subject")])
-    rows.append([InlineKeyboardButton("🧪 Проверить все тесты", callback_data="admin:validate_tests")])
+    rows.append([InlineKeyboardButton("🧪 Проверить тесты", callback_data="admin:validate_tests")])
     rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(rows)
 
@@ -90,10 +94,9 @@ def admin_subject_text(subject_id: str) -> str:
     ]
 
     if tests:
-        lines.append("Выбери тест или добавь новый в этот раздел.")
+        lines.append("Выбери тест или добавь новый.")
     else:
-        lines.append("В этом разделе пока нет тестов.")
-        lines.append("Нажми «➕ Добавить тест», чтобы привязать JSON из папки tests.")
+        lines.append("Раздел пустой. Можно добавить тест или удалить раздел.")
 
     return "\n".join(lines)
 
@@ -102,17 +105,67 @@ def admin_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     rows = []
 
     for test_id, info in get_tests_for_subject(subject_id):
+        title = info.get("title", test_id)
+        if len(title) > 45:
+            title = title[:42].rstrip() + "…"
         rows.append([
             InlineKeyboardButton(
-                f"📚 {info.get('title', test_id)}",
+                f"📚 {title}",
                 callback_data=f"admin:test:{test_id}",
             )
         ])
 
     rows.append([InlineKeyboardButton("➕ Добавить тест", callback_data=f"admin:add_test_to_subject:{subject_id}")])
+    rows.append([InlineKeyboardButton("⚙️ Настройки раздела", callback_data=f"admin:subject_settings:{subject_id}")])
     rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
-    rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(rows)
+
+
+def admin_subject_settings_text(subject_id: str) -> str:
+    info = get_subject_info(subject_id)
+    tests = get_tests_for_subject(subject_id)
+    title = info.get("title", subject_id)
+    emoji = info.get("emoji", "📚")
+
+    lines = [
+        "⚙️ Настройки раздела",
+        "",
+        f"{emoji} {title}",
+        f"Тестов внутри: {len(tests)}",
+        "",
+        "Здесь можно переименовать или удалить раздел.",
+    ]
+
+    if tests:
+        lines.extend([
+            "",
+            "Удалить раздел можно только когда в нём нет тестов.",
+            "Сначала открепи или перенеси тесты.",
+        ])
+
+    return "\n".join(lines)
+
+
+def admin_subject_settings_keyboard(subject_id: str) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton("✏️ Переименовать раздел", callback_data=f"admin:rename_subject:{subject_id}")],
+    ]
+
+    if get_tests_for_subject(subject_id):
+        rows.append([InlineKeyboardButton("🧷 Сначала открепи тесты", callback_data=f"admin:subject:{subject_id}")])
+    else:
+        rows.append([InlineKeyboardButton("🗑 Удалить раздел", callback_data=f"admin:delete_subject_confirm:{subject_id}")])
+
+    rows.append([InlineKeyboardButton("↩️ К разделу", callback_data=f"admin:subject:{subject_id}")])
+    rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_delete_subject_confirm_keyboard(subject_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑 Да, удалить раздел", callback_data=f"admin:delete_subject_do:{subject_id}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:subject_settings:{subject_id}")],
+    ])
 
 
 def admin_add_test_to_subject_text(subject_id: str) -> str:
@@ -120,7 +173,7 @@ def admin_add_test_to_subject_text(subject_id: str) -> str:
     tests = get_unassigned_tests()
 
     lines = [
-        "➕ Добавить тест в раздел",
+        "➕ Добавить тест",
         "",
         f"Раздел: {subject.get('emoji', '📚')} {subject.get('title', subject_id)}",
         "",
@@ -130,12 +183,10 @@ def admin_add_test_to_subject_text(subject_id: str) -> str:
         lines.extend([
             "Непривязанных тестов нет.",
             "",
-            "Чтобы тест появился здесь, положи JSON-файл в папку tests без subject/раздела, затем перезапусти Render.",
-            "Например:",
-            "tests/new_test.json",
+            "Положи JSON-файл в папку tests без subject/раздела и перезапусти Render.",
         ])
     else:
-        lines.append("Выбери тест, который нужно добавить в этот раздел.")
+        lines.append("Выбери тест из папки tests, который ещё не привязан к разделу.")
 
     return "\n".join(lines)
 
@@ -158,6 +209,24 @@ def admin_add_test_to_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
     return InlineKeyboardMarkup(rows)
 
+
+def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    subject_id = effective_test_info(test_id).get("subject_id")
+    back_callback = f"admin:subject:{subject_id}" if subject_id else "admin:tests"
+
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Статистика", callback_data=f"admin:test_overview:{test_id}")],
+        [
+            InlineKeyboardButton("👥 Пользователи", callback_data=f"admin:test_users:{test_id}:0"),
+            InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:frequent_errors:{test_id}"),
+        ],
+        [
+            InlineKeyboardButton("🔐 Доступ", callback_data=f"admin:test_access:{test_id}"),
+            InlineKeyboardButton("⚙️ Настройки", callback_data=f"admin:test_meta:{test_id}"),
+        ],
+        [InlineKeyboardButton("↩️ К разделу", callback_data=back_callback)],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
 
 def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -580,8 +649,10 @@ def validate_single_test_text(test_id: str) -> str:
             except (TypeError, ValueError):
                 problems.append("correct_index не число")
 
-        normalized = " ".join(q_text.lower().split())
-        if normalized:
+        normalized_question = " ".join(q_text.lower().split())
+        normalized_options = "|".join(" ".join(str(option).lower().split()) for option in options)
+        normalized = f"{normalized_question}||{normalized_options}||{correct_index}"
+        if normalized_question:
             if normalized in seen:
                 duplicates.append((seen[normalized] + 1, index + 1))
             else:
@@ -1322,10 +1393,37 @@ def admin_global_user_keyboard(user_id: int, page: int = 0, sort: str = "recent"
         ],
         [
             InlineKeyboardButton("⭐ Избранное", callback_data=f"admin:user_favorites:{user_id}:0:{page}:{sort}"),
-            InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}:{sort}"),
+            InlineKeyboardButton("🔐 Доступы", callback_data=f"admin:user_access:{user_id}:{page}:{sort}"),
         ],
-        [InlineKeyboardButton("🔐 Доступы", callback_data=f"admin:user_access:{user_id}:{page}:{sort}")],
+        [
+            InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}:{sort}"),
+            InlineKeyboardButton("⚙️ Управление", callback_data=f"admin:user_manage:{user_id}:{page}:{sort}"),
+        ],
+        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{sort}:{page}")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ]
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_user_manage_text(user_id: int) -> str:
+    with db_connect() as conn:
+        user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+
+    status = "🚫 заблокирован" if is_user_blocked(user_id) else "🟢 активен"
+
+    return "\n".join([
+        "⚙️ Управление пользователем",
+        "",
+        f"Пользователь: {user_display_name(user) if user else f'ID {user_id}'}",
+        f"Статус: {status}",
+        "",
+        "Эти действия меняют состояние пользователя.",
+    ])
+
+
+def admin_user_manage_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
+    sort = _parse_users_sort(sort)
+    rows = []
 
     if is_user_blocked(user_id):
         rows.append([InlineKeyboardButton("✅ Разблокировать", callback_data=f"admin:unblock_user:{user_id}:{page}:{sort}")])
@@ -1335,11 +1433,9 @@ def admin_global_user_keyboard(user_id: int, page: int = 0, sort: str = "recent"
     rows.extend([
         [InlineKeyboardButton("🧹 Очистить runtime", callback_data=f"admin:clear_user_runtime_confirm:{user_id}:{page}:{sort}")],
         [InlineKeyboardButton("🗑 Сбросить прогресс", callback_data=f"admin:reset_user_confirm:{user_id}:{page}:{sort}")],
-        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{sort}:{page}")],
-        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+        [InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}:{sort}")],
     ])
     return InlineKeyboardMarkup(rows)
-
 
 def admin_user_back_keyboard(user_id: int, page: int = 0, sort: str = "recent") -> InlineKeyboardMarkup:
     sort = _parse_users_sort(sort)
@@ -1814,8 +1910,10 @@ def validate_tests_text() -> str:
                 except (TypeError, ValueError):
                     problems.append("correct_index не число")
 
-            normalized = " ".join(q_text.lower().split())
-            if normalized:
+            normalized_question = " ".join(q_text.lower().split())
+            normalized_options = "|".join(" ".join(str(option).lower().split()) for option in options)
+            normalized = f"{normalized_question}||{normalized_options}||{correct_index}"
+            if normalized_question:
                 if normalized in seen:
                     duplicates.append((seen[normalized] + 1, index + 1))
                 else:
@@ -1950,22 +2048,25 @@ def admin_debug_keyboard() -> InlineKeyboardMarkup:
 
 def admin_manage_text() -> str:
     return (
-        "⚙️ Управление\n\n"
-        "Действия здесь меняют состояние бота. Опасные операции требуют подтверждения.\n\n"
-        "📢 Рассылка — отправить сообщение всем незаблокированным пользователям.\n"
-        "🚫 Заблокированные — список пользователей с ограниченным доступом.\n"
-        "🧪 Проверка тестов — ищет ошибки в JSON и дубликаты вопросов.\n"
-        "🧹 Runtime-сессии — временные состояния текущих прохождений."
+        "⚙️ Сервис\n\n"
+        "Здесь собраны редкие и технические действия, чтобы не перегружать главную админку."
     )
 
 
 def admin_manage_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 Рассылка", callback_data="admin:broadcast_start")],
-        [InlineKeyboardButton("🚫 Заблокированные", callback_data="admin:blocked_users:0")],
-        [InlineKeyboardButton("🧪 Проверить тесты", callback_data="admin:validate_tests")],
-        [InlineKeyboardButton("🧹 Очистить runtime-сессии", callback_data="admin:clear_runtime_confirm")],
-        [InlineKeyboardButton("🐞 Debug", callback_data="admin:debug")],
+        [
+            InlineKeyboardButton("📢 Рассылка", callback_data="admin:broadcast_start"),
+            InlineKeyboardButton("📤 Экспорт", callback_data="admin:export_menu"),
+        ],
+        [
+            InlineKeyboardButton("🧪 Проверить тесты", callback_data="admin:validate_tests"),
+            InlineKeyboardButton("🐞 Debug", callback_data="admin:debug"),
+        ],
+        [
+            InlineKeyboardButton("🚫 Заблокированные", callback_data="admin:blocked_users:0"),
+            InlineKeyboardButton("🧹 Runtime", callback_data="admin:clear_runtime_confirm"),
+        ],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
 
@@ -2001,47 +2102,89 @@ def _access_icon_for_admin(test_id: str) -> str:
 
 
 def admin_test_meta_text(test_id: str) -> str:
-    base = TESTS[test_id]
     info = effective_test_info(test_id)
     setting = get_test_metadata_setting(test_id)
 
+    subject_id = info.get("subject_id")
+    subject = get_subject_info(subject_id) if subject_id else {}
+    subject_title = subject.get("title") or info.get("subject_title") or "не привязан"
+
     lines = [
-        "✏️ Название и раздел теста",
+        "⚙️ Настройки теста",
         "",
-        f"Текущее название: {info.get('title', test_id)}",
-        f"Название в JSON: {base.get('title', test_id)}",
+        f"Тест: {info.get('title', test_id)}",
+        f"ID: {test_id}",
+        f"Раздел: {subject_title}",
         "",
-        f"Текущий раздел: {info.get('subject_title') or info.get('subject_id') or '—'}",
-        f"Раздел в JSON: {base.get('subject_title') or base.get('subject_id') or '—'}",
-        f"Emoji раздела: {info.get('subject_emoji') or '📚'}",
-        "",
-        "Сортировка предметов и тестов идёт по алфавиту.",
+        "Здесь меняются название, раздел и служебные действия.",
     ]
 
     if setting:
-        lines.extend([
-            "",
-            f"Источник настройки: админка",
-            f"Изменено: {fmt_msk(setting.get('updated_at'))}",
-        ])
+        lines.extend(["", f"Изменено: {fmt_msk(setting.get('updated_at'))}"])
     else:
-        lines.extend([
-            "",
-            "Источник настройки: JSON",
-        ])
+        lines.extend(["", "Источник: JSON / файл"])
 
     return "\n".join(lines)
 
 
 def admin_test_meta_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✏️ Изменить название", callback_data=f"admin:set_test_title:{test_id}")],
-        [InlineKeyboardButton("📁 Изменить раздел", callback_data=f"admin:set_test_subject:{test_id}")],
-        [InlineKeyboardButton("↩️ Сбросить к JSON", callback_data=f"admin:reset_test_meta:{test_id}")],
-        [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
+    rows = [
+        [InlineKeyboardButton("✏️ Переименовать тест", callback_data=f"admin:set_test_title:{test_id}")],
+        [InlineKeyboardButton("📁 Перенести в раздел", callback_data=f"admin:move_test_subject:{test_id}")],
+    ]
+
+    if effective_test_info(test_id).get("subject_id"):
+        rows.append([InlineKeyboardButton("🧷 Открепить от раздела", callback_data=f"admin:detach_test_subject:{test_id}")])
+
+    rows.extend([
+        [
+            InlineKeyboardButton("🏆 Рейтинг", callback_data=f"admin:rating:{test_id}"),
+            InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_test:{test_id}"),
+        ],
+        [InlineKeyboardButton("🧪 Проверить тест", callback_data=f"admin:validate_test:{test_id}")],
+        [InlineKeyboardButton("↩️ К тесту", callback_data=f"admin:test:{test_id}")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
+    return InlineKeyboardMarkup(rows)
 
+
+def admin_move_test_subject_text(test_id: str) -> str:
+    info = effective_test_info(test_id)
+    subjects = get_subjects()
+
+    lines = [
+        "📁 Перенести тест",
+        "",
+        f"Тест: {info.get('title', test_id)}",
+        "",
+    ]
+
+    if not subjects:
+        lines.append("Сначала создай раздел в 📚 Контент → ➕ Добавить раздел.")
+    else:
+        lines.append("Выбери раздел, куда перенести тест.")
+
+    return "\n".join(lines)
+
+
+def admin_move_test_subject_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    rows = []
+
+    current_subject_id = effective_test_info(test_id).get("subject_id")
+    for subject_id, subject in get_subjects():
+        title = subject.get("title", subject_id)
+        emoji = subject.get("emoji", "📚")
+        prefix = "✅ " if subject_id == current_subject_id else ""
+        rows.append([
+            InlineKeyboardButton(
+                f"{prefix}{emoji} {title}",
+                callback_data=f"admin:move_test_subject_do:{subject_id}:{test_id}",
+            )
+        ])
+
+    rows.append([InlineKeyboardButton("➕ Добавить раздел", callback_data="admin:add_subject")])
+    rows.append([InlineKeyboardButton("↩️ К настройкам теста", callback_data=f"admin:test_meta:{test_id}")])
+    return InlineKeyboardMarkup(rows)
 
 def admin_test_access_text(test_id: str) -> str:
     info = effective_test_info(test_id)
@@ -2628,6 +2771,34 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
     user = update.effective_user
     if not user or not is_admin(user.id):
         return
+
+    rename_subject_id = context.user_data.get("admin_rename_subject_id")
+    if rename_subject_id:
+        text = (update.message.text or "").strip()
+        if not text:
+            await update.message.reply_text(
+                "Название раздела не может быть пустым.",
+                reply_markup=admin_subject_settings_keyboard(rename_subject_id),
+            )
+            raise ApplicationHandlerStop
+
+        context.user_data.pop("admin_rename_subject_id", None)
+        subject_id = _slug(text)
+
+        if subject_id != rename_subject_id and not get_tests_for_subject(rename_subject_id):
+            delete_subject_setting(rename_subject_id)
+            remove_subject_override(rename_subject_id)
+        else:
+            subject_id = rename_subject_id
+
+        set_subject_setting(subject_id, text, emoji="📚", updated_by=user.id)
+        add_subject_override(subject_id, text, emoji="📚")
+
+        await update.message.reply_text(
+            "✅ Раздел переименован.\n\n" + admin_subject_text(subject_id),
+            reply_markup=admin_subject_keyboard(subject_id),
+        )
+        raise ApplicationHandlerStop
 
     if context.user_data.get("admin_add_subject_waiting"):
         text = (update.message.text or "").strip()
@@ -3251,6 +3422,7 @@ async def handle_admin_add_subject(update: Update, context: ContextTypes.DEFAULT
     context.user_data.pop("admin_rename_test_id", None)
     context.user_data.pop("admin_change_subject_test_id", None)
     context.user_data.pop("admin_access_code_test_id", None)
+    context.user_data.pop("admin_rename_subject_id", None)
 
     await query.edit_message_text(
         "➕ Добавить раздел\n\n"
@@ -3308,6 +3480,200 @@ async def handle_admin_assign_test_subject(update: Update, context: ContextTypes
     await query.edit_message_text(
         "✅ Тест добавлен в раздел.\n\n" + admin_subject_text(subject_id),
         reply_markup=admin_subject_keyboard(subject_id),
+    )
+
+
+
+async def handle_admin_subject_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    await query.edit_message_text(
+        admin_subject_settings_text(subject_id),
+        reply_markup=admin_subject_settings_keyboard(subject_id),
+    )
+
+
+async def handle_admin_rename_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    context.user_data["admin_rename_subject_id"] = subject_id
+
+    info = get_subject_info(subject_id)
+    await query.edit_message_text(
+        "✏️ Переименовать раздел\n\n"
+        f"Сейчас: {info.get('title', subject_id)}\n\n"
+        "Отправь следующим сообщением новое название.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:subject_settings:{subject_id}")],
+        ]),
+    )
+
+
+async def handle_admin_delete_subject_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    tests = get_tests_for_subject(subject_id)
+    if tests:
+        await query.edit_message_text(
+            "Раздел нельзя удалить, пока в нём есть тесты.\n\n"
+            "Сначала открепи или перенеси тесты.",
+            reply_markup=admin_subject_settings_keyboard(subject_id),
+        )
+        return
+
+    info = get_subject_info(subject_id)
+    await query.edit_message_text(
+        "🗑 Удалить раздел?\n\n"
+        f"Раздел: {info.get('title', subject_id)}\n\n"
+        "Это удалит только сам раздел. Тесты не удаляются.",
+        reply_markup=admin_delete_subject_confirm_keyboard(subject_id),
+    )
+
+
+async def handle_admin_delete_subject_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id = query.data.split(":", 2)
+    if get_tests_for_subject(subject_id):
+        await query.edit_message_text(
+            "Раздел не удалён: в нём есть тесты.",
+            reply_markup=admin_subject_settings_keyboard(subject_id),
+        )
+        return
+
+    delete_subject_setting(subject_id)
+    remove_subject_override(subject_id)
+
+    await query.edit_message_text(
+        "✅ Раздел удалён.\n\n" + admin_tests_text(),
+        reply_markup=admin_tests_keyboard(),
+    )
+
+
+async def handle_admin_move_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":", 2)
+    await query.edit_message_text(
+        admin_move_test_subject_text(test_id),
+        reply_markup=admin_move_test_subject_keyboard(test_id),
+    )
+
+
+async def handle_admin_move_test_subject_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, subject_id, test_id = query.data.split(":", 3)
+
+    subject = get_subject_info(subject_id)
+    current = effective_test_info(test_id)
+
+    set_test_metadata_setting(
+        test_id,
+        title=current.get("title"),
+        subject_id=subject_id,
+        subject_title=subject.get("title", subject_id),
+        subject_emoji=subject.get("emoji", "📚"),
+        updated_by=query.from_user.id,
+    )
+    apply_test_metadata_override(
+        test_id,
+        subject_id=subject_id,
+        subject_title=subject.get("title", subject_id),
+        subject_emoji=subject.get("emoji", "📚"),
+    )
+
+    await query.edit_message_text(
+        "✅ Тест перенесён.\n\n" + admin_test_meta_text(test_id),
+        reply_markup=admin_test_meta_keyboard(test_id),
+    )
+
+
+async def handle_admin_detach_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, test_id = query.data.split(":", 2)
+    current = effective_test_info(test_id)
+
+    set_test_metadata_setting(
+        test_id,
+        title=current.get("title"),
+        subject_id="unassigned",
+        subject_title="",
+        subject_emoji="",
+        updated_by=query.from_user.id,
+    )
+    apply_test_metadata_override(
+        test_id,
+        subject_id="unassigned",
+        subject_title="",
+        subject_emoji="",
+    )
+
+    await query.edit_message_text(
+        "✅ Тест откреплён от раздела.\n\n"
+        "Теперь он появится в списке непривязанных тестов.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")],
+            [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+        ]),
+    )
+
+
+async def handle_admin_user_manage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    parts = query.data.split(":")
+    user_id = int(parts[2])
+    page = int(parts[3]) if len(parts) > 3 else 0
+    sort = _parse_users_sort(parts[4]) if len(parts) > 4 else "recent"
+
+    await query.edit_message_text(
+        admin_user_manage_text(user_id),
+        reply_markup=admin_user_manage_keyboard(user_id, page, sort),
     )
 
 
