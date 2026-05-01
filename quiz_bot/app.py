@@ -49,6 +49,10 @@ from .admin import (
     handle_admin_unblock_user,
     handle_admin_tests,
     handle_admin_users,
+    handle_admin_users_recent,
+    handle_admin_users_result,
+    handle_admin_users_attempts,
+    handle_admin_users_errors,
 )
 from .config import ADMIN_IDS, BOT_TOKEN
 from .handlers import (
@@ -219,6 +223,10 @@ def build_application():
     # Admin callbacks
     app.add_handler(CallbackQueryHandler(handle_admin_menu, pattern=r"^admin:menu$"))
     app.add_handler(CallbackQueryHandler(handle_admin_summary, pattern=r"^admin:summary$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_users_recent, pattern=r"^admin:users:recent:0$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_users_result, pattern=r"^admin:users:result:0$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_users_attempts, pattern=r"^admin:users:attempts:0$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_users_errors, pattern=r"^admin:users:errors:0$"))
     app.add_handler(CallbackQueryHandler(handle_admin_users, pattern=r"^admin:users:"))
     app.add_handler(CallbackQueryHandler(handle_admin_global_user_detail, pattern=r"^admin:global_user:"))
     app.add_handler(CallbackQueryHandler(handle_admin_block_user_confirm, pattern=r"^admin:block_user_confirm:"))

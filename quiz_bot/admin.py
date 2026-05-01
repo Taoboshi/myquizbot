@@ -1902,29 +1902,52 @@ async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE)
     page = 0
 
     # Supported formats:
+    # admin:users
     # admin:users:0
+    # admin:users:recent
     # admin:users:recent:0
     # admin:users:result:0
     # admin:users:attempts:0
     # admin:users:errors:0
-    if len(parts) == 3:
-        if parts[2].isdigit():
-            page = int(parts[2])
+    if len(parts) >= 3:
+        third = parts[2]
+        if third.isdigit():
+            page = int(third)
         else:
-            sort = _parse_users_sort(parts[2])
-    elif len(parts) >= 4:
-        sort = _parse_users_sort(parts[2])
-        page = int(parts[3]) if str(parts[3]).isdigit() else 0
+            sort = _parse_users_sort(third)
 
-    text = admin_users_text(page, sort)
+    if len(parts) >= 4 and str(parts[3]).isdigit():
+        page = int(parts[3])
+
+    message_text = admin_users_text(page, sort)
     keyboard = admin_users_keyboard(page, sort)
 
     try:
-        await query.edit_message_text(text, reply_markup=keyboard)
+        await query.edit_message_text(message_text, reply_markup=keyboard)
     except Exception as exc:
         if "Message is not modified" in str(exc):
             return
         raise
+
+
+async def handle_admin_users_recent(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    update.callback_query.data = "admin:users:recent:0"
+    await handle_admin_users(update, context)
+
+
+async def handle_admin_users_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    update.callback_query.data = "admin:users:result:0"
+    await handle_admin_users(update, context)
+
+
+async def handle_admin_users_attempts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    update.callback_query.data = "admin:users:attempts:0"
+    await handle_admin_users(update, context)
+
+
+async def handle_admin_users_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    update.callback_query.data = "admin:users:errors:0"
+    await handle_admin_users(update, context)
 
 
 async def handle_admin_global_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
