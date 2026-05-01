@@ -217,7 +217,16 @@ def _load_explicit_tests(loaded: dict[str, list[dict[str, Any]]]) -> set[str]:
         known_paths.add(str(path.resolve()))
 
         if not path.exists():
-            raise FileNotFoundError(f"Не найден файл с вопросами: {path}")
+            tests_dir = BASE_DIR / "tests"
+            fallback = tests_dir / Path(info["file"]).name
+            if fallback.exists():
+                path = fallback
+            else:
+                matches = sorted(tests_dir.rglob(Path(info["file"]).name)) if tests_dir.exists() else []
+                if matches:
+                    path = matches[0]
+                else:
+                    raise FileNotFoundError(f"Не найден файл с вопросами: {path}")
 
         data = _read_json(path)
         meta = _metadata_from_data(path, data, explicit_test_id=test_id, explicit_info=info)

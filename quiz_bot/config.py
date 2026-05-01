@@ -11,24 +11,11 @@ if not BOT_TOKEN:
 
 ADMIN_IDS = {551500449}
 
-SUBJECTS = {
-    "oziz": {
-        "title": "ОЗИЗ",
-        "emoji": "📚",
-        "order": 10,
-    },
-}
+SUBJECTS = {}
 
 TESTS = {
-    "first_test": {
-        "title": "ОЗИЗ модуль 2",
-        "file": "tests/oziz/oziz_module_2.json",
-        "subject_id": "oziz",
-        "subject_title": "ОЗИЗ",
-        "subject_emoji": "📚",
-        "access": {
-            "type": "public",
-        },
+    "oziz_module_2": {
+        "file": "tests/oziz_module_2.json",
     },
 }
 
