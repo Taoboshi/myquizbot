@@ -781,6 +781,7 @@ def admin_global_user_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMar
             InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}"),
         ],
         [InlineKeyboardButton("🧹 Очистить runtime", callback_data=f"admin:clear_user_runtime_confirm:{user_id}:{page}")],
+        [InlineKeyboardButton("🗑 Сбросить прогресс", callback_data=f"admin:reset_user_confirm:{user_id}:{page}")],
         [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{page}")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
@@ -1042,6 +1043,160 @@ def export_user_csv(user_id: int) -> Path:
     return path
 
 
+def admin_reset_user_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⚠️ Продолжить", callback_data=f"admin:reset_user_second:{user_id}:{page}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+    ])
+
+
+def admin_reset_user_second_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑 Да, удалить прогресс", callback_data=f"admin:reset_user_do:{user_id}:{page}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+    ])
+
+
+def reset_user_progress(user_id: int) -> dict[str, int]:
+    with db_connect() as conn:
+        attempt_row = conn.execute(
+            "SELECT COUNT(*) AS c FROM attempts WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        attempts_count = int(attempt_row["c"] or 0)
+
+        stats_count = _safe_count(conn, "user_stats", f"WHERE user_id = {int(user_id)}") or 0
+        answered_count = _safe_count(conn, "user_answered_questions", f"WHERE user_id = {int(user_id)}") or 0
+        errors_count = _safe_count(conn, "all_time_errors", f"WHERE user_id = {int(user_id)}") or 0
+        favorites_count = _safe_count(conn, "favorites", f"WHERE user_id = {int(user_id)}") or 0
+        active_count = _safe_count(conn, "active_sessions", f"WHERE user_id = {int(user_id)}") or 0
+        runtime_count = _safe_count(conn, "runtime_sessions", f"WHERE user_id = {int(user_id)}") or 0
+
+        conn.execute(
+            """
+            DELETE FROM attempt_wrong_answers
+            WHERE user_id = ?
+               OR attempt_id IN (
+                    SELECT attempt_id FROM attempts WHERE user_id = ?
+               )
+            """,
+            (user_id, user_id),
+        )
+        conn.execute("DELETE FROM attempts WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM user_stats WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM user_answered_questions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM all_time_errors WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
+
+        try:
+            conn.execute("DELETE FROM runtime_sessions WHERE user_id = ?", (user_id,))
+        except Exception:
+            pass
+
+        conn.commit()
+
+    return {
+        "attempts": attempts_count,
+        "stats": stats_count,
+        "answered_questions": answered_count,
+        "errors": errors_count,
+        "favorites": favorites_count,
+        "active_sessions": active_count,
+        "runtime_sessions": runtime_count,
+    }
+
+
+def validate_tests_text() -> str:
+    lines = ["🧪 Проверка тестов", ""]
+    total_questions = 0
+    total_duplicates = 0
+    has_errors = False
+
+    for test_id, info in TESTS.items():
+        title = info["title"]
+        lines.append(f"📚 {title}")
+        lines.append(f"ID: {test_id}")
+
+        try:
+            questions = get_questions(test_id)
+        except Exception as exc:
+            has_errors = True
+            lines.append(f"❌ Не удалось загрузить: {exc}")
+            lines.append("")
+            continue
+
+        total_questions += len(questions)
+        invalid_items = []
+        seen: dict[str, int] = {}
+        duplicates = []
+
+        for index, question in enumerate(questions):
+            q_text = str(question.get("question") or "").strip()
+            options = question.get("options") or []
+            correct_index = question.get("correct_index")
+
+            problems = []
+            if not q_text:
+                problems.append("нет текста вопроса")
+            if not isinstance(options, list) or len(options) < 2:
+                problems.append("меньше 2 вариантов")
+            if correct_index is None:
+                problems.append("нет correct_index")
+            else:
+                try:
+                    correct_int = int(correct_index)
+                    if correct_int < 0 or correct_int >= len(options):
+                        problems.append("correct_index вне диапазона")
+                except (TypeError, ValueError):
+                    problems.append("correct_index не число")
+
+            normalized = " ".join(q_text.lower().split())
+            if normalized:
+                if normalized in seen:
+                    duplicates.append((seen[normalized] + 1, index + 1))
+                else:
+                    seen[normalized] = index
+
+            if problems:
+                invalid_items.append((index + 1, ", ".join(problems)))
+
+        total_duplicates += len(duplicates)
+
+        lines.append(f"Вопросов: {len(questions)}")
+        if invalid_items:
+            has_errors = True
+            lines.append(f"❌ Проблемных вопросов: {len(invalid_items)}")
+            for num, problem in invalid_items[:10]:
+                lines.append(f"• Вопрос {num}: {problem}")
+            if len(invalid_items) > 10:
+                lines.append(f"• ещё {len(invalid_items) - 10}")
+        else:
+            lines.append("✅ Структура вопросов: OK")
+
+        if duplicates:
+            lines.append(f"⚠️ Дубликатов вопросов: {len(duplicates)}")
+            for first, second in duplicates[:10]:
+                lines.append(f"• Вопрос {first} повторяется в вопросе {second}")
+            if len(duplicates) > 10:
+                lines.append(f"• ещё {len(duplicates) - 10}")
+        else:
+            lines.append("✅ Дубликатов не найдено")
+
+        lines.append("")
+
+    status = "❌ Есть проблемы" if has_errors else "✅ Критичных ошибок не найдено"
+    lines.extend([
+        "Итог",
+        status,
+        f"Тестов: {len(TESTS)}",
+        f"Вопросов всего: {total_questions}",
+        f"Дубликатов всего: {total_duplicates}",
+    ])
+
+    return "\n".join(lines)
+
+
 def admin_clear_user_runtime_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Да, очистить", callback_data=f"admin:clear_user_runtime_do:{user_id}:{page}")],
@@ -1133,14 +1288,16 @@ def admin_debug_keyboard() -> InlineKeyboardMarkup:
 def admin_manage_text() -> str:
     return (
         "⚙️ Управление\n\n"
-        "Здесь пока только безопасные действия.\n\n"
-        "🧹 Runtime-сессии — это временные состояния текущих прохождений. "
+        "Действия здесь меняют состояние бота. Опасные операции требуют подтверждения.\n\n"
+        "🧪 Проверка тестов — ищет ошибки в JSON и дубликаты вопросов.\n"
+        "🧹 Runtime-сессии — временные состояния текущих прохождений. "
         "Их можно очистить, если после обновления кода у пользователей зависли старые состояния."
     )
 
 
 def admin_manage_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🧪 Проверить тесты", callback_data="admin:validate_tests")],
         [InlineKeyboardButton("🧹 Очистить runtime-сессии", callback_data="admin:clear_runtime_confirm")],
         [InlineKeyboardButton("🐞 Debug", callback_data="admin:debug")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
@@ -1328,6 +1485,90 @@ async def handle_admin_clear_user_runtime_do(update: Update, context: ContextTyp
     await query.edit_message_text(
         f"✅ Runtime-сессии пользователя очищены.\n\nУдалено записей: {count}",
         reply_markup=admin_global_user_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_reset_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+    await query.edit_message_text(
+        "🗑 Сбросить прогресс пользователя?\n\n"
+        f"Пользователь ID: {user_id}\n\n"
+        "Будут удалены попытки, статистика, ошибки, избранное и сохранённые сессии. "
+        "Сам пользователь останется в списке.\n\n"
+        "Это действие нельзя отменить.",
+        reply_markup=admin_reset_user_confirm_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_reset_user_second(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+    await query.edit_message_text(
+        "⚠️ Последнее подтверждение\n\n"
+        f"Пользователь ID: {user_id}\n\n"
+        "После нажатия кнопки ниже прогресс будет удалён полностью.",
+        reply_markup=admin_reset_user_second_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_reset_user_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+    result = reset_user_progress(user_id)
+
+    await query.edit_message_text(
+        "✅ Прогресс пользователя сброшен\n\n"
+        f"Пользователь ID: {user_id}\n"
+        f"Удалено попыток: {result['attempts']}\n"
+        f"Строк статистики: {result['stats']}\n"
+        f"Ответов по вопросам: {result['answered_questions']}\n"
+        f"Ошибок: {result['errors']}\n"
+        f"Избранного: {result['favorites']}\n"
+        f"Сохранённых сессий: {result['active_sessions']}\n"
+        f"Runtime-сессий: {result['runtime_sessions']}",
+        reply_markup=admin_global_user_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_validate_tests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    await query.edit_message_text(
+        validate_tests_text(),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⚙️ К управлению", callback_data="admin:manage")],
+            [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+        ]),
     )
 
 

@@ -23,6 +23,10 @@ from .admin import (
     handle_admin_export_user,
     handle_admin_clear_user_runtime_confirm,
     handle_admin_clear_user_runtime_do,
+    handle_admin_reset_user_confirm,
+    handle_admin_reset_user_second,
+    handle_admin_reset_user_do,
+    handle_admin_validate_tests,
     handle_admin_manage,
     handle_admin_menu,
     handle_admin_rating,
@@ -193,6 +197,10 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_export_user, pattern=r"^admin:export_user:"))
     app.add_handler(CallbackQueryHandler(handle_admin_clear_user_runtime_confirm, pattern=r"^admin:clear_user_runtime_confirm:"))
     app.add_handler(CallbackQueryHandler(handle_admin_clear_user_runtime_do, pattern=r"^admin:clear_user_runtime_do:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_reset_user_confirm, pattern=r"^admin:reset_user_confirm:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_reset_user_second, pattern=r"^admin:reset_user_second:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_reset_user_do, pattern=r"^admin:reset_user_do:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_validate_tests, pattern=r"^admin:validate_tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_stats, pattern=r"^admin:test_stats:"))
     app.add_handler(CallbackQueryHandler(handle_admin_rating, pattern=r"^admin:rating:"))
