@@ -50,14 +50,12 @@ def subject_button_title(info: dict, subject_id: str = "") -> str:
 def admin_tests_text() -> str:
     subjects = get_subjects()
     tests_count = len(TESTS)
-    unassigned_count = len(get_unassigned_tests())
 
     lines = [
         "📚 Контент",
         "",
         f"Разделов: {len(subjects)}",
         f"Тестов: {tests_count}",
-        f"Непривязанных: {unassigned_count}",
         "",
         "Здесь создаются разделы и раскладываются тесты.",
     ]
@@ -87,16 +85,12 @@ def admin_tests_keyboard() -> InlineKeyboardMarkup:
 
 def admin_subject_text(subject_id: str) -> str:
     info = get_subject_info(subject_id)
-    title = info.get("title", subject_id)
-    emoji = info.get("emoji", "")
     tests = get_tests_for_subject(subject_id)
-    unassigned_count = len(get_unassigned_tests())
 
     lines = [
         subject_button_title(info, subject_id),
         "",
         f"Тестов в разделе: {len(tests)}",
-        f"Непривязанных JSON-тестов: {unassigned_count}",
         "",
     ]
 
