@@ -5,12 +5,22 @@ from typing import Any
 from .config import ADMIN_IDS
 
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
-
-MOSCOW_TZ = ZoneInfo("Europe/Moscow")
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
-def format_moscow_datetime(value) -> str:
+def _display_timezone() -> ZoneInfo:
+    tz_name = os.getenv("APP_TIMEZONE", "Europe/Moscow").strip() or "Europe/Moscow"
+    try:
+        return ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("Europe/Moscow")
+
+
+def display_timezone_label() -> str:
+    return os.getenv("APP_TIMEZONE_LABEL", "МСК").strip() or "МСК"
+
+
+def format_app_datetime(value, *, with_label: bool = True) -> str:
     if value is None:
         return "—"
     if isinstance(value, datetime):
@@ -34,8 +44,21 @@ def format_moscow_datetime(value) -> str:
             if dt is None:
                 return raw
     if dt.tzinfo is None:
+        # DB timestamps are written in UTC by SQLite/PostgreSQL defaults.
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(MOSCOW_TZ).strftime("%d.%m.%Y %H:%M")
+    formatted = dt.astimezone(_display_timezone()).strftime("%d.%m.%Y %H:%M")
+    if with_label:
+        return f"{formatted} {display_timezone_label()}"
+    return formatted
+
+
+def format_moscow_datetime(value) -> str:
+    # Backward-compatible name used by older screens.
+    return format_app_datetime(value, with_label=False)
+
+
+def format_display_datetime(value) -> str:
+    return format_app_datetime(value, with_label=True)
 
 
 def short_question_text(text: str, limit: int = 95) -> str:

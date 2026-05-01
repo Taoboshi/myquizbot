@@ -5,7 +5,7 @@ from telegram import BotCommand, BotCommandScopeChat, InlineKeyboardButton, Inli
 from telegram.ext import ContextTypes
 
 from .config import ADMIN_IDS, BTN_TEST_MENU, RESUMABLE_MODES, TESTS
-from .helpers import attempt_percent, format_moscow_datetime, mode_title, seconds_to_text, short_question_text
+from .helpers import attempt_percent, format_display_datetime, mode_title, seconds_to_text, short_question_text
 from .keyboards import (
     after_finish_keyboard,
     answer_keyboard,
@@ -49,6 +49,11 @@ from .quiz import (
 )
 from .runtime import LAST_START_AT, USER_STATE
 from .state import clear_text_waiting_state, delete_active_session, get_state, load_active_session, restore_state, save_active_session, save_question_progress, start_quiz_mode
+
+def fmt_msk(value) -> str:
+    return format_display_datetime(value)
+
+
 from .storage import (
     clear_all_time_errors,
     get_all_time_error_indices,
@@ -342,7 +347,7 @@ async def handle_profile_errors(update: Update, context: ContextTypes.DEFAULT_TY
             status = "✅ Исправлена" if int(item.get("is_resolved") or 0) else "❌ Не исправлена"
             lines.append(f"{start + i}. Вопрос {idx + 1}")
             lines.append(_short_question_line(test_id, idx))
-            lines.append(f"Дата ошибки: {format_moscow_datetime(item.get('last_wrong_at'))}")
+            lines.append(f"Дата ошибки: {fmt_msk(item.get('last_wrong_at'))}")
             lines.append(f"Статус: {status}")
             lines.append("")
     else:
@@ -368,7 +373,7 @@ async def handle_profile_error_show(update: Update, context: ContextTypes.DEFAUL
         f"🧠 Ошибка\n\n"
         f"📚 {TESTS[test_id]['title']}\n"
         f"Вопрос {idx + 1}\n\n"
-        f"Дата ошибки: {format_moscow_datetime(item.get('last_wrong_at'))}\n"
+        f"Дата ошибки: {fmt_msk(item.get('last_wrong_at'))}\n"
         f"Статус: {status}\n\n"
         f"{_question_options_text(test_id, idx, item.get('last_wrong_answer_index'), show_wrong=True)}"
     )
@@ -397,7 +402,7 @@ async def handle_profile_history(update: Update, context: ContextTypes.DEFAULT_T
             wrong = max(0, answered - correct)
             percent = _safe_percent(correct, answered)
             lines.append(f"{start + i}. {mode_title(a.get('mode'))} · {percent}%")
-            lines.append(f"{format_moscow_datetime(a.get('finished_at'))} · {answered} вопроса · {wrong} ошибок")
+            lines.append(f"{fmt_msk(a.get('finished_at'))} · {answered} вопроса · {wrong} ошибок")
             lines.append("")
     else:
         lines.extend(["", "Завершённых попыток пока нет."])
@@ -422,7 +427,7 @@ async def handle_history_attempt(update: Update, context: ContextTypes.DEFAULT_T
         f"📄 Попытка #{attempt_id}\n\n"
         f"📚 {TESTS[test_id]['title']}\n"
         f"🎮 {mode_title(attempt.get('mode'))}\n"
-        f"🕓 {format_moscow_datetime(attempt.get('finished_at'))}\n"
+        f"🕓 {fmt_msk(attempt.get('finished_at'))}\n"
         f"⏱ {seconds_to_text(attempt.get('duration_seconds'))}\n\n"
         f"📊 Результат:\n"
         f"🏆 {_safe_percent(correct, answered)}%\n"

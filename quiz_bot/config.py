@@ -34,3 +34,8 @@ FULL_TEST_MODES = {"normal", "random", "reverse", "from_number"}
 SOLUTION_MODES = ("normal", "random", "reverse", "from_number")
 FIND_PAGE_SIZE = 10
 ADMIN_USERS_PAGE_SIZE = 10
+
+# Time display settings.
+# Database timestamps are treated as UTC and shown to users/admins in this timezone.
+APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Europe/Moscow").strip() or "Europe/Moscow"
+APP_TIMEZONE_LABEL = os.getenv("APP_TIMEZONE_LABEL", "МСК").strip() or "МСК"

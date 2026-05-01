@@ -9,10 +9,15 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Upda
 from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
-from .helpers import attempt_percent, is_admin, mode_title, seconds_to_text, sep, user_display_name
+from .helpers import attempt_percent, format_display_datetime, is_admin, mode_title, seconds_to_text, sep, user_display_name
 from .loader import get_questions
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
 from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, upsert_user
+
+
+def fmt_msk(value) -> str:
+    return format_display_datetime(value)
+
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
@@ -126,7 +131,7 @@ def admin_test_users_text(test_id: str, page: int = 0) -> str:
         lines.append(f"{n}. {user_display_name(row)}")
         lines.append(f"   🎯 {percent}% · ✅ {correct}/{answered}")
         lines.append(f"   📝 попытки: {finished}/{started} · 🧠 ошибки: {active_errors} · ⭐ {favorites}")
-        lines.append(f"   🕒 {row['last_activity_at'] or row['last_seen_at'] or '—'}")
+        lines.append(f"   🕒 {fmt_msk(row['last_activity_at'] or row['last_seen_at'])}")
 
     return "\n".join(lines)
 
@@ -587,7 +592,7 @@ def admin_summary_text() -> str:
 
     last_activity = "—"
     if last_user:
-        last_activity = f"{user_display_name(last_user)} · {last_user['last_seen_at']}"
+        last_activity = f"{user_display_name(last_user)} · {fmt_msk(last_user['last_seen_at'])}"
 
     return (
         "📊 Обзор\n\n"
@@ -726,13 +731,13 @@ def admin_debug_text() -> str:
     ]
 
     if last_attempt:
-        finished = last_attempt["finished_at"] or "не завершена"
+        finished = fmt_msk(last_attempt["finished_at"]) if last_attempt["finished_at"] else "не завершена"
         lines.extend([
             "",
             "Последняя попытка:",
             f"• test_id: {last_attempt['test_id']}",
             f"• mode: {last_attempt['mode']}",
-            f"• start: {last_attempt['started_at']}",
+            f"• start: {fmt_msk(last_attempt['started_at'])}",
             f"• finish: {finished}",
         ])
 
@@ -982,7 +987,7 @@ def admin_users_text(page: int = 0, sort: str = "recent") -> str:
         lines.append(f"{n}. {name}{blocked}")
         lines.append(f"   🎯 {percent}% · ✅ {correct}/{answered}")
         lines.append(f"   📝 попытки: {finished_attempts}/{attempts_total} · 🧠 ошибки: {active_errors} · ⭐ {favorites}")
-        lines.append(f"   🕒 {row['last_seen_at'] or '—'}")
+        lines.append(f"   🕒 {fmt_msk(row['last_seen_at'])}")
 
     lines.extend([
         "",
@@ -1046,7 +1051,7 @@ def _attempt_row_text(row) -> str:
     return (
         f"{correct}/{answered} · {percent}% · {status}\\n"
         f"Время: {seconds_to_text(row['duration_seconds'])}\\n"
-        f"Дата: {row['started_at']}"
+        f"Дата: {fmt_msk(row['started_at'])}"
     )
 
 
@@ -1125,12 +1130,12 @@ def admin_global_user_text(user_id: int) -> str:
         f"Username: {username}",
         f"ID: {user_id}",
         f"Статус: {status}",
-        f"Последняя активность: {user['last_seen_at'] if user else '—'}",
+        f"Последняя активность: {fmt_msk(user['last_seen_at']) if user else '—'}",
     ]
 
     if blocked:
         lines.extend([
-            f"Заблокирован: {blocked['blocked_at']}",
+            f"Заблокирован: {fmt_msk(blocked['blocked_at'])}",
             f"Причина: {blocked['reason'] or '—'}",
         ])
 
@@ -1274,7 +1279,7 @@ def admin_user_history_text(user_id: int, page: int = 0) -> str:
         lines.append(f"   {mode_title(row['mode'])} · {status}{finish_reason}")
         lines.append(f"   Результат: {correct}/{answered} · {percent}%")
         lines.append(f"   Время: {seconds_to_text(row['duration_seconds'])}")
-        lines.append(f"   Старт: {row['started_at']}")
+        lines.append(f"   Старт: {fmt_msk(row['started_at'])}")
 
     return "\n".join(lines)
 
@@ -1344,7 +1349,7 @@ def admin_user_errors_text(user_id: int, page: int = 0) -> str:
         except Exception:
             question = "Вопрос не найден"
         lines.append(f"{n}. {title} · вопрос {question_index + 1}")
-        lines.append(f"   Ошибок: {row['wrong_count']} · последняя: {row['last_wrong_at']}")
+        lines.append(f"   Ошибок: {row['wrong_count']} · последняя: {fmt_msk(row['last_wrong_at'])}")
         lines.append(f"   {_admin_short_text(question)}")
 
     return "\n".join(lines)
@@ -1414,7 +1419,7 @@ def admin_user_favorites_text(user_id: int, page: int = 0) -> str:
         except Exception:
             question = "Вопрос не найден"
         lines.append(f"{n}. {title} · вопрос {question_index + 1}")
-        lines.append(f"   Добавлен: {row['created_at']}")
+        lines.append(f"   Добавлен: {fmt_msk(row['created_at'])}")
         lines.append(f"   {_admin_short_text(question)}")
 
     return "\n".join(lines)
@@ -1517,7 +1522,7 @@ def admin_blocked_users_text(page: int = 0) -> str:
     for n, row in enumerate(rows, start=offset + 1):
         lines.append(f"{n}. {user_display_name(row)}")
         lines.append(f"   ID: {row['user_id']}")
-        lines.append(f"   Заблокирован: {row['blocked_at']}")
+        lines.append(f"   Заблокирован: {fmt_msk(row['blocked_at'])}")
         if row["reason"]:
             lines.append(f"   Причина: {row['reason']}")
 
