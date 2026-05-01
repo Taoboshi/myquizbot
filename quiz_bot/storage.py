@@ -344,6 +344,18 @@ def _init_postgres_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_test_access (
+                user_id BIGINT NOT NULL,
+                test_id TEXT NOT NULL,
+                access_source TEXT NOT NULL DEFAULT 'admin',
+                granted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                granted_by BIGINT,
+                PRIMARY KEY (user_id, test_id)
+            )
+            """
+        )
 
         for stmt in [
             "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS last_wrong_answer_index INTEGER",
@@ -443,6 +455,15 @@ def _init_sqlite_db() -> None:
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (user_id, test_id, question_index)
             );
+
+            CREATE TABLE IF NOT EXISTS user_test_access (
+                user_id INTEGER NOT NULL,
+                test_id TEXT NOT NULL,
+                access_source TEXT NOT NULL DEFAULT 'admin',
+                granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                granted_by INTEGER,
+                PRIMARY KEY (user_id, test_id)
+            );
             """
         )
 
@@ -468,6 +489,82 @@ def init_db() -> None:
         _init_postgres_db()
     else:
         _init_sqlite_db()
+
+
+
+def has_user_test_access(user_id: int, test_id: str) -> bool:
+    with db_connect() as conn:
+        if not _table_exists(conn, "user_test_access"):
+            return False
+
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM user_test_access
+            WHERE user_id = ? AND test_id = ?
+            LIMIT 1
+            """,
+            (user_id, test_id),
+        ).fetchone()
+    return row is not None
+
+
+def grant_user_test_access(user_id: int, test_id: str, access_source: str = "admin", granted_by: int | None = None) -> None:
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO user_test_access (user_id, test_id, access_source, granted_at, granted_by)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+            ON CONFLICT(user_id, test_id)
+            DO UPDATE SET
+                access_source = excluded.access_source,
+                granted_at = CURRENT_TIMESTAMP,
+                granted_by = excluded.granted_by
+            """,
+            (user_id, test_id, access_source, granted_by),
+        )
+        conn.commit()
+
+
+def revoke_user_test_access(user_id: int, test_id: str) -> None:
+    with db_connect() as conn:
+        conn.execute(
+            "DELETE FROM user_test_access WHERE user_id = ? AND test_id = ?",
+            (user_id, test_id),
+        )
+        conn.commit()
+
+
+def list_user_test_access(user_id: int) -> list[str]:
+    with db_connect() as conn:
+        if not _table_exists(conn, "user_test_access"):
+            return []
+        rows = conn.execute(
+            """
+            SELECT test_id
+            FROM user_test_access
+            WHERE user_id = ?
+            ORDER BY granted_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+    return [row["test_id"] for row in rows]
+
+
+def list_test_access_users(test_id: str) -> list[int]:
+    with db_connect() as conn:
+        if not _table_exists(conn, "user_test_access"):
+            return []
+        rows = conn.execute(
+            """
+            SELECT user_id
+            FROM user_test_access
+            WHERE test_id = ?
+            ORDER BY granted_at DESC
+            """,
+            (test_id,),
+        ).fetchall()
+    return [int(row["user_id"]) for row in rows]
 
 
 def upsert_user(user) -> None:

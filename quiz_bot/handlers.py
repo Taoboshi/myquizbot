@@ -6,6 +6,7 @@ from telegram.ext import ContextTypes
 
 from .config import ADMIN_IDS, BTN_TEST_MENU, RESUMABLE_MODES, TESTS
 from .helpers import attempt_percent, format_display_datetime, mode_title, seconds_to_text, short_question_text
+from .access import can_open_test, is_code_locked_for_user, verify_access_code
 from .keyboards import (
     after_finish_keyboard,
     answer_keyboard,
@@ -34,9 +35,12 @@ from .keyboards import (
     result_errors_keyboard,
     test_main_keyboard,
     test_select_keyboard,
+    subject_select_keyboard,
+    subject_tests_keyboard,
+    locked_test_keyboard,
 )
 from .keyboards import find_results_text, preview_question_text, search_question_indices, PAGE_SIZE
-from .loader import get_questions
+from .loader import get_questions, get_subject_info, test_subject_id
 from .quiz import (
     add_session_wrong_answer,
     build_question_text,
@@ -105,19 +109,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     LAST_START_AT[chat_id] = current
-    await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
+    await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
 
 async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
-    await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
+    await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
-    if len(TESTS) == 1:
-        test_id = next(iter(TESTS))
+    open_tests = _open_tests_for_user(update.effective_user.id)
+    if len(open_tests) == 1:
+        test_id = open_tests[0]
         await update.message.reply_text(my_stats_text(update.effective_user.id, test_id), reply_markup=stats_keyboard(test_id))
     else:
-        await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
+        await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
+
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
@@ -125,19 +131,25 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if state.get("test_id") and state.get("mode") in RESUMABLE_MODES:
         delete_active_session(update.effective_user.id, state.get("test_id"))
     USER_STATE.pop(update.effective_chat.id, None)
-    await update.message.reply_text("Текущее действие сброшено.", reply_markup=test_select_keyboard())
+    await update.message.reply_text("Текущее действие сброшено.", reply_markup=subject_select_keyboard(update.effective_user.id))
 
 async def reset_errors_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
-    if len(TESTS) == 1:
-        test_id = next(iter(TESTS))
+    open_tests = _open_tests_for_user(update.effective_user.id)
+    if len(open_tests) == 1:
+        test_id = open_tests[0]
         await update.message.reply_text("Сбросить ошибки?", reply_markup=reset_errors_keyboard(test_id))
     else:
-        await update.message.reply_text("Выбери тест:", reply_markup=test_select_keyboard())
+        await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
+
 
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     await update.message.reply_text(f"Твой Telegram ID: {update.effective_user.id}")
+
+def _open_tests_for_user(user_id: int) -> list[str]:
+    return [test_id for test_id in TESTS if can_open_test(user_id, test_id)]
+
 
 def test_main_text(user_id: int, test_id: str) -> str:
     title = TESTS[test_id]["title"]
@@ -223,11 +235,74 @@ async def handle_learn_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
 
+async def handle_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query:
+        await query.answer()
+
+
 async def handle_tests_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     upsert_user(query.from_user)
     await query.answer()
-    await query.edit_message_text("Выбери тест:", reply_markup=test_select_keyboard())
+    await query.edit_message_text("Выбери предмет:", reply_markup=subject_select_keyboard(query.from_user.id))
+
+
+async def handle_subject_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, subject_id = query.data.split(":", 1)
+
+    info = get_subject_info(subject_id)
+    emoji = info.get("emoji", "📚")
+    title = info.get("title", subject_id)
+
+    state = get_state(query.message.chat_id)
+    clear_text_waiting_state(state)
+
+    await query.edit_message_text(
+        f"{emoji} {title}\n\nВыбери тест:",
+        reply_markup=subject_tests_keyboard(subject_id, query.from_user.id),
+    )
+
+
+async def handle_locked_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id = query.data.split(":", 1)
+
+    if can_open_test(query.from_user.id, test_id):
+        await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
+        return
+
+    title = TESTS[test_id]["title"]
+    await query.edit_message_text(
+        f"🔒 {title}\n\nЭтот тест открывается по коду доступа.",
+        reply_markup=locked_test_keyboard(test_id),
+    )
+
+
+async def handle_enter_access_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    _, test_id = query.data.split(":", 1)
+
+    if can_open_test(query.from_user.id, test_id):
+        await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
+        return
+
+    state = get_state(query.message.chat_id)
+    clear_text_waiting_state(state)
+    state["pending_access_code_test_id"] = test_id
+
+    await query.edit_message_text(
+        f"🔑 Введи код доступа для теста:\n\n{TESTS[test_id]['title']}",
+        reply_markup=locked_test_keyboard(test_id),
+    )
+
 
 async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -237,6 +312,19 @@ async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     state = get_state(query.message.chat_id)
     clear_text_waiting_state(state)
+
+    if not can_open_test(query.from_user.id, test_id):
+        if is_code_locked_for_user(query.from_user.id, test_id):
+            await query.edit_message_text(
+                f"🔒 {TESTS[test_id]['title']}\n\nЭтот тест открывается по коду доступа.",
+                reply_markup=locked_test_keyboard(test_id),
+            )
+        else:
+            await query.edit_message_text(
+                "🔒 У тебя нет доступа к этому тесту.",
+                reply_markup=subject_tests_keyboard(test_subject_id(test_id), query.from_user.id),
+            )
+        return
 
     await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
 
@@ -1151,6 +1239,22 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     upsert_user(update.effective_user)
     state = get_state(update.effective_chat.id)
     text = (update.message.text or "").strip()
+
+    access_test_id = state.get("pending_access_code_test_id")
+    if access_test_id:
+        if verify_access_code(update.effective_user.id, access_test_id, text):
+            state["pending_access_code_test_id"] = None
+            await update.message.reply_text(
+                f"✅ Доступ открыт.\n\n{test_main_text(update.effective_user.id, access_test_id)}",
+                reply_markup=test_main_keyboard(access_test_id),
+            )
+            return
+
+        await update.message.reply_text(
+            "❌ Неверный код. Попробуй ещё раз или вернись назад.",
+            reply_markup=locked_test_keyboard(access_test_id),
+        )
+        return
 
     start_test_id = state.get("pending_start_from_number_test_id")
     if start_test_id:

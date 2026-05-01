@@ -16,28 +16,76 @@ from .config import (
     RESUMABLE_MODES,
     TESTS,
 )
-from .loader import get_questions
+from .access import access_icon_for_user, can_view_test, is_code_locked_for_user
+from .loader import get_questions, get_subject_info, get_subjects, get_tests_for_subject, test_subject_id
 from .quiz import build_question_text
 from .state import active_session_button_text
 from .storage import is_favorite
 
-def test_select_keyboard() -> InlineKeyboardMarkup:
+def subject_select_keyboard(user_id: int) -> InlineKeyboardMarkup:
     rows = []
-    for test_id, info in TESTS.items():
+    for subject_id, info in get_subjects():
+        visible_tests = [
+            test_id
+            for test_id, _ in get_tests_for_subject(subject_id)
+            if can_view_test(user_id, test_id)
+        ]
+        if not visible_tests:
+            continue
+
+        emoji = info.get("emoji", "📚")
+        title = info.get("title", subject_id)
         rows.append([
             InlineKeyboardButton(
-                f"📚 {info['title']} — {len(get_questions(test_id))} вопросов",
-                callback_data=f"test_menu:{test_id}",
+                f"{emoji} {title}",
+                callback_data=f"subject_menu:{subject_id}",
             )
         ])
+
+    if not rows:
+        rows.append([InlineKeyboardButton("Пока нет доступных предметов", callback_data="noop")])
     return InlineKeyboardMarkup(rows)
+
+
+def subject_tests_keyboard(subject_id: str, user_id: int) -> InlineKeyboardMarkup:
+    rows = []
+    for test_id, info in get_tests_for_subject(subject_id):
+        if not can_view_test(user_id, test_id):
+            continue
+
+        icon = access_icon_for_user(user_id, test_id)
+        callback = f"locked_test:{test_id}" if is_code_locked_for_user(user_id, test_id) else f"test_menu:{test_id}"
+        rows.append([
+            InlineKeyboardButton(
+                f"{icon} {info['title']} — {len(get_questions(test_id))} вопросов",
+                callback_data=callback,
+            )
+        ])
+
+    if not rows:
+        rows.append([InlineKeyboardButton("Нет доступных тестов", callback_data="noop")])
+
+    rows.append([InlineKeyboardButton("⬅️ К предметам", callback_data="tests:menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def locked_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
+    subject_id = test_subject_id(test_id)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔑 Ввести код", callback_data=f"enter_access_code:{test_id}")],
+        [InlineKeyboardButton("⬅️ К тестам предмета", callback_data=f"subject_menu:{subject_id}")],
+    ])
+
+
+def test_select_keyboard(user_id: int | None = None) -> InlineKeyboardMarkup:
+    return subject_select_keyboard(user_id or 0)
 
 def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📖 Учить", callback_data=f"learn_menu:{test_id}")],
         [InlineKeyboardButton("👤 Профиль", callback_data=f"my_profile:{test_id}")],
         [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
-        [InlineKeyboardButton(BTN_BACK, callback_data="tests:menu")],
+        [InlineKeyboardButton(BTN_BACK, callback_data=f"subject_menu:{test_subject_id(test_id)}")],
     ])
 
 

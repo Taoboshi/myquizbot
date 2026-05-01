@@ -25,6 +25,7 @@ def get_state(chat_id: int) -> dict[str, Any]:
             "finish_recorded": False,
             "attempt_id": None,
             "pending_start_from_number_test_id": None,
+            "pending_access_code_test_id": None,
             "find_mode": None,
             "find_test_id": None,
             "find_query": None,
@@ -35,6 +36,7 @@ def get_state(chat_id: int) -> dict[str, Any]:
 
 def clear_text_waiting_state(state: dict[str, Any]) -> None:
     state["pending_start_from_number_test_id"] = None
+    state["pending_access_code_test_id"] = None
     state["find_mode"] = None
     state["find_test_id"] = None
 

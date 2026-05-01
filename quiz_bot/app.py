@@ -69,6 +69,7 @@ from .handlers import (
     handle_mini_start,
     handle_my_profile,
     handle_my_stats,
+    handle_noop,
     handle_next_question,
     handle_pause_to_menu,
     handle_profile_favorites,
@@ -98,6 +99,9 @@ from .handlers import (
     handle_start_quiz,
     handle_test_menu,
     handle_tests_menu,
+    handle_subject_menu,
+    handle_locked_test,
+    handle_enter_access_code,
     handle_text_input,
     handle_view_question,
     myid,
@@ -176,7 +180,11 @@ def build_application():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
     # User callbacks
+    app.add_handler(CallbackQueryHandler(handle_noop, pattern=r"^noop$"))
     app.add_handler(CallbackQueryHandler(handle_tests_menu, pattern=r"^tests:menu$"))
+    app.add_handler(CallbackQueryHandler(handle_subject_menu, pattern=r"^subject_menu:"))
+    app.add_handler(CallbackQueryHandler(handle_locked_test, pattern=r"^locked_test:"))
+    app.add_handler(CallbackQueryHandler(handle_enter_access_code, pattern=r"^enter_access_code:"))
     app.add_handler(CallbackQueryHandler(handle_test_menu, pattern=r"^test_menu:"))
     app.add_handler(CallbackQueryHandler(handle_learn_menu, pattern=r"^learn_menu:"))
     app.add_handler(CallbackQueryHandler(handle_my_profile, pattern=r"^my_profile:"))
