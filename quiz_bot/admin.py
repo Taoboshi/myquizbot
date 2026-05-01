@@ -43,7 +43,7 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
 def subject_button_title(info: dict, subject_id: str = "") -> str:
     emoji = (info.get("emoji") or "").strip()
     title = info.get("title") or subject_id
-    return subject_button_title(info, subject_id) if emoji else str(title)
+    return f"{emoji} {title}" if emoji else str(title)
 
 
 
