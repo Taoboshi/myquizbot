@@ -875,14 +875,19 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     query = update.callback_query
-    upsert_user(query.from_user)
+    
+    # Выносим апдейт юзера в отдельный поток, чтобы не тормозить бота
+    await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
 
     _, test_id, index_str, answer_str = query.data.split(":")
     index = int(index_str)
     selected = int(answer_str)
-    state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
+    
+    # Выносим чтение состояния из базы тоже в отдельный поток
+    state = await asyncio.to_thread(get_state_or_restore, query.message.chat_id, query.from_user.id, test_id)
 
     if not state.get("active"):
         await query.edit_message_text("Этот режим уже завершён.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
@@ -906,8 +911,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         if state["pos"] >= len(state["order"]):
             state["active"] = False
-            save_question_progress(query.from_user.id, state, index, True, save_session=False)
-            finish_attempt_if_needed(query.from_user.id, state)
+            # Асинхронное сохранение прогресса и завершения попытки
+            await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, True, save_session=False)
+            await asyncio.to_thread(finish_attempt_if_needed, query.from_user.id, state)
+            
             await query.edit_message_text(
                 answered_text,
                 parse_mode="HTML",
@@ -915,7 +922,9 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await query.message.reply_text(result_text(state, query.from_user.id), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
             return
 
-        save_question_progress(query.from_user.id, state, index, True)
+        # Асинхронное сохранение промежуточного прогресса
+        await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, True)
+        
         next_index = state["order"][state["pos"]]
         await query.edit_message_text(
             answered_text,
@@ -930,7 +939,9 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     add_session_wrong_answer(state, index, selected)
     state["awaiting_next"] = True
-    save_question_progress(query.from_user.id, state, index, False, selected)
+    
+    # Асинхронное сохранение ошибки
+    await asyncio.to_thread(save_question_progress, query.from_user.id, state, index, False, selected)
 
     await query.edit_message_text(
         build_question_text(index, state, selected_index=selected, show_correct=True),
