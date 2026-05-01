@@ -1,10 +1,10 @@
 import random
 from datetime import datetime
 
-from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from .config import BTN_TEST_MENU, RESUMABLE_MODES, TESTS
+from .config import ADMIN_IDS, BTN_TEST_MENU, RESUMABLE_MODES, TESTS
 from .helpers import attempt_percent, format_moscow_datetime, mode_title, seconds_to_text, short_question_text
 from .keyboards import (
     after_finish_keyboard,
@@ -71,16 +71,25 @@ from .storage import (
 )
 
 async def setup_bot_commands(app) -> None:
-    await app.bot.set_my_commands([
+    user_commands = [
         BotCommand("start", "Открыть меню"),
-        BotCommand("tests", "Выбрать тест"),
-        BotCommand("finish", "Завершить текущую попытку"),
-        BotCommand("stats", "Статистика"),
-        BotCommand("reset", "Сбросить текущее действие"),
-        BotCommand("reset_errors", "Сбросить ошибки"),
-        BotCommand("myid", "Показать Telegram ID"),
+    ]
+
+    admin_commands = [
+        BotCommand("start", "Открыть меню"),
         BotCommand("admin", "Админ-панель"),
-    ])
+    ]
+
+    await app.bot.set_my_commands(user_commands)
+
+    for admin_id in ADMIN_IDS:
+        try:
+            await app.bot.set_my_commands(
+                admin_commands,
+                scope=BotCommandScopeChat(chat_id=admin_id),
+            )
+        except Exception:
+            pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
