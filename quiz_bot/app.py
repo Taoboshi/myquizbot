@@ -7,9 +7,17 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandle
 
 from .admin import (
     admin_command,
+    handle_admin_clear_runtime_confirm,
+    handle_admin_clear_runtime_do,
+    handle_admin_debug,
+    handle_admin_errors_menu,
     handle_admin_export_all,
+    handle_admin_export_menu,
     handle_admin_export_test,
     handle_admin_frequent_errors,
+    handle_admin_frequent_errors_all,
+    handle_admin_global_user_detail,
+    handle_admin_manage,
     handle_admin_menu,
     handle_admin_rating,
     handle_admin_summary,
@@ -18,6 +26,7 @@ from .admin import (
     handle_admin_test_user_detail,
     handle_admin_test_users,
     handle_admin_tests,
+    handle_admin_users,
 )
 from .config import BOT_TOKEN
 from .handlers import (
@@ -169,17 +178,26 @@ def build_application():
 
     # Admin callbacks
     app.add_handler(CallbackQueryHandler(handle_admin_menu, pattern=r"^admin:menu$"))
-    app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
-    app.add_handler(CallbackQueryHandler(handle_admin_test_menu, pattern=r"^admin:test:"))
     app.add_handler(CallbackQueryHandler(handle_admin_summary, pattern=r"^admin:summary$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_users, pattern=r"^admin:users:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_global_user_detail, pattern=r"^admin:global_user:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_tests, pattern=r"^admin:tests$"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_stats, pattern=r"^admin:test_stats:"))
     app.add_handler(CallbackQueryHandler(handle_admin_rating, pattern=r"^admin:rating:"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_users, pattern=r"^admin:test_users:"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_user_detail, pattern=r"^admin:user:"))
     app.add_handler(CallbackQueryHandler(handle_admin_test_user_detail, pattern=r"^admin:test_user:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_errors_menu, pattern=r"^admin:errors$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_frequent_errors_all, pattern=r"^admin:frequent_errors_all$"))
     app.add_handler(CallbackQueryHandler(handle_admin_frequent_errors, pattern=r"^admin:frequent_errors:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_export_menu, pattern=r"^admin:export_menu$"))
     app.add_handler(CallbackQueryHandler(handle_admin_export_all, pattern=r"^admin:export_all$"))
     app.add_handler(CallbackQueryHandler(handle_admin_export_test, pattern=r"^admin:export_test:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_debug, pattern=r"^admin:debug$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_manage, pattern=r"^admin:manage$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_clear_runtime_confirm, pattern=r"^admin:clear_runtime_confirm$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_clear_runtime_do, pattern=r"^admin:clear_runtime_do$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_test_menu, pattern=r"^admin:test:"))
 
     app.add_error_handler(error_handler)
     return app

@@ -14,30 +14,35 @@ from .storage import DATABASE_URL, db_connect, get_all_time_error_indices, upser
 
 def admin_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📚 Выбрать тест", callback_data="admin:tests")],
-        [InlineKeyboardButton("📊 Общая сводка", callback_data="admin:summary")],
-        [InlineKeyboardButton("📤 Экспорт всех данных", callback_data="admin:export_all")],
+        [InlineKeyboardButton("📊 Обзор", callback_data="admin:summary")],
+        [InlineKeyboardButton("👥 Пользователи", callback_data="admin:users:0")],
+        [InlineKeyboardButton("📚 Тесты", callback_data="admin:tests")],
+        [InlineKeyboardButton("🧠 Ошибки", callback_data="admin:errors")],
+        [InlineKeyboardButton("📤 Экспорт", callback_data="admin:export_menu")],
+        [InlineKeyboardButton("🐞 Debug", callback_data="admin:debug")],
+        [InlineKeyboardButton("⚙️ Управление", callback_data="admin:manage")],
     ])
 
 def admin_tests_keyboard() -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(f"📚 {info['title']}", callback_data=f"admin:test:{test_id}")] for test_id, info in TESTS.items()]
-    rows.append([InlineKeyboardButton("⬅️ Назад в админку", callback_data="admin:menu")])
+    rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
     return InlineKeyboardMarkup(rows)
 
 def admin_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📈 Статистика по тесту", callback_data=f"admin:test_stats:{test_id}")],
-        [InlineKeyboardButton("🏆 Рейтинг топ-10", callback_data=f"admin:rating:{test_id}")],
+        [InlineKeyboardButton("📈 Статистика", callback_data=f"admin:test_stats:{test_id}")],
         [InlineKeyboardButton("👥 Пользователи", callback_data=f"admin:test_users:{test_id}:0")],
+        [InlineKeyboardButton("🏆 Рейтинг топ-10", callback_data=f"admin:rating:{test_id}")],
         [InlineKeyboardButton("🧠 Частые ошибки", callback_data=f"admin:frequent_errors:{test_id}")],
         [InlineKeyboardButton("📤 Экспорт по тесту", callback_data=f"admin:export_test:{test_id}")],
-        [InlineKeyboardButton("⬅️ Назад к тестам", callback_data="admin:tests")],
+        [InlineKeyboardButton("📚 К тестам", callback_data="admin:tests")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
 
 def admin_back_to_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏠 Назад к тесту", callback_data=f"admin:test:{test_id}")],
-        [InlineKeyboardButton("⬅️ Назад к тестам", callback_data="admin:tests")],
+        [InlineKeyboardButton("📚 К тесту", callback_data=f"admin:test:{test_id}")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
 
 def admin_test_users_text(test_id: str, page: int = 0) -> str:
@@ -384,21 +389,77 @@ def admin_frequent_errors_text(test_id: str) -> str:
 
     return "\n".join(lines)
 
+def _today_start() -> str:
+    return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _percent(correct: int | float | None, total: int | float | None) -> float:
+    total = total or 0
+    if not total:
+        return 0.0
+    return round(float(correct or 0) / float(total) * 100, 1)
+
+
 def admin_summary_text() -> str:
+    today_start = _today_start()
+
     with db_connect() as conn:
-        users = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
-        attempts = conn.execute("SELECT COUNT(*) AS c FROM attempts").fetchone()["c"]
-        finished = conn.execute("SELECT COUNT(*) AS c FROM attempts WHERE finished_at IS NOT NULL").fetchone()["c"]
-        answered = conn.execute("SELECT COALESCE(SUM(answered), 0) AS c FROM attempts").fetchone()["c"]
+        users = _safe_count(conn, "users")
+        active_today = _safe_count(conn, "users", "WHERE last_seen_at >= '%s'" % today_start)
+        attempts = _safe_count(conn, "attempts")
+        finished = _safe_count(conn, "attempts", "WHERE finished_at IS NOT NULL")
+        attempts_today = _safe_count(conn, "attempts", "WHERE started_at >= '%s'" % today_start)
+        finished_today = _safe_count(conn, "attempts", "WHERE finished_at IS NOT NULL AND finished_at >= '%s'" % today_start)
+        active_sessions = _safe_count(conn, "active_sessions")
+        runtime_sessions = _safe_count(conn, "runtime_sessions")
+        active_errors = _safe_count(conn, "all_time_errors", "WHERE COALESCE(is_resolved, 0) = 0")
+        favorites = _safe_count(conn, "favorites")
+
+        totals = conn.execute(
+            """
+            SELECT COALESCE(SUM(answered), 0) AS answered,
+                   COALESCE(SUM(correct), 0) AS correct
+            FROM attempts
+            WHERE finished_at IS NOT NULL
+            """
+        ).fetchone()
+
+        last_user = conn.execute(
+            """
+            SELECT user_id, username, first_name, last_name, last_seen_at
+            FROM users
+            ORDER BY last_seen_at DESC
+            LIMIT 1
+            """
+        ).fetchone()
+
+    answered = int(totals["answered"] or 0) if totals else 0
+    correct = int(totals["correct"] or 0) if totals else 0
+    avg_percent = _percent(correct, answered)
+    backend = "PostgreSQL / Neon" if DATABASE_URL else "SQLite"
+    last_activity = "—"
+    if last_user:
+        last_activity = f"{user_display_name(last_user)} · {last_user['last_seen_at']}"
 
     return (
-        "📊 Общая сводка\n\n"
-        f"👥 Пользователей: {users}\n"
-        f"📝 Попыток начато: {attempts}\n"
-        f"✅ Попыток завершено: {finished}\n"
-        f"🔢 Ответов в попытках: {answered}"
+        "🛠 Админ-панель\n\n"
+        "📊 Обзор\n\n"
+        f"👥 Пользователей: {users or 0}\n"
+        f"🟢 Активных сегодня: {active_today or 0}\n"
+        f"📝 Попыток всего: {attempts or 0}\n"
+        f"✅ Завершено всего: {finished or 0}\n"
+        f"📅 Попыток сегодня: {attempts_today or 0}\n"
+        f"🏁 Завершено сегодня: {finished_today or 0}\n\n"
+        f"🎯 Средний результат: {avg_percent}%\n"
+        f"🔢 Ответов в завершённых попытках: {answered}\n\n"
+        f"📚 Тестов: {len(TESTS)}\n"
+        f"🧠 Активных ошибок: {active_errors or 0}\n"
+        f"⭐ Избранных вопросов: {favorites or 0}\n"
+        f"💾 Сохранённых сессий: {active_sessions or 0}\n"
+        f"🔄 Runtime-сессий: {runtime_sessions or 0}\n\n"
+        f"🗄 База: {backend}\n"
+        f"🕒 Последняя активность: {last_activity}"
     )
-
 
 def _safe_count(conn, table_name: str, where_sql: str = "") -> int | None:
     try:
@@ -520,12 +581,314 @@ def export_csv(test_id: str | None = None) -> Path:
 
     return path
 
+
+def admin_users_text(page: int = 0) -> str:
+    page = max(0, page)
+    offset = page * ADMIN_USERS_PAGE_SIZE
+
+    with db_connect() as conn:
+        total = _safe_count(conn, "users") or 0
+        rows = conn.execute(
+            """
+            SELECT u.user_id, u.username, u.first_name, u.last_name, u.last_seen_at,
+                   COUNT(a.attempt_id) AS attempts_total,
+                   SUM(CASE WHEN a.finished_at IS NOT NULL THEN 1 ELSE 0 END) AS attempts_finished,
+                   COALESCE(SUM(a.answered), 0) AS answered,
+                   COALESCE(SUM(a.correct), 0) AS correct
+            FROM users u
+            LEFT JOIN attempts a ON a.user_id = u.user_id
+            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.last_seen_at
+            ORDER BY u.last_seen_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (ADMIN_USERS_PAGE_SIZE, offset),
+        ).fetchall()
+
+    total_pages = max(1, (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+    start_num = offset + 1 if total else 0
+    end_num = min(offset + len(rows), total)
+
+    lines = [
+        "👥 Пользователи",
+        "",
+        f"{start_num}–{end_num} из {total}",
+        f"Страница {page + 1} из {total_pages}",
+        "",
+    ]
+
+    if not rows:
+        lines.append("Пользователей пока нет.")
+        return "\n".join(lines)
+
+    for n, row in enumerate(rows, start=start_num):
+        answered = int(row["answered"] or 0)
+        correct = int(row["correct"] or 0)
+        percent = _percent(correct, answered)
+        finished = int(row["attempts_finished"] or 0)
+        attempts_total = int(row["attempts_total"] or 0)
+        lines.append(
+            f"{n}. {user_display_name(row)} — {percent}% · "
+            f"{finished}/{attempts_total} попыток · {row['last_seen_at'] or '—'}"
+        )
+
+    lines.extend(["", "Открой карточку пользователя кнопкой ниже."])
+    return "\n".join(lines)
+
+
+def admin_users_keyboard(page: int = 0) -> InlineKeyboardMarkup:
+    page = max(0, page)
+    offset = page * ADMIN_USERS_PAGE_SIZE
+
+    with db_connect() as conn:
+        total = _safe_count(conn, "users") or 0
+        rows = conn.execute(
+            """
+            SELECT user_id, username, first_name, last_name
+            FROM users
+            ORDER BY last_seen_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (ADMIN_USERS_PAGE_SIZE, offset),
+        ).fetchall()
+
+    buttons = []
+    for row in rows:
+        label = f"👤 {user_display_name(row)}"
+        if len(label) > 34:
+            label = label[:31].rstrip() + "…"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"admin:global_user:{row['user_id']}:{page}")])
+
+    total_pages = max(1, (total + ADMIN_USERS_PAGE_SIZE - 1) // ADMIN_USERS_PAGE_SIZE)
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:users:{page - 1}"))
+    if page + 1 < total_pages:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:users:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+
+    buttons.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def admin_global_user_text(user_id: int) -> str:
+    with db_connect() as conn:
+        user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+
+        totals = conn.execute(
+            """
+            SELECT COUNT(*) AS attempts_total,
+                   SUM(CASE WHEN finished_at IS NOT NULL THEN 1 ELSE 0 END) AS attempts_finished,
+                   COALESCE(SUM(answered), 0) AS answered,
+                   COALESCE(SUM(correct), 0) AS correct,
+                   MAX(started_at) AS last_attempt_at
+            FROM attempts
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+
+        per_tests = conn.execute(
+            """
+            SELECT test_id, attempts_started, attempts_finished, total_answered, total_correct, last_activity_at
+            FROM user_stats
+            WHERE user_id = ?
+            ORDER BY last_activity_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+
+        favorites = _safe_count(conn, "favorites", f"WHERE user_id = {int(user_id)}")
+        active_errors = _safe_count(conn, "all_time_errors", f"WHERE user_id = {int(user_id)} AND COALESCE(is_resolved, 0) = 0")
+        saved_sessions = _safe_count(conn, "active_sessions", f"WHERE user_id = {int(user_id)}")
+        runtime_sessions = _safe_count(conn, "runtime_sessions", f"WHERE user_id = {int(user_id)}")
+
+        last_attempts = conn.execute(
+            """
+            SELECT test_id, mode, started_at, finished_at, answered, correct, duration_seconds
+            FROM attempts
+            WHERE user_id = ?
+            ORDER BY started_at DESC
+            LIMIT 5
+            """,
+            (user_id,),
+        ).fetchall()
+
+    display_name = user_display_name(user) if user else f"ID {user_id}"
+    username = f"@{user['username']}" if user and user["username"] else "—"
+
+    attempts_total = int(totals["attempts_total"] or 0) if totals else 0
+    attempts_finished = int(totals["attempts_finished"] or 0) if totals else 0
+    answered = int(totals["answered"] or 0) if totals else 0
+    correct = int(totals["correct"] or 0) if totals else 0
+    percent = _percent(correct, answered)
+
+    lines = [
+        "👤 Карточка пользователя",
+        "",
+        f"Имя: {display_name}",
+        f"Username: {username}",
+        f"ID: {user_id}",
+        f"Первый запуск: {user['first_seen_at'] if user else '—'}",
+        f"Последняя активность: {user['last_seen_at'] if user else '—'}",
+        "",
+        "📊 Общий результат",
+        f"Попыток: {attempts_finished} завершено из {attempts_total}",
+        f"Правильно: {correct} из {answered}",
+        f"Средний результат: {percent}%",
+        "",
+        "🧠 Данные",
+        f"Актуальных ошибок: {active_errors or 0}",
+        f"Избранных вопросов: {favorites or 0}",
+        f"Сохранённых сессий: {saved_sessions or 0}",
+        f"Runtime-сессий: {runtime_sessions or 0}",
+    ]
+
+    if per_tests:
+        lines.extend(["", "📚 По тестам"])
+        for row in per_tests:
+            title = TESTS.get(row["test_id"], {}).get("title", row["test_id"])
+            test_answered = int(row["total_answered"] or 0)
+            test_correct = int(row["total_correct"] or 0)
+            test_percent = _percent(test_correct, test_answered)
+            lines.append(
+                f"• {title}: {test_correct}/{test_answered} · {test_percent}% · "
+                f"{int(row['attempts_finished'] or 0)} заверш."
+            )
+
+    if last_attempts:
+        lines.extend(["", "🕘 Последние попытки"])
+        for row in last_attempts:
+            title = TESTS.get(row["test_id"], {}).get("title", row["test_id"])
+            status = "завершена" if row["finished_at"] else "не завершена"
+            attempt_percent_value = _percent(row["correct"], row["answered"])
+            lines.append(
+                f"• {title} · {mode_title(row['mode'])}: "
+                f"{row['correct']}/{row['answered']} ({attempt_percent_value}%) · {status}"
+            )
+
+    return "\n".join(lines)
+
+
+def admin_global_user_keyboard(page: int = 0) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{page}")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
+def admin_errors_menu_text() -> str:
+    return (
+        "🧠 Ошибки\n\n"
+        "Здесь можно смотреть самые частые ошибки по всем тестам или отдельно по каждому тесту."
+    )
+
+
+def admin_errors_menu_keyboard() -> InlineKeyboardMarkup:
+    rows = [[InlineKeyboardButton("🧠 Частые ошибки по всем тестам", callback_data="admin:frequent_errors_all")]]
+    for test_id, info in TESTS.items():
+        rows.append([InlineKeyboardButton(f"📚 {info['title']}", callback_data=f"admin:frequent_errors:{test_id}")])
+    rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_frequent_errors_all_text() -> str:
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT test_id, question_index, SUM(wrong_count) AS c, COUNT(DISTINCT user_id) AS users
+            FROM all_time_errors
+            WHERE COALESCE(is_resolved, 0) = 0
+            GROUP BY test_id, question_index
+            ORDER BY c DESC
+            LIMIT 15
+            """
+        ).fetchall()
+
+    lines = ["🧠 Частые ошибки по всем тестам", ""]
+    if not rows:
+        lines.append("Ошибок пока нет.")
+        return "\n".join(lines)
+
+    for n, row in enumerate(rows, start=1):
+        test_id = row["test_id"]
+        title = TESTS.get(test_id, {}).get("title", test_id)
+        questions = get_questions(test_id)
+        question_index = int(row["question_index"])
+        q = questions[question_index]["question"].replace("\n", " ")
+        short = q[:90] + ("…" if len(q) > 90 else "")
+        lines.append(f"{n}. {title} · вопрос {question_index + 1}")
+        lines.append(f"   Ошибок: {row['c']} · пользователей: {row['users']}")
+        lines.append(f"   {short}")
+
+    return "\n".join(lines)
+
+
+def admin_export_menu_text() -> str:
+    return (
+        "📤 Экспорт\n\n"
+        "Можно выгрузить все попытки сразу или только данные конкретного теста."
+    )
+
+
+def admin_export_menu_keyboard() -> InlineKeyboardMarkup:
+    rows = [[InlineKeyboardButton("📦 Все данные", callback_data="admin:export_all")]]
+    for test_id, info in TESTS.items():
+        rows.append([InlineKeyboardButton(f"📚 {info['title']}", callback_data=f"admin:export_test:{test_id}")])
+    rows.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def admin_debug_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Обновить", callback_data="admin:debug")],
+        [InlineKeyboardButton("⚙️ Управление", callback_data="admin:manage")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
+def admin_manage_text() -> str:
+    return (
+        "⚙️ Управление\n\n"
+        "Здесь пока только безопасные действия.\n\n"
+        "🧹 Runtime-сессии — это временные состояния текущих прохождений. "
+        "Их можно очистить, если после обновления кода у пользователей зависли старые состояния."
+    )
+
+
+def admin_manage_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🧹 Очистить runtime-сессии", callback_data="admin:clear_runtime_confirm")],
+        [InlineKeyboardButton("🐞 Debug", callback_data="admin:debug")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
+def admin_clear_runtime_confirm_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Да, очистить", callback_data="admin:clear_runtime_do")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data="admin:manage")],
+    ])
+
+
+def clear_runtime_sessions() -> int:
+    with db_connect() as conn:
+        try:
+            row = conn.execute("SELECT COUNT(*) AS c FROM runtime_sessions").fetchone()
+            count = int(row["c"] or 0)
+            conn.execute("DELETE FROM runtime_sessions")
+            conn.commit()
+            return count
+        except Exception:
+            return 0
+
+
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     upsert_user(update.effective_user)
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Админ-панель недоступна.")
         return
-    await update.message.reply_text("Админ-панель", reply_markup=admin_main_keyboard())
+    await update.message.reply_text(admin_summary_text(), reply_markup=admin_main_keyboard())
 
 
 async def admin_debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -533,7 +896,7 @@ async def admin_debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Админ-панель недоступна.")
         return
-    await update.message.reply_text(admin_debug_text())
+    await update.message.reply_text(admin_debug_text(), reply_markup=admin_debug_keyboard())
 
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -542,7 +905,123 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    await query.edit_message_text("Админ-панель", reply_markup=admin_main_keyboard())
+    await query.edit_message_text(admin_summary_text(), reply_markup=admin_main_keyboard())
+
+
+async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    parts = query.data.split(":")
+    page = int(parts[2]) if len(parts) > 2 else 0
+    await query.edit_message_text(admin_users_text(page), reply_markup=admin_users_keyboard(page))
+
+
+async def handle_admin_global_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    await query.edit_message_text(
+        admin_global_user_text(int(user_id_str)),
+        reply_markup=admin_global_user_keyboard(int(page_str)),
+    )
+
+
+async def handle_admin_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+    await query.edit_message_text(admin_errors_menu_text(), reply_markup=admin_errors_menu_keyboard())
+
+
+async def handle_admin_frequent_errors_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+    await query.edit_message_text(
+        admin_frequent_errors_all_text(),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🧠 К ошибкам", callback_data="admin:errors")],
+            [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+        ]),
+    )
+
+
+async def handle_admin_export_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+    await query.edit_message_text(admin_export_menu_text(), reply_markup=admin_export_menu_keyboard())
+
+
+async def handle_admin_debug(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+    await query.edit_message_text(admin_debug_text(), reply_markup=admin_debug_keyboard())
+
+
+async def handle_admin_manage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+    await query.edit_message_text(admin_manage_text(), reply_markup=admin_manage_keyboard())
+
+
+async def handle_admin_clear_runtime_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    await query.edit_message_text(
+        "🧹 Очистить runtime-сессии?\n\n"
+        "Это сбросит временные состояния текущих прохождений. "
+        "Сохранённые завершённые попытки и статистика не удалятся.",
+        reply_markup=admin_clear_runtime_confirm_keyboard(),
+    )
+
+
+async def handle_admin_clear_runtime_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    count = clear_runtime_sessions()
+    await query.edit_message_text(
+        f"✅ Runtime-сессии очищены.\n\nУдалено записей: {count}",
+        reply_markup=admin_manage_keyboard(),
+    )
+
 
 async def handle_admin_tests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -658,6 +1137,7 @@ async def handle_admin_export_all(update: Update, context: ContextTypes.DEFAULT_
         return
     path = export_csv(None)
     await query.message.reply_document(InputFile(path), caption="📤 Экспорт всех данных")
+    await query.edit_message_text(admin_export_menu_text(), reply_markup=admin_export_menu_keyboard())
 
 async def handle_admin_export_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -669,3 +1149,4 @@ async def handle_admin_export_test(update: Update, context: ContextTypes.DEFAULT
     _, _, test_id = query.data.split(":")
     path = export_csv(test_id)
     await query.message.reply_document(InputFile(path), caption=f"📤 Экспорт по тесту: {TESTS[test_id]['title']}")
+    await query.edit_message_text(admin_export_menu_text(), reply_markup=admin_export_menu_keyboard())
