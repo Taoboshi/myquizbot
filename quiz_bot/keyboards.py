@@ -349,7 +349,7 @@ def profile_list_keyboard(test_id: str, prefix: str, page: int, total: int) -> I
         nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"{prefix}:{test_id}:{page + 1}"))
     if nav:
         rows.append(nav)
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -363,7 +363,7 @@ def favorites_keyboard(test_id: str, indices: list[int], page: int, total: int) 
         nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_favorites:{test_id}:{page + 1}"))
     if nav:
         rows.append(nav)
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -392,7 +392,7 @@ def profile_errors_keyboard(test_id: str, items: list[dict[str, Any]], page: int
         nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_errors:{test_id}:{page + 1}"))
     if nav:
         rows.append(nav)
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -420,7 +420,7 @@ def history_keyboard(test_id: str, attempts: list[dict[str, Any]], page: int, to
         nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"profile_history:{test_id}:{page + 1}"))
     if nav:
         rows.append(nav)
-    rows.append([InlineKeyboardButton(BTN_BACK, callback_data=f"my_profile:{test_id}")])
+    rows.append([InlineKeyboardButton("👤 В профиль", callback_data=f"my_profile:{test_id}")])
     return InlineKeyboardMarkup(rows)
 
 
