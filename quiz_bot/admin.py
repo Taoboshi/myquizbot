@@ -1,10 +1,12 @@
+import asyncio
 import csv
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Update
-from telegram.ext import ContextTypes
+from telegram.ext import ApplicationHandlerStop, ContextTypes
 
 from .config import ADMIN_USERS_PAGE_SIZE, BASE_DIR, DB_PATH, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, is_admin, mode_title, seconds_to_text, sep, user_display_name
@@ -414,6 +416,8 @@ def admin_summary_text() -> str:
         runtime_sessions = _safe_count(conn, "runtime_sessions")
         active_errors = _safe_count(conn, "all_time_errors", "WHERE COALESCE(is_resolved, 0) = 0")
         favorites = _safe_count(conn, "favorites")
+        blocked_users = _safe_count(conn, "blocked_users")
+        broadcast_recipients = max(0, (users or 0) - (blocked_users or 0))
 
         totals = conn.execute(
             """
@@ -455,6 +459,8 @@ def admin_summary_text() -> str:
         f"📚 Тестов: {len(TESTS)}\n"
         f"🧠 Активных ошибок: {active_errors or 0}\n"
         f"⭐ Избранных вопросов: {favorites or 0}\n"
+        f"🚫 Заблокированных: {blocked_users or 0}\n"
+        f"📢 Получателей рассылки: {broadcast_recipients}\n"
         f"💾 Сохранённых сессий: {active_sessions or 0}\n"
         f"🔄 Runtime-сессий: {runtime_sessions or 0}\n\n"
         f"🗄 База: {backend}\n"
@@ -486,6 +492,7 @@ def admin_debug_text() -> str:
         runtime_sessions = _safe_count(conn, "runtime_sessions")
         all_time_errors = _safe_count(conn, "all_time_errors")
         attempt_wrong_answers = _safe_count(conn, "attempt_wrong_answers")
+        blocked_users = _safe_count(conn, "blocked_users")
 
         try:
             last_attempt = conn.execute(
@@ -525,6 +532,7 @@ def admin_debug_text() -> str:
         f"🔄 runtime_sessions: {_fmt_count(runtime_sessions)}",
         f"🧠 all_time_errors: {_fmt_count(all_time_errors)}",
         f"❌ attempt_wrong_answers: {_fmt_count(attempt_wrong_answers)}",
+        f"🚫 blocked_users: {_fmt_count(blocked_users)}",
     ]
 
     if last_attempt:
@@ -580,6 +588,111 @@ def export_csv(test_id: str | None = None) -> Path:
             ])
 
     return path
+
+
+_ADMIN_TABLES_READY = False
+
+
+def ensure_admin_tables() -> None:
+    global _ADMIN_TABLES_READY
+
+    if _ADMIN_TABLES_READY:
+        return
+
+    with db_connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS blocked_users (
+                user_id BIGINT PRIMARY KEY,
+                blocked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                blocked_by BIGINT,
+                reason TEXT
+            )
+            """
+        )
+        conn.commit()
+
+    _ADMIN_TABLES_READY = True
+
+
+def is_user_blocked(user_id: int) -> bool:
+    ensure_admin_tables()
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT user_id FROM blocked_users WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+    return row is not None
+
+
+def get_blocked_user(user_id: int):
+    ensure_admin_tables()
+    with db_connect() as conn:
+        return conn.execute(
+            """
+            SELECT b.*, u.username, u.first_name, u.last_name
+            FROM blocked_users b
+            LEFT JOIN users u ON u.user_id = b.user_id
+            WHERE b.user_id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+
+
+def block_user(user_id: int, blocked_by: int, reason: str | None = None) -> None:
+    ensure_admin_tables()
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO blocked_users (user_id, blocked_by, reason)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id)
+            DO UPDATE SET
+                blocked_at = CURRENT_TIMESTAMP,
+                blocked_by = excluded.blocked_by,
+                reason = excluded.reason
+            """,
+            (user_id, blocked_by, reason),
+        )
+        conn.commit()
+
+
+def unblock_user(user_id: int) -> None:
+    ensure_admin_tables()
+    with db_connect() as conn:
+        conn.execute("DELETE FROM blocked_users WHERE user_id = ?", (user_id,))
+        conn.commit()
+
+
+def broadcast_users() -> list[int]:
+    ensure_admin_tables()
+    with db_connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT u.user_id
+            FROM users u
+            LEFT JOIN blocked_users b ON b.user_id = u.user_id
+            WHERE b.user_id IS NULL
+            ORDER BY u.last_seen_at DESC
+            """
+        ).fetchall()
+    return [int(row["user_id"]) for row in rows]
+
+
+async def blocked_user_guard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user or is_admin(user.id):
+        return
+
+    if not is_user_blocked(user.id):
+        return
+
+    if update.callback_query:
+        await update.callback_query.answer("Доступ к боту ограничен.", show_alert=True)
+    elif update.message:
+        await update.message.reply_text("Доступ к боту ограничен.")
+
+    raise ApplicationHandlerStop
 
 
 def admin_users_text(page: int = 0) -> str:
@@ -672,6 +785,8 @@ def admin_users_keyboard(page: int = 0) -> InlineKeyboardMarkup:
 
 
 def admin_global_user_text(user_id: int) -> str:
+    ensure_admin_tables()
+
     with db_connect() as conn:
         user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
 
@@ -702,6 +817,10 @@ def admin_global_user_text(user_id: int) -> str:
         active_errors = _safe_count(conn, "all_time_errors", f"WHERE user_id = {int(user_id)} AND COALESCE(is_resolved, 0) = 0")
         saved_sessions = _safe_count(conn, "active_sessions", f"WHERE user_id = {int(user_id)}")
         runtime_sessions = _safe_count(conn, "runtime_sessions", f"WHERE user_id = {int(user_id)}")
+        blocked = conn.execute(
+            "SELECT * FROM blocked_users WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
 
         last_attempts = conn.execute(
             """
@@ -716,6 +835,7 @@ def admin_global_user_text(user_id: int) -> str:
 
     display_name = user_display_name(user) if user else f"ID {user_id}"
     username = f"@{user['username']}" if user and user["username"] else "—"
+    status = "🚫 заблокирован" if blocked else "🟢 активен"
 
     attempts_total = int(totals["attempts_total"] or 0) if totals else 0
     attempts_finished = int(totals["attempts_finished"] or 0) if totals else 0
@@ -729,8 +849,18 @@ def admin_global_user_text(user_id: int) -> str:
         f"Имя: {display_name}",
         f"Username: {username}",
         f"ID: {user_id}",
+        f"Статус: {status}",
         f"Первый запуск: {user['first_seen_at'] if user else '—'}",
         f"Последняя активность: {user['last_seen_at'] if user else '—'}",
+    ]
+
+    if blocked:
+        lines.extend([
+            f"Заблокирован: {blocked['blocked_at']}",
+            f"Причина: {blocked['reason'] or '—'}",
+        ])
+
+    lines.extend([
         "",
         "📊 Общий результат",
         f"Попыток: {attempts_finished} завершено из {attempts_total}",
@@ -742,7 +872,7 @@ def admin_global_user_text(user_id: int) -> str:
         f"Избранных вопросов: {favorites or 0}",
         f"Сохранённых сессий: {saved_sessions or 0}",
         f"Runtime-сессий: {runtime_sessions or 0}",
-    ]
+    ])
 
     if per_tests:
         lines.extend(["", "📚 По тестам"])
@@ -760,18 +890,18 @@ def admin_global_user_text(user_id: int) -> str:
         lines.extend(["", "🕘 Последние попытки"])
         for row in last_attempts:
             title = TESTS.get(row["test_id"], {}).get("title", row["test_id"])
-            status = "завершена" if row["finished_at"] else "не завершена"
+            status_text = "завершена" if row["finished_at"] else "не завершена"
             attempt_percent_value = _percent(row["correct"], row["answered"])
             lines.append(
                 f"• {title} · {mode_title(row['mode'])}: "
-                f"{row['correct']}/{row['answered']} ({attempt_percent_value}%) · {status}"
+                f"{row['correct']}/{row['answered']} ({attempt_percent_value}%) · {status_text}"
             )
 
     return "\n".join(lines)
 
 
 def admin_global_user_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
+    rows = [
         [
             InlineKeyboardButton("📜 История", callback_data=f"admin:user_history:{user_id}:0:{page}"),
             InlineKeyboardButton("🧠 Ошибки", callback_data=f"admin:user_errors:{user_id}:0:{page}"),
@@ -780,11 +910,20 @@ def admin_global_user_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMar
             InlineKeyboardButton("⭐ Избранное", callback_data=f"admin:user_favorites:{user_id}:0:{page}"),
             InlineKeyboardButton("📤 Экспорт", callback_data=f"admin:export_user:{user_id}:{page}"),
         ],
+    ]
+
+    if is_user_blocked(user_id):
+        rows.append([InlineKeyboardButton("✅ Разблокировать", callback_data=f"admin:unblock_user:{user_id}:{page}")])
+    else:
+        rows.append([InlineKeyboardButton("🚫 Заблокировать", callback_data=f"admin:block_user_confirm:{user_id}:{page}")])
+
+    rows.extend([
         [InlineKeyboardButton("🧹 Очистить runtime", callback_data=f"admin:clear_user_runtime_confirm:{user_id}:{page}")],
         [InlineKeyboardButton("🗑 Сбросить прогресс", callback_data=f"admin:reset_user_confirm:{user_id}:{page}")],
         [InlineKeyboardButton("👥 К пользователям", callback_data=f"admin:users:{page}")],
         [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
     ])
+    return InlineKeyboardMarkup(rows)
 
 
 def admin_user_back_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
@@ -1043,6 +1182,114 @@ def export_user_csv(user_id: int) -> Path:
     return path
 
 
+def admin_block_user_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🚫 Да, заблокировать", callback_data=f"admin:block_user_do:{user_id}:{page}")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:global_user:{user_id}:{page}")],
+    ])
+
+
+def admin_unblock_user_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👤 К пользователю", callback_data=f"admin:global_user:{user_id}:{page}")],
+        [InlineKeyboardButton("🚫 Заблокированные", callback_data="admin:blocked_users:0")],
+        [InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")],
+    ])
+
+
+def admin_blocked_users_text(page: int = 0) -> str:
+    ensure_admin_tables()
+    page = max(0, page)
+    offset = page * ADMIN_USERS_PAGE_SIZE
+
+    with db_connect() as conn:
+        total = _safe_count(conn, "blocked_users") or 0
+        rows = conn.execute(
+            """
+            SELECT b.user_id, b.blocked_at, b.reason, u.username, u.first_name, u.last_name
+            FROM blocked_users b
+            LEFT JOIN users u ON u.user_id = b.user_id
+            ORDER BY b.blocked_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (ADMIN_USERS_PAGE_SIZE, offset),
+        ).fetchall()
+
+    total_pages = _admin_user_pages(total)
+    lines = [
+        "🚫 Заблокированные пользователи",
+        "",
+        f"Всего: {total}",
+        f"Страница {page + 1} из {total_pages}",
+        "",
+    ]
+
+    if not rows:
+        lines.append("Заблокированных пользователей нет.")
+        return "\n".join(lines)
+
+    for n, row in enumerate(rows, start=offset + 1):
+        lines.append(f"{n}. {user_display_name(row)}")
+        lines.append(f"   ID: {row['user_id']}")
+        lines.append(f"   Заблокирован: {row['blocked_at']}")
+        if row["reason"]:
+            lines.append(f"   Причина: {row['reason']}")
+
+    return "\n".join(lines)
+
+
+def admin_blocked_users_keyboard(page: int = 0) -> InlineKeyboardMarkup:
+    ensure_admin_tables()
+    page = max(0, page)
+    offset = page * ADMIN_USERS_PAGE_SIZE
+
+    with db_connect() as conn:
+        total = _safe_count(conn, "blocked_users") or 0
+        rows = conn.execute(
+            """
+            SELECT b.user_id, u.username, u.first_name, u.last_name
+            FROM blocked_users b
+            LEFT JOIN users u ON u.user_id = b.user_id
+            ORDER BY b.blocked_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (ADMIN_USERS_PAGE_SIZE, offset),
+        ).fetchall()
+
+    buttons = []
+    for row in rows:
+        label = f"👤 {user_display_name(row)}"
+        if len(label) > 34:
+            label = label[:31].rstrip() + "…"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"admin:global_user:{row['user_id']}:{page}")])
+
+    total_pages = _admin_user_pages(total)
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"admin:blocked_users:{page - 1}"))
+    if page + 1 < total_pages:
+        nav.append(InlineKeyboardButton("➡️ Далее", callback_data=f"admin:blocked_users:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+
+    buttons.append([InlineKeyboardButton("⚙️ К управлению", callback_data="admin:manage")])
+    buttons.append([InlineKeyboardButton("🏠 В админку", callback_data="admin:menu")])
+    return InlineKeyboardMarkup(buttons)
+
+
+def admin_broadcast_preview_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 Отправить всем", callback_data="admin:broadcast_send")],
+        [InlineKeyboardButton("↩️ Отмена", callback_data="admin:broadcast_cancel")],
+    ])
+
+
+def admin_broadcast_cancel_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("↩️ Отмена", callback_data="admin:broadcast_cancel")],
+    ])
+
+
 def admin_reset_user_confirm_keyboard(user_id: int, page: int = 0) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⚠️ Продолжить", callback_data=f"admin:reset_user_second:{user_id}:{page}")],
@@ -1289,14 +1536,17 @@ def admin_manage_text() -> str:
     return (
         "⚙️ Управление\n\n"
         "Действия здесь меняют состояние бота. Опасные операции требуют подтверждения.\n\n"
+        "📢 Рассылка — отправить сообщение всем незаблокированным пользователям.\n"
+        "🚫 Заблокированные — список пользователей с ограниченным доступом.\n"
         "🧪 Проверка тестов — ищет ошибки в JSON и дубликаты вопросов.\n"
-        "🧹 Runtime-сессии — временные состояния текущих прохождений. "
-        "Их можно очистить, если после обновления кода у пользователей зависли старые состояния."
+        "🧹 Runtime-сессии — временные состояния текущих прохождений."
     )
 
 
 def admin_manage_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 Рассылка", callback_data="admin:broadcast_start")],
+        [InlineKeyboardButton("🚫 Заблокированные", callback_data="admin:blocked_users:0")],
         [InlineKeyboardButton("🧪 Проверить тесты", callback_data="admin:validate_tests")],
         [InlineKeyboardButton("🧹 Очистить runtime-сессии", callback_data="admin:clear_runtime_confirm")],
         [InlineKeyboardButton("🐞 Debug", callback_data="admin:debug")],
@@ -1486,6 +1736,185 @@ async def handle_admin_clear_user_runtime_do(update: Update, context: ContextTyp
         f"✅ Runtime-сессии пользователя очищены.\n\nУдалено записей: {count}",
         reply_markup=admin_global_user_keyboard(user_id, page),
     )
+
+
+async def handle_admin_block_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+
+    await query.edit_message_text(
+        "🚫 Заблокировать пользователя?\n\n"
+        f"Пользователь ID: {user_id}\n\n"
+        "Он не сможет пользоваться ботом, пока ты его не разблокируешь. "
+        "Статистика и данные пользователя останутся.",
+        reply_markup=admin_block_user_confirm_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_block_user_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+
+    block_user(user_id, query.from_user.id, "blocked from admin panel")
+    await query.edit_message_text(
+        "🚫 Пользователь заблокирован.",
+        reply_markup=admin_unblock_user_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_unblock_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    _, _, user_id_str, page_str = query.data.split(":")
+    user_id = int(user_id_str)
+    page = int(page_str)
+
+    unblock_user(user_id)
+    await query.edit_message_text(
+        "✅ Пользователь разблокирован.",
+        reply_markup=admin_global_user_keyboard(user_id, page),
+    )
+
+
+async def handle_admin_blocked_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    parts = query.data.split(":")
+    page = int(parts[2]) if len(parts) > 2 else 0
+    await query.edit_message_text(
+        admin_blocked_users_text(page),
+        reply_markup=admin_blocked_users_keyboard(page),
+    )
+
+
+async def handle_admin_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    context.user_data["admin_broadcast_waiting"] = True
+    context.user_data.pop("admin_broadcast_text", None)
+
+    await query.edit_message_text(
+        "📢 Рассылка\n\n"
+        "Отправь следующим сообщением текст, который нужно разослать пользователям.\n\n"
+        "Получатели: все незаблокированные пользователи.",
+        reply_markup=admin_broadcast_cancel_keyboard(),
+    )
+
+
+async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not user or not is_admin(user.id):
+        return
+    if not context.user_data.get("admin_broadcast_waiting"):
+        return
+
+    text = (update.message.text or "").strip()
+    context.user_data["admin_broadcast_waiting"] = False
+
+    if not text:
+        await update.message.reply_text("Пустое сообщение не подходит.", reply_markup=admin_manage_keyboard())
+        raise ApplicationHandlerStop
+
+    context.user_data["admin_broadcast_text"] = text
+    users_count = len(broadcast_users())
+
+    preview = text
+    if len(preview) > 1200:
+        preview = preview[:1200].rstrip() + "…"
+
+    await update.message.reply_text(
+        "📢 Предпросмотр рассылки\n\n"
+        f"Получателей: {users_count}\n"
+        "Заблокированные пользователи не получат сообщение.\n\n"
+        f"{preview}",
+        reply_markup=admin_broadcast_preview_keyboard(),
+    )
+
+    raise ApplicationHandlerStop
+
+
+async def handle_admin_broadcast_send(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    text = context.user_data.get("admin_broadcast_text")
+    if not text:
+        await query.edit_message_text("Текст рассылки не найден.", reply_markup=admin_manage_keyboard())
+        return
+
+    user_ids = broadcast_users()
+    await query.edit_message_text(f"📢 Рассылка запущена.\n\nПолучателей: {len(user_ids)}")
+
+    sent = 0
+    failed = 0
+    delay = float(os.getenv("BROADCAST_SEND_DELAY_SECONDS", "0.05"))
+
+    for user_id in user_ids:
+        try:
+            await context.bot.send_message(chat_id=user_id, text=text)
+            sent += 1
+        except Exception:
+            failed += 1
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+    context.user_data.pop("admin_broadcast_text", None)
+    context.user_data.pop("admin_broadcast_waiting", None)
+
+    await query.message.reply_text(
+        "✅ Рассылка завершена\n\n"
+        f"Отправлено: {sent}\n"
+        f"Ошибок: {failed}",
+        reply_markup=admin_manage_keyboard(),
+    )
+
+
+async def handle_admin_broadcast_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    upsert_user(query.from_user)
+    await query.answer()
+    if not is_admin(query.from_user.id):
+        await query.edit_message_text("Админ-панель недоступна.")
+        return
+
+    context.user_data.pop("admin_broadcast_waiting", None)
+    context.user_data.pop("admin_broadcast_text", None)
+    await query.edit_message_text("Рассылка отменена.", reply_markup=admin_manage_keyboard())
 
 
 async def handle_admin_reset_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

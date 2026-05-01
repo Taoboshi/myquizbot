@@ -2,11 +2,20 @@ import logging
 import os
 import time
 
+from telegram import Update
 from telegram.error import Conflict
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, TypeHandler, filters
 
 from .admin import (
     admin_command,
+    blocked_user_guard,
+    handle_admin_block_user_confirm,
+    handle_admin_block_user_do,
+    handle_admin_blocked_users,
+    handle_admin_broadcast_cancel,
+    handle_admin_broadcast_send,
+    handle_admin_broadcast_start,
+    handle_admin_broadcast_text,
     handle_admin_clear_runtime_confirm,
     handle_admin_clear_runtime_do,
     handle_admin_debug,
@@ -35,6 +44,7 @@ from .admin import (
     handle_admin_test_stats,
     handle_admin_test_user_detail,
     handle_admin_test_users,
+    handle_admin_unblock_user,
     handle_admin_tests,
     handle_admin_users,
 )
@@ -139,6 +149,8 @@ def build_application():
     app.add_handler(CommandHandler("admin", admin_command))
     if admin_debug_command is not None:
         app.add_handler(CommandHandler("admin_debug", admin_debug_command))
+    app.add_handler(TypeHandler(Update, blocked_user_guard), group=-2)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_broadcast_text), group=-1)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
     # User callbacks
@@ -191,6 +203,13 @@ def build_application():
     app.add_handler(CallbackQueryHandler(handle_admin_summary, pattern=r"^admin:summary$"))
     app.add_handler(CallbackQueryHandler(handle_admin_users, pattern=r"^admin:users:"))
     app.add_handler(CallbackQueryHandler(handle_admin_global_user_detail, pattern=r"^admin:global_user:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_block_user_confirm, pattern=r"^admin:block_user_confirm:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_block_user_do, pattern=r"^admin:block_user_do:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_unblock_user, pattern=r"^admin:unblock_user:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_blocked_users, pattern=r"^admin:blocked_users:"))
+    app.add_handler(CallbackQueryHandler(handle_admin_broadcast_start, pattern=r"^admin:broadcast_start$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_broadcast_send, pattern=r"^admin:broadcast_send$"))
+    app.add_handler(CallbackQueryHandler(handle_admin_broadcast_cancel, pattern=r"^admin:broadcast_cancel$"))
     app.add_handler(CallbackQueryHandler(handle_admin_user_history, pattern=r"^admin:user_history:"))
     app.add_handler(CallbackQueryHandler(handle_admin_user_errors, pattern=r"^admin:user_errors:"))
     app.add_handler(CallbackQueryHandler(handle_admin_user_favorites, pattern=r"^admin:user_favorites:"))
