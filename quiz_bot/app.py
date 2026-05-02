@@ -67,10 +67,18 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("telegram.request").setLevel(logging.WARNING)
+    
     init_db()
+    
+    # --- ВОТ ЭТИ ДВЕ СТРОЧКИ НУЖНО ДОБАВИТЬ ---
+    from .loader import apply_all_test_metadata_overrides
+    apply_all_test_metadata_overrides()
+    # ------------------------------------------
+    
     keep_alive()
 
     get_bot_token(required=True)
+
 
     acquire_polling_lock()
     try:
