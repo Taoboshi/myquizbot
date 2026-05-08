@@ -4,8 +4,8 @@ import logging
 import os
 import sqlite3
 import time
-from typing import Any
 from functools import wraps
+from typing import Any
 
 from .config import DB_PATH
 
@@ -17,28 +17,32 @@ try:
     import psycopg
     from psycopg.rows import dict_row
     from psycopg_pool import ConnectionPool
-except ImportError:  # локальный запуск без PostgreSQL всё ещё сможет работать на SQLite
+except ImportError:
     psycopg = None
     dict_row = None
     ConnectionPool = None
 
-def ttl_cache(ttl_seconds=5):
-    """Кэш, который хранит ответы от БД несколько секунд, убивая проблему N+1"""
+_GLOBAL_CACHE = {}
+
+def clear_cache():
+    _GLOBAL_CACHE.clear()
+
+def ttl_cache(ttl_seconds=60):
     def decorator(func):
-        cache = {}
         @wraps(func)
         def wrapper(*args, **kwargs):
-            key = str(args) + str(kwargs)
+            key = f"{func.__name__}:{args}:{kwargs}"
             now = time.time()
-            if key in cache:
-                val, exp = cache[key]
+            if key in _GLOBAL_CACHE:
+                val, exp = _GLOBAL_CACHE[key]
                 if now < exp:
                     return val
             val = func(*args, **kwargs)
-            cache[key] = (val, now + ttl_seconds)
+            _GLOBAL_CACHE[key] = (val, now + ttl_seconds)
             return val
         return wrapper
     return decorator
+
 
 
 _POLLING_LOCK_CONN = None
@@ -686,8 +690,7 @@ def init_db() -> None:
 
 VALID_ACCESS_TYPES = {"public", "private", "code", "admin_only"}
 
-
-@ttl_cache(2)
+@ttl_cache(60)
 def get_test_access_setting(test_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "test_access_settings"):
@@ -736,6 +739,7 @@ def set_test_access_setting(test_id: str, access_type: str, code: str | None = N
             (test_id, access_type, code_value, updated_by),
         )
         conn.commit()
+    clear_cache()
 
 
 def reset_test_access_setting(test_id: str) -> None:
@@ -745,11 +749,10 @@ def reset_test_access_setting(test_id: str) -> None:
 
         conn.execute("DELETE FROM test_access_settings WHERE test_id = ?", (test_id,))
         conn.commit()
+    clear_cache()
 
 
-
-
-@ttl_cache(2)
+@ttl_cache(60)
 def list_subject_settings() -> list[dict[str, Any]]:
     with db_connect() as conn:
         if not _table_exists(conn, "subject_settings"):
@@ -779,7 +782,6 @@ def list_subject_settings() -> list[dict[str, Any]]:
     ]
 
 
-
 def delete_subject_setting(subject_id: str) -> None:
     subject_id = str(subject_id or "").strip()
     if not subject_id:
@@ -791,9 +793,10 @@ def delete_subject_setting(subject_id: str) -> None:
 
         conn.execute("DELETE FROM subject_settings WHERE subject_id = ?", (subject_id,))
         conn.commit()
+    clear_cache()
 
 
-@ttl_cache(2)
+@ttl_cache(60)
 def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "subject_settings"):
@@ -864,6 +867,7 @@ def set_subject_setting(
             (subject_id, title, emoji, access_type_value, code_value, updated_by),
         )
         conn.commit()
+    clear_cache()
 
 
 def set_subject_access_setting(subject_id: str, access_type: str, code: str | None = None, updated_by: int | None = None) -> None:
@@ -879,9 +883,10 @@ def set_subject_access_setting(subject_id: str, access_type: str, code: str | No
         code=code,
         updated_by=updated_by,
     )
+    clear_cache()
 
 
-@ttl_cache(2)
+@ttl_cache(60)
 def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
     with db_connect() as conn:
         if not _table_exists(conn, "test_metadata_settings"):
@@ -951,6 +956,7 @@ def set_test_metadata_setting(
             ),
         )
         conn.commit()
+    clear_cache()
 
 
 def reset_test_metadata_setting(test_id: str) -> None:
@@ -960,9 +966,10 @@ def reset_test_metadata_setting(test_id: str) -> None:
 
         conn.execute("DELETE FROM test_metadata_settings WHERE test_id = ?", (test_id,))
         conn.commit()
+    clear_cache()
 
 
-@ttl_cache(2)
+@ttl_cache(60)
 def has_user_test_access(user_id: int, test_id: str) -> bool:
     with db_connect() as conn:
         if not _table_exists(conn, "user_test_access"):
@@ -995,6 +1002,7 @@ def grant_user_test_access(user_id: int, test_id: str, access_source: str = "adm
             (user_id, test_id, access_source, granted_by),
         )
         conn.commit()
+    clear_cache()
 
 
 def revoke_user_test_access(user_id: int, test_id: str) -> None:
@@ -1004,6 +1012,7 @@ def revoke_user_test_access(user_id: int, test_id: str) -> None:
             (user_id, test_id),
         )
         conn.commit()
+    clear_cache()
 
 
 def list_user_test_access(user_id: int) -> list[str]:
@@ -1036,6 +1045,7 @@ def list_test_access_users(test_id: str) -> list[int]:
             (test_id,),
         ).fetchall()
     return [int(row["user_id"]) for row in rows]
+
 
 
 def upsert_user(user) -> None:
