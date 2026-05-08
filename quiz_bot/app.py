@@ -70,15 +70,12 @@ def main() -> None:
     
     init_db()
     
-    # --- ВОТ ЭТИ ДВЕ СТРОЧКИ НУЖНО ДОБАВИТЬ ---
     from .loader import apply_all_test_metadata_overrides
     apply_all_test_metadata_overrides()
-    # ------------------------------------------
     
     keep_alive()
 
     get_bot_token(required=True)
-
 
     acquire_polling_lock()
     try:
@@ -95,3 +92,6 @@ def main() -> None:
                 time.sleep(15)
     finally:
         release_polling_lock()
+
+if __name__ == "__main__":
+    main()
