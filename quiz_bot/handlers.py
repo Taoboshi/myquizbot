@@ -390,15 +390,19 @@ async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def handle_my_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     query = update.callback_query
-    upsert_user(query.from_user)
+    await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
     _, test_id = query.data.split(":")
 
     state = get_state(query.message.chat_id)
     clear_text_waiting_state(state)
 
-    await query.edit_message_text(profile_text(query.from_user, test_id), reply_markup=profile_keyboard(test_id))
+    text = await asyncio.to_thread(profile_text, query.from_user, test_id)
+    keyboard = await asyncio.to_thread(profile_keyboard, test_id)
+    await query.edit_message_text(text, reply_markup=keyboard)
+
 
 
 def _question_options_text(test_id: str, question_index: int, wrong_index: int | None = None, *, show_wrong: bool = True) -> str:
@@ -800,8 +804,9 @@ async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text("📝 Решать\n\nВыбери режим:", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
 
 async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     query = update.callback_query
-    upsert_user(query.from_user)
+    await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
     _, test_id, mode = query.data.split(":")
 
@@ -814,7 +819,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     state = get_state(query.message.chat_id)
     clear_text_waiting_state(state)
 
-    start_quiz_mode(state, query.from_user.id, test_id, mode, order)
+    await asyncio.to_thread(start_quiz_mode, state, query.from_user.id, test_id, mode, order)
     index = state["order"][state["pos"]]
 
     await query.edit_message_text(
@@ -839,8 +844,9 @@ async def handle_start_from_number_menu(update: Update, context: ContextTypes.DE
     )
 
 async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     query = update.callback_query
-    upsert_user(query.from_user)
+    await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
     _, test_id, _count = query.data.split(":")
 
@@ -849,7 +855,7 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     order = order[:min(10, len(order))]
 
     state = get_state(query.message.chat_id)
-    start_quiz_mode(state, query.from_user.id, test_id, "mini", order)
+    await asyncio.to_thread(start_quiz_mode, state, query.from_user.id, test_id, "mini", order)
     index = state["order"][state["pos"]]
 
     await query.edit_message_text(
@@ -859,19 +865,22 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     query = update.callback_query
-    upsert_user(query.from_user)
+    await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
     _, test_id = query.data.split(":")
 
-    order = get_all_time_error_indices(query.from_user.id, test_id)
+    order = await asyncio.to_thread(get_all_time_error_indices, query.from_user.id, test_id)
     if not order:
         await query.answer("Ошибок для разбора нет")
-        await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
+        text = await asyncio.to_thread(learn_menu_text, query.from_user.id, test_id)
+        keyboard = await asyncio.to_thread(learn_menu_keyboard, test_id)
+        await query.edit_message_text(text, reply_markup=keyboard)
         return
 
     state = get_state(query.message.chat_id)
-    start_quiz_mode(state, query.from_user.id, test_id, "errors", order)
+    await asyncio.to_thread(start_quiz_mode, state, query.from_user.id, test_id, "errors", order)
     index = state["order"][state["pos"]]
 
     await query.edit_message_text(
@@ -1193,11 +1202,16 @@ async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEF
     )
 
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import asyncio
     query = update.callback_query
-    upsert_user(query.from_user)
+    await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
     _, test_id = query.data.split(":")
-    await query.edit_message_text(my_stats_text(query.from_user.id, test_id), reply_markup=stats_keyboard(test_id))
+    
+    text = await asyncio.to_thread(my_stats_text, query.from_user.id, test_id)
+    keyboard = await asyncio.to_thread(stats_keyboard, test_id)
+    await query.edit_message_text(text, reply_markup=keyboard)
+
 
 async def handle_public_rating(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
