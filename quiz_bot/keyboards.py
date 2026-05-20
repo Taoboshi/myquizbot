@@ -159,51 +159,57 @@ def answer_keyboard(test_id: str, question_index: int, user_id: int | None = Non
     buttons = []
     letters = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З"]
 
-    # Собираем первые 4 варианта (А, Б, В, Г) по отдельным строкам
-    for i in range(min(4, len(options))):
-        buttons.append([
-            InlineKeyboardButton(
-                f"{letters[i]}", 
-                callback_data=f"ans:{test_id}:{question_index}:{i}"
-            )
-        ])
+    # Шаг 1: Собираем первые 4 варианта парами (А и Б в одном ряду, В и Г в другом)
+    # Ряд 1: А и Б
+    row1 = []
+    if len(options) > 0:
+        row1.append(InlineKeyboardButton(f"{letters[0]}", callback_data=f"ans:{test_id}:{question_index}:0"))
+    if len(options) > 1:
+        row1.append(InlineKeyboardButton(f"{letters[1]}", callback_data=f"ans:{test_id}:{question_index}:1"))
+    if row1:
+        buttons.append(row1)
 
-    # Проверяем, есть ли 5-й вариант (индекс 4, буква "Д")
-    has_option_d = len(options) > 4
+    # Ряд 2: В и Г
+    row2 = []
+    if len(options) > 2:
+        row2.append(InlineKeyboardButton(f"{letters[2]}", callback_data=f"ans:{test_id}:{question_index}:2"))
+    if len(options) > 3:
+        row2.append(InlineKeyboardButton(f"{letters[3]}", callback_data=f"ans:{test_id}:{question_index}:3"))
+    if row2:
+        buttons.append(row2)
 
     # Кнопка "Показать ответ"
     show_ans_btn = InlineKeyboardButton("Показать ответ", callback_data=f"show:{test_id}:{question_index}")
 
-    if has_option_d:
-        # Если есть вариант Д (индекс 4), ставим его и "Показать ответ" в ОДНУ строку
+    # Шаг 2: Проверяем наличие 5-го варианта (буква "Д")
+    if len(options) > 4:
+        # Ставим "Д" и "Показать ответ" в ОДИН ряд
         d_btn = InlineKeyboardButton(f"{letters[4]}", callback_data=f"ans:{test_id}:{question_index}:4")
         buttons.append([d_btn, show_ans_btn])
         
-        # Если вариантов вдруг больше 5 (например, Е, Ж), добавляем их ниже
+        # Если вдруг вариантов больше 5 (например, Е), пускаем их ниже парами
+        current_row = []
         for i in range(5, len(options)):
-            buttons.append([
-                InlineKeyboardButton(
-                    f"{letters[i]}", 
-                    callback_data=f"ans:{test_id}:{question_index}:{i}"
-                )
-            ])
+            current_row.append(InlineKeyboardButton(f"{letters[i]}", callback_data=f"ans:{test_id}:{question_index}:{i}"))
+            if len(current_row) == 2:
+                buttons.append(current_row)
+                current_row = []
+        if current_row:
+            buttons.append(current_row)
     else:
-        # Если варианта Д нет (всего 4 варианта), "Показать ответ" идет отдельной строкой, как раньше
+        # Если буквы "Д" нет, кнопка "Показать ответ" идет на всю ширину
         buttons.append([show_ans_btn])
 
-    # Нижний ряд сервисных кнопок (Избранное, Меню, Прогресс)
-    fav_text = "⭐ В избранном" if (user_id and is_favorite(user_id, test_id, question_index)) else "☆ В избранное"
+    # Шаг 3: Твои родные сервисные кнопки (Избранное со смайликом ⭐ и Назад в меню)
+    fav_text = "⭐ В избранном" if (user_id and is_favorite(user_id, test_id, question_index)) else "⭐ В избранное"
     
     buttons.append([
         InlineKeyboardButton(fav_text, callback_data=f"fav:{test_id}:{question_index}"),
-        InlineKeyboardButton("Меню", callback_data=f"qmenu:{test_id}"),
-    ])
-    buttons.append([
-        InlineKeyboardButton("📊 Мой прогресс", callback_data=f"my_stats:{test_id}")
+        InlineKeyboardButton("Назад в меню", callback_data=f"qmenu:{test_id}"),
     ])
 
     return InlineKeyboardMarkup(buttons)
-    
+
 
 def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
     if attempt_id is not None:
