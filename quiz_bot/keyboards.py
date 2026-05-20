@@ -167,10 +167,10 @@ def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None, use
     # Добавление кнопок с меню и ответом
     if attempt_id is not None:
         rows.append([InlineKeyboardButton(f"💡 {BTN_SHOW_ANSWER}", callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
-        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(f"🏠 {BTN_MENU}", callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
     else:
         rows.append([InlineKeyboardButton(f"💡 {BTN_SHOW_ANSWER}", callback_data=f"show_answer:{test_id}:{index}")])
-        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(f"🏠 {BTN_MENU}", callback_data=f"question_menu:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
     return InlineKeyboardMarkup(rows)
 
 
