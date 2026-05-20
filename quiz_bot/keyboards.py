@@ -150,7 +150,6 @@ def _favorite_button(user_id: int | None, test_id: str, index: int) -> InlineKey
 
 def answer_keyboard(test_id: str, question_index: int, user_id: int | None = None) -> InlineKeyboardMarkup:
     from .quiz import get_questions
-    from .storage import is_favorite
     
     questions = get_questions(test_id)
     q = questions[question_index]
@@ -165,26 +164,23 @@ def answer_keyboard(test_id: str, question_index: int, user_id: int | None = Non
         current_row.append(
             InlineKeyboardButton(f"{letters[i]}", callback_data=f"ans:{test_id}:{question_index}:{i}")
         )
-        # Как только в ряду набирается 2 кнопки, отправляем ряд в клавиатуру
         if len(current_row) == 2:
             buttons.append(current_row)
             current_row = []
 
-    # Если вариантов было нечетное количество, останется 1 кнопка без пары
+    # Если вариантов нечетное количество, останется 1 кнопка без пары
     if current_row:
-        # Добавляем пустой некликабельный квадратик для симметрии
-        current_row.append(InlineKeyboardButton("▫️", callback_data="ignore"))
+        # Вставляем специальный "невидимый" символ (U+2800)
+        current_row.append(InlineKeyboardButton("⠀", callback_data="ignore"))
         buttons.append(current_row)
 
-    # Кнопка "Показать ответ" на всю ширину
-    buttons.append([InlineKeyboardButton("Показать ответ", callback_data=f"show:{test_id}:{question_index}")])
+    # Кнопка "Показать ответ" со смайликом лампочки 💡
+    buttons.append([InlineKeyboardButton("💡 Показать ответ", callback_data=f"show_answer:{test_id}:{question_index}")])
 
-    # Сервисные кнопки внизу
-    fav_text = "⭐ В избранном" if (user_id and is_favorite(user_id, test_id, question_index)) else "☆ В избранное"
-    
+    # Сервисные кнопки (Избранное и Меню со смайликом домика 🏠)
     buttons.append([
-        InlineKeyboardButton(fav_text, callback_data=f"fav:{test_id}:{question_index}"),
-        InlineKeyboardButton("Меню", callback_data=f"qmenu:{test_id}"),
+        _favorite_button(user_id, test_id, question_index),
+        InlineKeyboardButton("🏠 Меню", callback_data=f"question_menu:{test_id}:{question_index}"),
     ])
 
     return InlineKeyboardMarkup(buttons)
