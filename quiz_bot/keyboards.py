@@ -148,26 +148,62 @@ def _favorite_button(user_id: int | None, test_id: str, index: int) -> InlineKey
     return InlineKeyboardButton(text, callback_data=f"toggle_favorite:{test_id}:{index}")
 
 
-def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
-    q = get_questions(test_id)[index]
+def answer_keyboard(test_id: str, question_index: int, user_id: int | None = None) -> InlineKeyboardMarkup:
+    from .quiz import get_questions
+    from .storage import is_favorite
+    
+    questions = get_questions(test_id)
+    q = questions[question_index]
+    options = q["options"]
+
     buttons = []
-    for i, _ in enumerate(q["options"]):
-        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        if attempt_id is not None:
-            callback_data = f"answer:{attempt_id}:{test_id}:{index}:{i}"
-        else:
-            callback_data = f"answer:{test_id}:{index}:{i}"
-        buttons.append(InlineKeyboardButton(f"{letter}", callback_data=callback_data))
+    letters = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З"]
 
-    rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
-    if attempt_id is not None:
-        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
-        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
+    # Собираем первые 4 варианта (А, Б, В, Г) по отдельным строкам
+    for i in range(min(4, len(options))):
+        buttons.append([
+            InlineKeyboardButton(
+                f"{letters[i]}", 
+                callback_data=f"ans:{test_id}:{question_index}:{i}"
+            )
+        ])
+
+    # Проверяем, есть ли 5-й вариант (индекс 4, буква "Д")
+    has_option_d = len(options) > 4
+
+    # Кнопка "Показать ответ"
+    show_ans_btn = InlineKeyboardButton("Показать ответ", callback_data=f"show:{test_id}:{question_index}")
+
+    if has_option_d:
+        # Если есть вариант Д (индекс 4), ставим его и "Показать ответ" в ОДНУ строку
+        d_btn = InlineKeyboardButton(f"{letters[4]}", callback_data=f"ans:{test_id}:{question_index}:4")
+        buttons.append([d_btn, show_ans_btn])
+        
+        # Если вариантов вдруг больше 5 (например, Е, Ж), добавляем их ниже
+        for i in range(5, len(options)):
+            buttons.append([
+                InlineKeyboardButton(
+                    f"{letters[i]}", 
+                    callback_data=f"ans:{test_id}:{question_index}:{i}"
+                )
+            ])
     else:
-        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
-        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
-    return InlineKeyboardMarkup(rows)
+        # Если варианта Д нет (всего 4 варианта), "Показать ответ" идет отдельной строкой, как раньше
+        buttons.append([show_ans_btn])
 
+    # Нижний ряд сервисных кнопок (Избранное, Меню, Прогресс)
+    fav_text = "⭐ В избранном" if (user_id and is_favorite(user_id, test_id, question_index)) else "☆ В избранное"
+    
+    buttons.append([
+        InlineKeyboardButton(fav_text, callback_data=f"fav:{test_id}:{question_index}"),
+        InlineKeyboardButton("Меню", callback_data=f"qmenu:{test_id}"),
+    ])
+    buttons.append([
+        InlineKeyboardButton("📊 Мой прогресс", callback_data=f"my_stats:{test_id}")
+    ])
+
+    return InlineKeyboardMarkup(buttons)
+    
 
 def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
     if attempt_id is not None:
