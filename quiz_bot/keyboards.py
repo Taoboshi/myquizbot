@@ -150,49 +150,23 @@ def _favorite_button(user_id: int | None, test_id: str, index: int) -> InlineKey
 
 def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
     q = get_questions(test_id)[index]
-    options = q["options"]
-
     buttons = []
-    letters = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З"]
-
-    # Собираем варианты ответов парами с сохранением attempt_id
-    current_row = []
-    for i in range(len(options)):
+    for i, _ in enumerate(q["options"]):
+        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
         if attempt_id is not None:
             callback_data = f"answer:{attempt_id}:{test_id}:{index}:{i}"
         else:
             callback_data = f"answer:{test_id}:{index}:{i}"
-            
-        current_row.append(
-            InlineKeyboardButton(f"{letters[i]}", callback_data=callback_data)
-        )
-        if len(current_row) == 2:
-            buttons.append(current_row)
-            current_row = []
+        buttons.append(InlineKeyboardButton(f"{letter}", callback_data=callback_data))
 
-    # Если вариантов нечетное количество, добавляем невидимую кнопку для симметрии
-    if current_row:
-        current_row.append(InlineKeyboardButton("⠀", callback_data="ignore"))
-        buttons.append(current_row)
-
-    # Формируем правильные callback-команды в зависимости от наличия attempt_id
+    rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
     if attempt_id is not None:
-        show_cb = f"show_answer:{attempt_id}:{test_id}:{index}"
-        menu_cb = f"question_menu:{attempt_id}:{test_id}:{index}"
+        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
     else:
-        show_cb = f"show_answer:{test_id}:{index}"
-        menu_cb = f"question_menu:{test_id}:{index}"
-
-    # Кнопка "Показать ответ" со смайликом лампочки 💡
-    buttons.append([InlineKeyboardButton("💡 Показать ответ", callback_data=show_cb)])
-
-    # Сервисные кнопки: Избранное (твоя родная кнопка) и Меню со смайликом домика 🏠
-    buttons.append([
-        _favorite_button(user_id, test_id, index),
-        InlineKeyboardButton("🏠 Меню", callback_data=menu_cb),
-    ])
-
-    return InlineKeyboardMarkup(buttons)
+        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
+    return InlineKeyboardMarkup(rows)
 
 
 def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
