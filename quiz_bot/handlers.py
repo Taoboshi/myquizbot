@@ -805,6 +805,7 @@ async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     import asyncio
+    import random
     query = update.callback_query
     await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
@@ -824,7 +825,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, user_id=query.from_user.id),
+        reply_markup=answer_keyboard(test_id, index, attempt_id=state.get("attempt_id"), user_id=query.from_user.id),
         parse_mode="HTML",
     )
 
@@ -845,6 +846,7 @@ async def handle_start_from_number_menu(update: Update, context: ContextTypes.DE
 
 async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     import asyncio
+    import random
     query = update.callback_query
     await asyncio.to_thread(upsert_user, query.from_user)
     await query.answer()
@@ -860,7 +862,7 @@ async def handle_mini_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, user_id=query.from_user.id),
+        reply_markup=answer_keyboard(test_id, index, attempt_id=state.get("attempt_id"), user_id=query.from_user.id),
         parse_mode="HTML",
     )
 
@@ -885,9 +887,10 @@ async def handle_errors_solve(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await query.edit_message_text(
         build_question_text(index, state),
-        reply_markup=answer_keyboard(test_id, index, user_id=query.from_user.id),
+        reply_markup=answer_keyboard(test_id, index, attempt_id=state.get("attempt_id"), user_id=query.from_user.id),
         parse_mode="HTML",
     )
+
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     import asyncio
