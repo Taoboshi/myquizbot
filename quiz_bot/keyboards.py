@@ -160,13 +160,19 @@ def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None, use
         buttons.append(InlineKeyboardButton(f"{letter}", callback_data=callback_data))
 
     rows = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]
+        # ПРАВКА: Добавление прочерка, если осталась одна кнопка
+    if rows and len(rows[-1]) == 1:
+        rows[-1].append(InlineKeyboardButton("—", callback_data="ignore"))
+
+    # Добавление кнопок с меню и ответом
     if attempt_id is not None:
-        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
-        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
+        rows.append([InlineKeyboardButton(f"💡 {BTN_SHOW_ANSWER}", callback_data=f"show_answer:{attempt_id}:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(f"🏠 {BTN_MENU}", callback_data=f"question_menu:{attempt_id}:{test_id}:{index}")])
     else:
-        rows.append([InlineKeyboardButton(BTN_SHOW_ANSWER, callback_data=f"show_answer:{test_id}:{index}")])
-        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(BTN_MENU, callback_data=f"question_menu:{test_id}:{index}")])
+        rows.append([InlineKeyboardButton(f"💡 {BTN_SHOW_ANSWER}", callback_data=f"show_answer:{test_id}:{index}")])
+        rows.append([_favorite_button(user_id, test_id, index), InlineKeyboardButton(f"🏠 {BTN_MENU}", callback_data=f"question_menu:{test_id}:{index}")])
     return InlineKeyboardMarkup(rows)
+
 
 
 def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
