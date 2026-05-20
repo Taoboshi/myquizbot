@@ -46,13 +46,13 @@ TESTS = {
 
 LETTERS = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "К"]
 
-BTN_SHOW_ANSWER = "Показать ответ"
-BTN_MENU = "☰ Меню"
+BTN_SHOW_ANSWER = "💡 Показать ответ"
+BTN_MENU = "🏛️ Меню"
 BTN_NEXT = "➡️ Следующий"
 BTN_CONTINUE = "▶️ Продолжить"
 BTN_SAVE_EXIT = "💾 Сохранить и выйти"
 BTN_FINISH = "🎯 Завершить"
-BTN_TEST_MENU = "🏠 К меню теста"
+BTN_TEST_MENU = "🏛️ К меню теста"
 BTN_BACK = "⬅️ Назад"
 
 RESUMABLE_MODES = {"normal", "random", "reverse", "from_number"}
