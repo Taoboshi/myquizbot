@@ -148,45 +148,51 @@ def _favorite_button(user_id: int | None, test_id: str, index: int) -> InlineKey
     return InlineKeyboardButton(text, callback_data=f"toggle_favorite:{test_id}:{index}")
 
 
-def answer_keyboard(test_id: str, question_index: int, user_id: int | None = None) -> InlineKeyboardMarkup:
-    from .quiz import get_questions
-    
-    questions = get_questions(test_id)
-    q = questions[question_index]
+def answer_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
+    q = get_questions(test_id)[index]
     options = q["options"]
 
     buttons = []
     letters = ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З"]
 
-    # Собираем все варианты ответов аккуратными парами
+    # Собираем варианты ответов парами с сохранением attempt_id
     current_row = []
     for i in range(len(options)):
-        # Правильная команда ответа, чтобы бот её понимал
+        if attempt_id is not None:
+            callback_data = f"answer:{attempt_id}:{test_id}:{index}:{i}"
+        else:
+            callback_data = f"answer:{test_id}:{index}:{i}"
+            
         current_row.append(
-            InlineKeyboardButton(f"{letters[i]}", callback_data=f"answer:{test_id}:{question_index}:{i}")
+            InlineKeyboardButton(f"{letters[i]}", callback_data=callback_data)
         )
         if len(current_row) == 2:
             buttons.append(current_row)
             current_row = []
 
-    # Если вариантов нечетное количество, добавляем невидимую кнопку
+    # Если вариантов нечетное количество, добавляем невидимую кнопку для симметрии
     if current_row:
         current_row.append(InlineKeyboardButton("⠀", callback_data="ignore"))
         buttons.append(current_row)
 
-    # Кнопка "Показать ответ" со смайликом лампочки 💡
-    buttons.append([
-        InlineKeyboardButton("💡 Показать ответ", callback_data=f"show_answer:{test_id}:{question_index}")
-    ])
+    # Формируем правильные callback-команды в зависимости от наличия attempt_id
+    if attempt_id is not None:
+        show_cb = f"show_answer:{attempt_id}:{test_id}:{index}"
+        menu_cb = f"question_menu:{attempt_id}:{test_id}:{index}"
+    else:
+        show_cb = f"show_answer:{test_id}:{index}"
+        menu_cb = f"question_menu:{test_id}:{index}"
 
-    # Сервисные кнопки: Избранное (родная функция) и Меню с домиком 🏠
+    # Кнопка "Показать ответ" со смайликом лампочки 💡
+    buttons.append([InlineKeyboardButton("💡 Показать ответ", callback_data=show_cb)])
+
+    # Сервисные кнопки: Избранное (твоя родная кнопка) и Меню со смайликом домика 🏠
     buttons.append([
-        _favorite_button(user_id, test_id, question_index),
-        InlineKeyboardButton("🏠 Меню", callback_data=f"question_menu:{test_id}:{question_index}"),
+        _favorite_button(user_id, test_id, index),
+        InlineKeyboardButton("🏠 Меню", callback_data=menu_cb),
     ])
 
     return InlineKeyboardMarkup(buttons)
-
 
 
 def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
