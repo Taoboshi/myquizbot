@@ -161,29 +161,32 @@ def answer_keyboard(test_id: str, question_index: int, user_id: int | None = Non
     # Собираем все варианты ответов аккуратными парами
     current_row = []
     for i in range(len(options)):
+        # Правильная команда ответа, чтобы бот её понимал
         current_row.append(
-            InlineKeyboardButton(f"{letters[i]}", callback_data=f"ans:{test_id}:{question_index}:{i}")
+            InlineKeyboardButton(f"{letters[i]}", callback_data=f"answer:{test_id}:{question_index}:{i}")
         )
         if len(current_row) == 2:
             buttons.append(current_row)
             current_row = []
 
-    # Если вариантов нечетное количество, останется 1 кнопка без пары
+    # Если вариантов нечетное количество, добавляем невидимую кнопку
     if current_row:
-        # Вставляем специальный "невидимый" символ (U+2800)
         current_row.append(InlineKeyboardButton("⠀", callback_data="ignore"))
         buttons.append(current_row)
 
     # Кнопка "Показать ответ" со смайликом лампочки 💡
-    buttons.append([InlineKeyboardButton("💡 Показать ответ", callback_data=f"show_answer:{test_id}:{question_index}")])
+    buttons.append([
+        InlineKeyboardButton("💡 Показать ответ", callback_data=f"show_answer:{test_id}:{question_index}")
+    ])
 
-    # Сервисные кнопки (Избранное и Меню со смайликом домика 🏠)
+    # Сервисные кнопки: Избранное (родная функция) и Меню с домиком 🏠
     buttons.append([
         _favorite_button(user_id, test_id, question_index),
         InlineKeyboardButton("🏠 Меню", callback_data=f"question_menu:{test_id}:{question_index}"),
     ])
 
     return InlineKeyboardMarkup(buttons)
+
 
 
 def next_keyboard(test_id: str, index: int, attempt_id: int | None = None, user_id: int | None = None) -> InlineKeyboardMarkup:
