@@ -1,12 +1,6 @@
 {
   "id": "luchevaya_test_blank",
   "title": "Тест по лучевой диагностике (бланк)",
-  "subject": {
-    "id": "luchevaya_diagnostika",
-    "title": "Основы лучевой диагностики",
-    "emoji": "🩻",
-    "order": 1
-  },
   "questions": [
     {
       "question": "Анатомически корень легкого не включает",
