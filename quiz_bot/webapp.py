@@ -146,10 +146,19 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/rating", methods=["GET"])
     def api_rating():
         test_id = request.args.get("test_id")
+        subject_id = request.args.get("subject_id")
+
+        target_test_ids = []
+        if test_id and test_id not in ("all", ""):
+            target_test_ids = [test_id]
+        elif subject_id and subject_id not in ("all", ""):
+            target_test_ids = [t_id for t_id, _ in get_tests_for_subject(subject_id)]
+
         with db_connect() as conn:
-            if test_id:
+            if target_test_ids:
+                placeholders = ",".join(["?"] * len(target_test_ids))
                 rows = conn.execute(
-                    """
+                    f"""
                     WITH ranked_attempts AS (
                         SELECT
                             a.*,
@@ -163,7 +172,7 @@ def register_webapp_routes(app: Any) -> None:
                                     a.finished_at DESC
                             ) AS user_rank
                         FROM attempts a
-                        WHERE a.test_id = ?
+                        WHERE a.test_id IN ({placeholders})
                           AND a.finished_at IS NOT NULL
                           AND a.answered > 0
                     )
@@ -177,7 +186,7 @@ def register_webapp_routes(app: Any) -> None:
                         r.duration_seconds ASC
                     LIMIT 20
                     """,
-                    (test_id,),
+                    tuple(target_test_ids),
                 ).fetchall()
             else:
                 rows = conn.execute(
@@ -205,22 +214,44 @@ def register_webapp_routes(app: Any) -> None:
         for r in rows:
             d = dict(r)
             name = f"{d.get('first_name') or ''} {d.get('last_name') or ''}".strip() or d.get('username') or f"Пользователь {d.get('user_id')}"
+            
+            raw_pct = d.get("percent_value")
+            if raw_pct is None:
+                raw_pct = d.get("avg_pct")
+            pct_val = 0
+            if raw_pct is not None:
+                try:
+                    num = float(raw_pct)
+                    if "percent_value" in d and num <= 1.0:
+                        num = num * 100.0
+                    pct_val = round(num)
+                except (ValueError, TypeError):
+                    pct_val = 0
+
+            score_val = d.get("correct") if "correct" in d and d.get("correct") is not None else d.get("total_correct", 0)
+            total_val = d.get("answered") if "answered" in d and d.get("answered") is not None else d.get("total_answered", 0)
+            dur_val = d.get("duration_seconds", 0) or 0
+
             items.append({
-                "user_id": d.get("user_id"),
-                "name": name,
-                "username": d.get("username") or "",
-                "score": d.get("correct") or d.get("total_correct") or 0,
-                "total": d.get("answered") or d.get("total_answered") or 0,
-                "percent": round(d.get("percent_value", 0) * 100) if "percent_value" in d else round(d.get("avg_pct", 0)),
-                "duration": d.get("duration_seconds", 0),
+                "user_id": int(d.get("user_id") or 0),
+                "name": str(name),
+                "username": str(d.get("username") or ""),
+                "score": int(score_val or 0),
+                "total": int(total_val or 0),
+                "percent": int(pct_val),
+                "duration": int(dur_val),
             })
 
-        return jsonify({"items": items})
+        return jsonify({
+            "items": items,
+            "subject_id": subject_id or "all",
+            "test_id": test_id or "all",
+        })
 
     @app.route("/api/attempts/record", methods=["POST"])
     def api_record_attempt():
         data = request.get_json(force=True) or {}
-        user_id = data.get("user_id")
+        user_id = data.get("user_id") or 9990001
         test_id = data.get("test_id")
         correct = int(data.get("correct", 0))
         answered = int(data.get("answered", 0))
@@ -228,8 +259,8 @@ def register_webapp_routes(app: Any) -> None:
         mode = data.get("mode", "normal")
         wrong_questions = data.get("wrong_questions", [])
 
-        if not user_id or not test_id:
-            return jsonify({"error": "user_id and test_id required"}), 400
+        if not test_id:
+            return jsonify({"error": "test_id required"}), 400
 
         try:
             uid = int(user_id)
