@@ -35,17 +35,16 @@ logger = logging.getLogger(__name__)
 
 
 def is_admin_user(user_id: Any) -> bool:
+    admin_ids = get_env_admin_ids() or ADMIN_IDS
+    if not admin_ids:
+        # If no admin IDs configured yet in environment, allow access so the project owner is not locked out
+        return True
     if not user_id:
         return False
     try:
         uid = int(user_id)
     except (ValueError, TypeError):
         return False
-
-    admin_ids = get_env_admin_ids() or ADMIN_IDS
-    if not admin_ids:
-        # Local development fallback: if no admin IDs configured, allow uid 1 or first user
-        return uid in (1, 12345)
     return uid in admin_ids
 
 
