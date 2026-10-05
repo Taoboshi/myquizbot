@@ -134,6 +134,13 @@ def healthz() -> tuple[str, int]:
     return "ok", 200
 
 
+try:
+    from .webapp import register_webapp_routes
+    register_webapp_routes(WEB_APP)
+except Exception:
+    pass
+
+
 def keep_alive() -> None:
     global _SERVER_STARTED
 
