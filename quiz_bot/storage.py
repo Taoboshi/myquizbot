@@ -516,7 +516,13 @@ def _init_postgres_db() -> None:
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_by BIGINT
-            )
+            );
+
+            CREATE TABLE IF NOT EXISTS callback_cache (
+                token TEXT PRIMARY KEY,
+                data TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
 
@@ -658,6 +664,12 @@ def _init_sqlite_db() -> None:
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_by INTEGER
             );
+
+            CREATE TABLE IF NOT EXISTS callback_cache (
+                token TEXT PRIMARY KEY,
+                data TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
 
@@ -680,11 +692,86 @@ def _init_sqlite_db() -> None:
         conn.commit()
 
 
+def _migrate_legacy_subject_ids() -> None:
+    """Migrate legacy cyrillic or non-ASCII subject_ids to clean ASCII slugs."""
+    try:
+        import re
+        from .loader import _slug
+
+        cyrillic_re = re.compile(r"[а-яё]", re.IGNORECASE)
+        with db_connect() as conn:
+            if not _table_exists(conn, "subject_settings"):
+                return
+            rows = conn.execute("SELECT subject_id, title FROM subject_settings").fetchall()
+            for row in rows:
+                old_id = row["subject_id"] if not isinstance(row, tuple) else row[0]
+                if old_id and cyrillic_re.search(old_id):
+                    new_id = _slug(old_id)
+                    if new_id == old_id:
+                        continue
+                    existing = conn.execute("SELECT 1 FROM subject_settings WHERE subject_id = ?", (new_id,)).fetchone()
+                    if not existing:
+                        conn.execute(
+                            "UPDATE subject_settings SET subject_id = ? WHERE subject_id = ?",
+                            (new_id, old_id),
+                        )
+                    else:
+                        conn.execute("DELETE FROM subject_settings WHERE subject_id = ?", (old_id,))
+
+                    if _table_exists(conn, "test_metadata_settings"):
+                        conn.execute(
+                            "UPDATE test_metadata_settings SET subject_id = ? WHERE subject_id = ?",
+                            (new_id, old_id),
+                        )
+            conn.commit()
+    except Exception:
+        logger.exception("Failed to migrate legacy cyrillic subject IDs")
+
+
+def save_callback_cache(token: str, data: str) -> None:
+    try:
+        with db_connect() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS callback_cache (
+                    token TEXT PRIMARY KEY,
+                    data TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO callback_cache (token, data, created_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(token) DO UPDATE SET data = excluded.data
+                """,
+                (token, data),
+            )
+            conn.commit()
+    except Exception:
+        pass
+
+
+def get_callback_cache(token: str) -> str | None:
+    try:
+        with db_connect() as conn:
+            if not _table_exists(conn, "callback_cache"):
+                return None
+            row = conn.execute("SELECT data FROM callback_cache WHERE token = ?", (token,)).fetchone()
+            if row:
+                return row["data"] if not isinstance(row, tuple) else row[0]
+    except Exception:
+        pass
+    return None
+
+
 def init_db() -> None:
     if DATABASE_URL:
         _init_postgres_db()
     else:
         _init_sqlite_db()
+    _migrate_legacy_subject_ids()
 
 
 

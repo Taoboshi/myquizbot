@@ -19,6 +19,7 @@ from .config import (
 from .access import can_view_subject, is_subject_code_locked_for_user, can_view_test, is_code_locked_for_user
 from .loader import get_questions, get_subject_info, get_subjects, get_tests_for_subject, test_subject_id
 from .quiz import build_question_text
+from .runtime import safe_callback
 from .state import active_session_button_text
 from .storage import is_favorite
 
@@ -40,7 +41,7 @@ def subject_select_keyboard(user_id: int) -> InlineKeyboardMarkup:
         title = info.get("title", subject_id)
         is_locked = is_subject_code_locked_for_user(user_id, subject_id)
         prefix = "🔒 " if is_locked else (f"{emoji} " if emoji else "")
-        callback = f"locked_subject:{subject_id}" if is_locked else f"subject_menu:{subject_id}"
+        callback = safe_callback(f"locked_subject:{subject_id}" if is_locked else f"subject_menu:{subject_id}")
         rows.append([
             InlineKeyboardButton(
                 f"{prefix}{title}",
@@ -80,7 +81,7 @@ def locked_test_keyboard(test_id: str) -> InlineKeyboardMarkup:
     subject_id = test_subject_id(test_id)
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔑 Ввести код", callback_data=f"enter_access_code:{test_id}")],
-        [InlineKeyboardButton("⬅️ К тестам предмета", callback_data=f"subject_menu:{subject_id}")],
+        [InlineKeyboardButton("⬅️ К тестам предмета", callback_data=safe_callback(f"subject_menu:{subject_id}"))],
     ])
 
 
@@ -92,7 +93,7 @@ def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("📖 Учить", callback_data=f"learn_menu:{test_id}")],
         [InlineKeyboardButton("👤 Профиль", callback_data=f"my_profile:{test_id}")],
         [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
-        [InlineKeyboardButton(BTN_BACK, callback_data=f"subject_menu:{test_subject_id(test_id)}")],
+        [InlineKeyboardButton(BTN_BACK, callback_data=safe_callback(f"subject_menu:{test_subject_id(test_id)}"))],
     ])
 
 

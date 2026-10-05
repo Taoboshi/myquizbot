@@ -2,19 +2,76 @@ import os
 from threading import Thread
 from typing import Any
 
-from flask import Flask
+try:
+    from flask import Flask
+    WEB_APP = Flask(__name__)
+except ImportError:
+    Flask = None
 
-import time
+    class _DummyApp:
+        def route(self, *args, **kwargs):
+            return lambda fn: fn
 
-WEB_APP = Flask(__name__)
+        def run(self, *args, **kwargs):
+            pass
+
+    WEB_APP = _DummyApp()
 USER_STATE: dict[int, dict[str, Any]] = {}
 USER_STATE_LAST_ACCESSED: dict[int, float] = {}
 LAST_START_AT: dict[int, float] = {}
 LAST_CALLBACK_AT: dict[tuple[int, str], float] = {}
 _SERVER_STARTED = False
 
+import hashlib
+
 STATE_TTL_SECONDS = int(os.getenv("USER_STATE_TTL_SECONDS", "86400"))  # 24 hours
 CALLBACK_DEBOUNCE_SECONDS = float(os.getenv("CALLBACK_DEBOUNCE_SECONDS", "0.35"))
+
+_CALLBACK_STORE: dict[str, str] = {}
+_CALLBACK_STORE_ORDER: list[str] = []
+_MAX_CALLBACK_STORE = 1000
+
+
+def safe_callback(data: str) -> str:
+    """Ensure callback_data is <= 64 bytes for Telegram inline buttons.
+    If longer, store full data and return a compact token 'cbe:<hash>'.
+    """
+    if not data:
+        return ""
+    data_bytes = str(data).encode("utf-8")
+    if len(data_bytes) <= 64:
+        return str(data)
+
+    token_hash = hashlib.sha256(data_bytes).hexdigest()[:12]
+    token = f"cbe:{token_hash}"
+    if token not in _CALLBACK_STORE:
+        _CALLBACK_STORE[token] = str(data)
+        _CALLBACK_STORE_ORDER.append(token)
+        if len(_CALLBACK_STORE_ORDER) > _MAX_CALLBACK_STORE:
+            oldest = _CALLBACK_STORE_ORDER.pop(0)
+            _CALLBACK_STORE.pop(oldest, None)
+        try:
+            from .storage import save_callback_cache
+            save_callback_cache(token, str(data))
+        except Exception:
+            pass
+    return token
+
+
+def unpack_callback(data: str) -> str:
+    """If callback is a packed token 'cbe:<hash>', retrieve the original callback data."""
+    if data and data.startswith("cbe:"):
+        res = _CALLBACK_STORE.get(data)
+        if not res:
+            try:
+                from .storage import get_callback_cache
+                res = get_callback_cache(data)
+                if res:
+                    _CALLBACK_STORE[data] = res
+            except Exception:
+                pass
+        return res or data
+    return data
 
 
 def is_duplicate_callback(user_id: int, callback_data: str) -> bool:

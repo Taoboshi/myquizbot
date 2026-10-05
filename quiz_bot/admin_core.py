@@ -13,6 +13,7 @@ from .helpers import attempt_percent, format_display_datetime, is_admin, mode_ti
 from .access import access_label, access_type_label, can_view_test, effective_test_access, effective_access_type, effective_access_code, subject_access_label, subject_access_type, subject_access_code
 from .loader import add_subject_override, apply_test_metadata_override, effective_test_info, get_questions, get_subject_info, get_subjects, get_tests_for_subject, get_unassigned_tests, remove_subject_override, _slug
 from .quiz import format_solution_attempt, format_training_attempt, public_rating_text
+from .runtime import safe_callback
 from .storage import DATABASE_URL, db_connect, delete_subject_setting, get_all_time_error_indices, get_test_access_setting, get_test_metadata_setting, grant_user_test_access, has_user_test_access, list_test_access_users, list_user_test_access, reset_test_access_setting, reset_test_metadata_setting, revoke_user_test_access, set_subject_access_setting, set_subject_setting, set_test_access_setting, set_test_metadata_setting, upsert_user
 
 
@@ -73,7 +74,7 @@ def admin_tests_keyboard() -> InlineKeyboardMarkup:
         rows.append([
             InlineKeyboardButton(
                 f"{subject_button_title(info, subject_id)} ({tests_count})",
-                callback_data=f"admin:subject:{subject_id}",
+                callback_data=safe_callback(f"admin:subject:{subject_id}"),
             )
         ])
 
@@ -112,12 +113,12 @@ def admin_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
         rows.append([
             InlineKeyboardButton(
                 f"📚 {title}",
-                callback_data=f"admin:test:{test_id}",
+                callback_data=safe_callback(f"admin:test:{test_id}"),
             )
         ])
 
-    rows.append([InlineKeyboardButton("➕ Добавить тест", callback_data=f"admin:add_test_to_subject:{subject_id}")])
-    rows.append([InlineKeyboardButton("⚙️ Настройки раздела", callback_data=f"admin:subject_settings:{subject_id}")])
+    rows.append([InlineKeyboardButton("➕ Добавить тест", callback_data=safe_callback(f"admin:add_test_to_subject:{subject_id}"))])
+    rows.append([InlineKeyboardButton("⚙️ Настройки раздела", callback_data=safe_callback(f"admin:subject_settings:{subject_id}"))])
     rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
     return InlineKeyboardMarkup(rows)
 
@@ -152,15 +153,15 @@ def admin_subject_access_text(subject_id: str) -> str:
 def admin_subject_access_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🌍 Открытый", callback_data=f"admin:set_subject_access:{subject_id}:public"),
-            InlineKeyboardButton("🔐 Приватный", callback_data=f"admin:set_subject_access:{subject_id}:private"),
+            InlineKeyboardButton("🌍 Открытый", callback_data=safe_callback(f"admin:set_subject_access:{subject_id}:public")),
+            InlineKeyboardButton("🔐 Приватный", callback_data=safe_callback(f"admin:set_subject_access:{subject_id}:private")),
         ],
         [
-            InlineKeyboardButton("🔑 По коду", callback_data=f"admin:set_subject_access:{subject_id}:code"),
-            InlineKeyboardButton("🙈 Только админ", callback_data=f"admin:set_subject_access:{subject_id}:admin_only"),
+            InlineKeyboardButton("🔑 По коду", callback_data=safe_callback(f"admin:set_subject_access:{subject_id}:code")),
+            InlineKeyboardButton("🙈 Только админ", callback_data=safe_callback(f"admin:set_subject_access:{subject_id}:admin_only")),
         ],
-        [InlineKeyboardButton("✏️ Изменить код", callback_data=f"admin:set_subject_code:{subject_id}")],
-        [InlineKeyboardButton("↩️ К настройкам раздела", callback_data=f"admin:subject_settings:{subject_id}")],
+        [InlineKeyboardButton("✏️ Изменить код", callback_data=safe_callback(f"admin:set_subject_code:{subject_id}"))],
+        [InlineKeyboardButton("↩️ К настройкам раздела", callback_data=safe_callback(f"admin:subject_settings:{subject_id}"))],
     ])
 
 
@@ -192,24 +193,24 @@ def admin_subject_settings_text(subject_id: str) -> str:
 
 def admin_subject_settings_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton("✏️ Переименовать раздел", callback_data=f"admin:rename_subject:{subject_id}")],
-        [InlineKeyboardButton("🔐 Доступ к разделу", callback_data=f"admin:subject_access:{subject_id}")],
+        [InlineKeyboardButton("✏️ Переименовать раздел", callback_data=safe_callback(f"admin:rename_subject:{subject_id}"))],
+        [InlineKeyboardButton("🔐 Доступ к разделу", callback_data=safe_callback(f"admin:subject_access:{subject_id}"))],
     ]
 
     if get_tests_for_subject(subject_id):
-        rows.append([InlineKeyboardButton("🧷 Сначала открепи тесты", callback_data=f"admin:subject:{subject_id}")])
+        rows.append([InlineKeyboardButton("🧷 Сначала открепи тесты", callback_data=safe_callback(f"admin:subject:{subject_id}"))])
     else:
-        rows.append([InlineKeyboardButton("🗑 Удалить раздел", callback_data=f"admin:delete_subject_confirm:{subject_id}")])
+        rows.append([InlineKeyboardButton("🗑 Удалить раздел", callback_data=safe_callback(f"admin:delete_subject_confirm:{subject_id}"))])
 
-    rows.append([InlineKeyboardButton("↩️ К разделу", callback_data=f"admin:subject:{subject_id}")])
+    rows.append([InlineKeyboardButton("↩️ К разделу", callback_data=safe_callback(f"admin:subject:{subject_id}"))])
     rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
     return InlineKeyboardMarkup(rows)
 
 
 def admin_delete_subject_confirm_keyboard(subject_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🗑 Да, удалить раздел", callback_data=f"admin:delete_subject_do:{subject_id}")],
-        [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:subject_settings:{subject_id}")],
+        [InlineKeyboardButton("🗑 Да, удалить раздел", callback_data=safe_callback(f"admin:delete_subject_do:{subject_id}"))],
+        [InlineKeyboardButton("↩️ Отмена", callback_data=safe_callback(f"admin:subject_settings:{subject_id}"))],
     ])
 
 
@@ -246,11 +247,11 @@ def admin_add_test_to_subject_keyboard(subject_id: str) -> InlineKeyboardMarkup:
         rows.append([
             InlineKeyboardButton(
                 f"📄 {title}",
-                callback_data=f"admin:assign_test_subject:{subject_id}:{test_id}",
+                callback_data=safe_callback(f"admin:asgn:{subject_id}:{test_id}"),
             )
         ])
 
-    rows.append([InlineKeyboardButton("↩️ К разделу", callback_data=f"admin:subject:{subject_id}")])
+    rows.append([InlineKeyboardButton("↩️ К разделу", callback_data=safe_callback(f"admin:subject:{subject_id}"))])
     rows.append([InlineKeyboardButton("📚 К разделам", callback_data="admin:tests")])
     return InlineKeyboardMarkup(rows)
 

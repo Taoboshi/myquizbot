@@ -52,7 +52,7 @@ from .quiz import (
     result_text,
     wrong_index_for_question,
 )
-from .runtime import LAST_START_AT, USER_STATE
+from .runtime import LAST_START_AT, USER_STATE, safe_callback
 from .state import clear_text_waiting_state, delete_active_session, get_state, load_active_session, restore_state, save_active_session, save_question_progress, start_quiz_mode
 
 def fmt_msk(value) -> str:
@@ -278,7 +278,7 @@ async def handle_locked_subject(update: Update, context: ContextTypes.DEFAULT_TY
     await query.edit_message_text(
         f"🔒 {title}\n\nЭтот раздел открывается по коду доступа.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔑 Ввести код", callback_data=f"enter_subject_code:{subject_id}")],
+            [InlineKeyboardButton("🔑 Ввести код", callback_data=safe_callback(f"enter_subject_code:{subject_id}"))],
             [InlineKeyboardButton("⬅️ К предметам", callback_data="tests:menu")],
         ]),
     )

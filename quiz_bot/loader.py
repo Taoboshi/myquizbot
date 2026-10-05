@@ -13,10 +13,28 @@ except Exception:
     list_subject_settings = None
 
 
-def _slug(value: str) -> str:
-    value = str(value or "").strip().lower()
-    value = re.sub(r"[^a-zа-яё0-9]+", "_", value, flags=re.IGNORECASE)
+CYRILLIC_TO_LATIN = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "yo",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+}
+
+
+def transliterate_cyrillic(text: str) -> str:
+    res = []
+    for ch in str(text or "").lower():
+        res.append(CYRILLIC_TO_LATIN.get(ch, ch))
+    return "".join(res)
+
+
+def _slug(value: str, max_len: int = 32) -> str:
+    value = transliterate_cyrillic(value).strip().lower()
+    value = re.sub(r"[^a-z0-9]+", "_", value)
     value = value.strip("_")
+    if max_len and len(value) > max_len:
+        value = value[:max_len].rstrip("_")
     return value or "default"
 
 

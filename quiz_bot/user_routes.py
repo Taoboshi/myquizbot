@@ -117,12 +117,13 @@ USER_CALLBACKS = (
 from telegram import Update
 from telegram.ext import ApplicationHandlerStop, CallbackQueryHandler, CommandHandler, MessageHandler, TypeHandler, filters
 
-from .runtime import is_duplicate_callback
+from .runtime import is_duplicate_callback, unpack_callback
 
 
 async def callback_debounce_guard(update: Update, context) -> None:
     query = update.callback_query
     if query and query.from_user and query.data:
+        query.data = unpack_callback(query.data)
         if is_duplicate_callback(query.from_user.id, query.data):
             try:
                 await query.answer()

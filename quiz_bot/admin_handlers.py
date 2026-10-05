@@ -1043,6 +1043,7 @@ async def handle_admin_add_test_to_subject(update: Update, context: ContextTypes
         return
 
     _, _, subject_id = query.data.split(":", 2)
+    context.user_data["admin_assign_subject_id"] = subject_id
     await query.edit_message_text(
         admin_add_test_to_subject_text(subject_id),
         reply_markup=admin_add_test_to_subject_keyboard(subject_id),
@@ -1057,7 +1058,19 @@ async def handle_admin_assign_test_subject(update: Update, context: ContextTypes
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, subject_id, test_id = query.data.split(":", 3)
+    parts = query.data.split(":")
+    if len(parts) >= 4:
+        _, _, subject_id, test_id = parts[:4]
+    elif len(parts) == 3:
+        test_id = parts[2]
+        subject_id = context.user_data.get("admin_assign_subject_id") or ""
+    else:
+        subject_id = ""
+        test_id = ""
+
+    if not subject_id or not test_id:
+        await query.edit_message_text("⚠️ Ошибка: раздел или тест не найдены.", reply_markup=admin_tests_keyboard())
+        return
 
     subject = get_subject_info(subject_id)
     current = effective_test_info(test_id)
@@ -1133,7 +1146,7 @@ async def handle_admin_set_subject_code(update: Update, context: ContextTypes.DE
         f"Раздел: {subject_button_title(get_subject_info(subject_id), subject_id)}\n\n"
         "Отправь следующим сообщением новый код доступа.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:subject_access:{subject_id}")],
+            [InlineKeyboardButton("↩️ Отмена", callback_data=safe_callback(f"admin:subject_access:{subject_id}"))],
         ]),
     )
 
@@ -1170,7 +1183,7 @@ async def handle_admin_rename_subject(update: Update, context: ContextTypes.DEFA
         f"Сейчас: {info.get('title', subject_id)}\n\n"
         "Отправь следующим сообщением новое название.",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("↩️ Отмена", callback_data=f"admin:subject_settings:{subject_id}")],
+            [InlineKeyboardButton("↩️ Отмена", callback_data=safe_callback(f"admin:subject_settings:{subject_id}"))],
         ]),
     )
 
@@ -1236,6 +1249,7 @@ async def handle_admin_move_test_subject(update: Update, context: ContextTypes.D
         return
 
     _, _, test_id = query.data.split(":", 2)
+    context.user_data["admin_move_test_id"] = test_id
     await query.edit_message_text(
         admin_move_test_subject_text(test_id),
         reply_markup=admin_move_test_subject_keyboard(test_id),
@@ -1250,7 +1264,19 @@ async def handle_admin_move_test_subject_do(update: Update, context: ContextType
         await query.edit_message_text("Админ-панель недоступна.")
         return
 
-    _, _, subject_id, test_id = query.data.split(":", 3)
+    parts = query.data.split(":")
+    if len(parts) >= 4:
+        _, _, subject_id, test_id = parts[:4]
+    elif len(parts) == 3:
+        subject_id = parts[2]
+        test_id = context.user_data.get("admin_move_test_id") or ""
+    else:
+        subject_id = ""
+        test_id = ""
+
+    if not subject_id or not test_id:
+        await query.edit_message_text("⚠️ Ошибка: раздел или тест не найдены.", reply_markup=admin_tests_keyboard())
+        return
 
     subject = get_subject_info(subject_id)
     current = effective_test_info(test_id)

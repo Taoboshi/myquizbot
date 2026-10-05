@@ -315,12 +315,12 @@ def admin_move_test_subject_keyboard(test_id: str) -> InlineKeyboardMarkup:
         rows.append([
             InlineKeyboardButton(
                 f"{prefix}{emoji} {title}",
-                callback_data=f"admin:move_test_subject_do:{subject_id}:{test_id}",
+                callback_data=safe_callback(f"admin:mv_subj:{subject_id}:{test_id}"),
             )
         ])
 
     rows.append([InlineKeyboardButton("➕ Добавить раздел", callback_data="admin:add_subject")])
-    rows.append([InlineKeyboardButton("↩️ К настройкам теста", callback_data=f"admin:test_meta:{test_id}")])
+    rows.append([InlineKeyboardButton("↩️ К настройкам теста", callback_data=safe_callback(f"admin:test_meta:{test_id}"))])
     return InlineKeyboardMarkup(rows)
 
 def admin_test_access_text(test_id: str) -> str:
