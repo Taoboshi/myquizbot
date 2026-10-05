@@ -17,9 +17,14 @@ from .loader import (
     load_tests,
 )
 from .storage import (
+    DATABASE_URL,
+    add_all_time_error,
     clear_all_time_errors,
     db_connect,
     delete_subject_setting,
+    ensure_user_stats,
+    get_all_time_error_indices,
+    mark_all_time_error_resolved,
     record_attempt_finish,
     set_subject_setting,
     set_test_metadata_setting,
@@ -212,6 +217,136 @@ def register_webapp_routes(app: Any) -> None:
             })
 
         return jsonify({"items": items})
+
+    @app.route("/api/attempts/record", methods=["POST"])
+    def api_record_attempt():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id")
+        test_id = data.get("test_id")
+        correct = int(data.get("correct", 0))
+        answered = int(data.get("answered", 0))
+        duration = int(data.get("duration", 0))
+        mode = data.get("mode", "normal")
+        wrong_questions = data.get("wrong_questions", [])
+
+        if not user_id or not test_id:
+            return jsonify({"error": "user_id and test_id required"}), 400
+
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "invalid user_id"}), 400
+
+        # Ensure user row exists
+        with db_connect() as conn:
+            user_row = conn.execute("SELECT user_id FROM users WHERE user_id = ?", (uid,)).fetchone()
+            if not user_row:
+                conn.execute(
+                    "INSERT INTO users (user_id, first_name, username) VALUES (?, ?, ?)",
+                    (uid, data.get("first_name", f"User {uid}"), data.get("username", "")),
+                )
+
+            # Record attempt
+            if DATABASE_URL:
+                cur = conn.execute(
+                    """
+                    INSERT INTO attempts (user_id, test_id, mode, answered, correct, duration_seconds, completed_full_test, finished_by_user, finished_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
+                    RETURNING attempt_id
+                    """,
+                    (uid, test_id, mode, answered, correct, duration),
+                )
+                attempt_id = cur.fetchone()["attempt_id"]
+            else:
+                cur = conn.execute(
+                    """
+                    INSERT INTO attempts (user_id, test_id, mode, answered, correct, duration_seconds, completed_full_test, finished_by_user, finished_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 1, 1, CURRENT_TIMESTAMP)
+                    """,
+                    (uid, test_id, mode, answered, correct, duration),
+                )
+                attempt_id = cur.lastrowid
+
+            ensure_user_stats(uid, test_id)
+            conn.execute(
+                """
+                UPDATE user_stats
+                SET attempts_started = attempts_started + 1,
+                    attempts_finished = attempts_finished + 1,
+                    last_activity_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND test_id = ?
+                """,
+                (uid, test_id),
+            )
+            conn.commit()
+
+        # Record wrong answers
+        for q_idx in wrong_questions:
+            try:
+                add_all_time_error(uid, test_id, int(q_idx) - 1, None)
+            except Exception:
+                pass
+
+        return jsonify({"success": True, "attempt_id": attempt_id})
+
+    @app.route("/api/errors/resolve", methods=["POST"])
+    def api_resolve_error():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id")
+        test_id = data.get("test_id")
+        question_id = data.get("question_id")
+
+        if not user_id or not test_id or question_id is None:
+            return jsonify({"error": "user_id, test_id and question_id required"}), 400
+
+        try:
+            uid = int(user_id)
+            qid = int(question_id)
+            mark_all_time_error_resolved(uid, test_id, qid - 1)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+        return jsonify({"success": True, "resolved": qid})
+
+    @app.route("/api/errors/clear", methods=["POST"])
+    def api_clear_errors():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id")
+        test_id = data.get("test_id")
+
+        if not user_id or not test_id:
+            return jsonify({"error": "user_id and test_id required"}), 400
+
+        try:
+            uid = int(user_id)
+            clear_all_time_errors(uid, test_id)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+        return jsonify({"success": True, "cleared": test_id})
+
+    @app.route("/api/user/state", methods=["GET"])
+    def api_user_state():
+        user_id = request.args.get("user_id")
+        test_id = request.args.get("test_id")
+
+        if not user_id or not test_id:
+            return jsonify({"error": "user_id and test_id required"}), 400
+
+        try:
+            uid = int(user_id)
+            err_indices = get_all_time_error_indices(uid, test_id)
+            # convert 0-based question_index to 1-based question id
+            error_ids = [i + 1 for i in err_indices]
+            with db_connect() as conn:
+                fav_rows = conn.execute(
+                    "SELECT question_index FROM favorites WHERE user_id = ? AND test_id = ? AND is_favorite = 1",
+                    (uid, test_id),
+                ).fetchall()
+            favorite_ids = [r["question_index"] + 1 for r in fav_rows]
+            return jsonify({"test_id": test_id, "errors": error_ids, "favorites": favorite_ids})
+        except Exception as e:
+            return jsonify({"errors": [], "favorites": []})
 
     # ==========================================
     # ADMIN API ENDPOINTS
