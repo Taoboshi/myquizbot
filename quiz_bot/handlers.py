@@ -1428,3 +1428,31 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     state["find_result_indices"] = indices
 
     await update.message.reply_text(find_results_text(test_id, text, indices, page=0), reply_markup=find_results_keyboard(test_id, indices, page=0))
+
+
+async def app_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    webapp_url = os.getenv("WEBAPP_URL", "").strip()
+    if not webapp_url:
+        render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+        if render_url:
+            webapp_url = f"{render_url.rstrip('/')}/app"
+
+    if webapp_url:
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("✨ Открыть ohTest (Mini App)", web_app=WebAppInfo(url=webapp_url))
+        ]])
+        await update.message.reply_text(
+            "🚀 <b>ohTest Mini App</b> готов к работе!\n\n"
+            "Нажмите кнопку ниже, чтобы открыть приложение в Telegram:",
+            reply_markup=kb,
+            parse_mode="HTML",
+        )
+    else:
+        await update.message.reply_text(
+            "📱 <b>ohTest Mini App</b>\n\n"
+            "Приложение готово! Для прямого открытия внутри Telegram добавьте переменную <code>WEBAPP_URL</code> в Render (например: <code>https://your-service.onrender.com/app</code>).\n\n"
+            "Локально на компьютере вы можете открыть интерактивный файл <b>ohTest_preview.html</b> прямо на Рабочем столе!",
+            parse_mode="HTML",
+        )
+

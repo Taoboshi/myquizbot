@@ -3,6 +3,7 @@
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from .handlers import (
+    app_command,
     finish_command,
     handle_answer,
     handle_attempt_error_show,
@@ -142,6 +143,7 @@ def register_user_handlers(app) -> None:
     app.add_handler(TypeHandler(Update, callback_debounce_guard), group=-1)
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler(["app", "ohtest"], app_command))
     app.add_handler(CommandHandler("tests", tests_command))
     app.add_handler(CommandHandler("finish", finish_command))
     app.add_handler(CommandHandler("stats", stats_command))

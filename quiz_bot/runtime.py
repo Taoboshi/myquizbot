@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import time
 from threading import Thread
 from typing import Any
@@ -111,8 +112,21 @@ def cleanup_expired_user_state() -> int:
 
 
 @WEB_APP.route("/")
-def home() -> str:
-    return "OZIZ quiz bot is running!"
+def home() -> Any:
+    web_file = Path(__file__).resolve().parent / "web" / "index.html"
+    if web_file.exists():
+        with open(web_file, "r", encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return "ohTest quiz bot is running!"
+
+
+@WEB_APP.route("/app")
+def serve_webapp() -> Any:
+    web_file = Path(__file__).resolve().parent / "web" / "index.html"
+    if web_file.exists():
+        with open(web_file, "r", encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return "ohTest Mini App is starting up...", 200
 
 
 @WEB_APP.route("/healthz")
