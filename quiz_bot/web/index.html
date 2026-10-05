@@ -1196,7 +1196,7 @@
   }
 
   // Test Selection & Hub
-  function selectTest(testId) {
+  async function selectTest(testId) {
     triggerHaptic('light');
     state.activeTestId = testId;
     const testData = BUNDLED_TESTS[testId];
@@ -1215,6 +1215,25 @@
     } catch(e) {}
 
     openTestHub();
+
+    // Live Server Sync: fetch latest questions from backend in case questions were edited in tests/*.json
+    try {
+      const res = await fetch(`/api/tests/${testId}`);
+      if (res.ok) {
+        const liveData = await res.json();
+        if (liveData && liveData.questions && liveData.questions.length > 0) {
+          BUNDLED_TESTS[testId] = {
+            title: liveData.title,
+            questions: liveData.questions
+          };
+          state.activeTestTitle = liveData.title;
+          state.currentTestOriginalQuestions = [...liveData.questions];
+          state.activeQuestions = [...liveData.questions];
+          document.getElementById('hub-test-title').innerText = state.activeTestTitle;
+          document.getElementById('hub-q-count').innerText = state.currentTestOriginalQuestions.length;
+        }
+      }
+    } catch(e) {}
   }
 
   function openTestHub() {
