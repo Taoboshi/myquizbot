@@ -10,9 +10,28 @@ WEB_APP = Flask(__name__)
 USER_STATE: dict[int, dict[str, Any]] = {}
 USER_STATE_LAST_ACCESSED: dict[int, float] = {}
 LAST_START_AT: dict[int, float] = {}
+LAST_CALLBACK_AT: dict[tuple[int, str], float] = {}
 _SERVER_STARTED = False
 
 STATE_TTL_SECONDS = int(os.getenv("USER_STATE_TTL_SECONDS", "86400"))  # 24 hours
+CALLBACK_DEBOUNCE_SECONDS = float(os.getenv("CALLBACK_DEBOUNCE_SECONDS", "0.35"))
+
+
+def is_duplicate_callback(user_id: int, callback_data: str) -> bool:
+    """Return True if user pressed the exact same callback within debounce threshold."""
+    now = time.time()
+    key = (user_id, callback_data)
+    last = LAST_CALLBACK_AT.get(key, 0.0)
+    if now - last < CALLBACK_DEBOUNCE_SECONDS:
+        return True
+    LAST_CALLBACK_AT[key] = now
+    # Periodic small cleanup of old debounce keys if dictionary grows
+    if len(LAST_CALLBACK_AT) > 5000:
+        threshold = now - 10.0
+        to_del = [k for k, t in LAST_CALLBACK_AT.items() if t < threshold]
+        for k in to_del:
+            LAST_CALLBACK_AT.pop(k, None)
+    return False
 
 
 def touch_user_state(chat_id: int) -> None:

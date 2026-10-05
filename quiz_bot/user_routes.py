@@ -114,8 +114,27 @@ USER_CALLBACKS = (
 )
 
 
+from telegram import Update
+from telegram.ext import ApplicationHandlerStop, CallbackQueryHandler, CommandHandler, MessageHandler, TypeHandler, filters
+
+from .runtime import is_duplicate_callback
+
+
+async def callback_debounce_guard(update: Update, context) -> None:
+    query = update.callback_query
+    if query and query.from_user and query.data:
+        if is_duplicate_callback(query.from_user.id, query.data):
+            try:
+                await query.answer()
+            except Exception:
+                pass
+            raise ApplicationHandlerStop
+
+
 def register_user_handlers(app) -> None:
     """Register user-facing commands, text handler and callback handlers."""
+    app.add_handler(TypeHandler(Update, callback_debounce_guard), group=-1)
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("tests", tests_command))
     app.add_handler(CommandHandler("finish", finish_command))

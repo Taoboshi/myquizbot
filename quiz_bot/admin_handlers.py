@@ -1,3 +1,4 @@
+import asyncio
 """Admin callback and command handlers.
 
 This module intentionally imports the UI/service helpers from admin_ui to keep
@@ -8,7 +9,7 @@ from .admin_ui import *  # noqa: F401,F403 - compatibility split of legacy admin
 from .admin_ui import _parse_users_sort, _slug
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Админ-панель недоступна.")
         return
@@ -16,7 +17,7 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def admin_debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("Админ-панель недоступна.")
         return
@@ -24,7 +25,7 @@ async def admin_debug_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -34,7 +35,7 @@ async def handle_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -75,7 +76,7 @@ async def handle_admin_users(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def _show_admin_users_sorted(update: Update, context: ContextTypes.DEFAULT_TYPE, sort: str) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -112,7 +113,7 @@ async def handle_admin_users_errors(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_admin_global_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -131,7 +132,7 @@ async def handle_admin_global_user_detail(update: Update, context: ContextTypes.
 
 async def handle_admin_user_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -150,7 +151,7 @@ async def handle_admin_user_history(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_admin_user_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -169,7 +170,7 @@ async def handle_admin_user_errors(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_user_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -188,7 +189,7 @@ async def handle_admin_user_favorites(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_export_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -208,7 +209,7 @@ async def handle_admin_export_user(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_clear_user_runtime_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -229,7 +230,7 @@ async def handle_admin_clear_user_runtime_confirm(update: Update, context: Conte
 
 async def handle_admin_clear_user_runtime_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -248,7 +249,7 @@ async def handle_admin_clear_user_runtime_do(update: Update, context: ContextTyp
 
 async def handle_admin_block_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -270,7 +271,7 @@ async def handle_admin_block_user_confirm(update: Update, context: ContextTypes.
 
 async def handle_admin_block_user_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -290,7 +291,7 @@ async def handle_admin_block_user_do(update: Update, context: ContextTypes.DEFAU
 
 async def handle_admin_unblock_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -310,7 +311,7 @@ async def handle_admin_unblock_user(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_admin_blocked_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -326,7 +327,7 @@ async def handle_admin_blocked_users(update: Update, context: ContextTypes.DEFAU
 
 async def handle_admin_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -536,7 +537,7 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_broadcast_send(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -576,7 +577,7 @@ async def handle_admin_broadcast_send(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_broadcast_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -589,7 +590,7 @@ async def handle_admin_broadcast_cancel(update: Update, context: ContextTypes.DE
 
 async def handle_admin_reset_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -611,7 +612,7 @@ async def handle_admin_reset_user_confirm(update: Update, context: ContextTypes.
 
 async def handle_admin_reset_user_second(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -631,7 +632,7 @@ async def handle_admin_reset_user_second(update: Update, context: ContextTypes.D
 
 async def handle_admin_reset_user_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -659,7 +660,7 @@ async def handle_admin_reset_user_do(update: Update, context: ContextTypes.DEFAU
 
 async def handle_admin_validate_tests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -676,7 +677,7 @@ async def handle_admin_validate_tests(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_errors_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -686,7 +687,7 @@ async def handle_admin_errors_menu(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_frequent_errors_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -702,7 +703,7 @@ async def handle_admin_frequent_errors_all(update: Update, context: ContextTypes
 
 async def handle_admin_export_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -712,7 +713,7 @@ async def handle_admin_export_menu(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_debug(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -722,7 +723,7 @@ async def handle_admin_debug(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def handle_admin_manage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -732,7 +733,7 @@ async def handle_admin_manage(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_admin_clear_runtime_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -748,7 +749,7 @@ async def handle_admin_clear_runtime_confirm(update: Update, context: ContextTyp
 
 async def handle_admin_clear_runtime_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -769,7 +770,7 @@ async def handle_admin_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def handle_admin_test_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -781,7 +782,7 @@ async def handle_admin_test_access(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_test_access_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -797,7 +798,7 @@ async def handle_admin_test_access_users(update: Update, context: ContextTypes.D
 
 async def handle_admin_user_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -816,7 +817,7 @@ async def handle_admin_user_access(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_grant_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -835,7 +836,7 @@ async def handle_admin_grant_access(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_admin_revoke_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -854,7 +855,7 @@ async def handle_admin_revoke_access(update: Update, context: ContextTypes.DEFAU
 
 async def handle_admin_set_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -872,7 +873,7 @@ async def handle_admin_set_access(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_admin_reset_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -889,7 +890,7 @@ async def handle_admin_reset_access(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_admin_set_access_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -910,7 +911,7 @@ async def handle_admin_set_access_code(update: Update, context: ContextTypes.DEF
 
 async def handle_admin_test_meta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -925,7 +926,7 @@ async def handle_admin_test_meta(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_admin_set_test_title(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -947,7 +948,7 @@ async def handle_admin_set_test_title(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_set_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -970,7 +971,7 @@ async def handle_admin_set_test_subject(update: Update, context: ContextTypes.DE
 
 async def handle_admin_reset_test_meta(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -996,7 +997,7 @@ async def handle_admin_reset_test_meta(update: Update, context: ContextTypes.DEF
 
 async def handle_admin_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1011,7 +1012,7 @@ async def handle_admin_subject(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_admin_add_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1035,7 +1036,7 @@ async def handle_admin_add_subject(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_add_test_to_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1050,7 +1051,7 @@ async def handle_admin_add_test_to_subject(update: Update, context: ContextTypes
 
 async def handle_admin_assign_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1085,7 +1086,7 @@ async def handle_admin_assign_test_subject(update: Update, context: ContextTypes
 
 async def handle_admin_subject_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1100,7 +1101,7 @@ async def handle_admin_subject_access(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_set_subject_access(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1118,7 +1119,7 @@ async def handle_admin_set_subject_access(update: Update, context: ContextTypes.
 
 async def handle_admin_set_subject_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1139,7 +1140,7 @@ async def handle_admin_set_subject_code(update: Update, context: ContextTypes.DE
 
 async def handle_admin_subject_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1154,7 +1155,7 @@ async def handle_admin_subject_settings(update: Update, context: ContextTypes.DE
 
 async def handle_admin_rename_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1176,7 +1177,7 @@ async def handle_admin_rename_subject(update: Update, context: ContextTypes.DEFA
 
 async def handle_admin_delete_subject_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1203,7 +1204,7 @@ async def handle_admin_delete_subject_confirm(update: Update, context: ContextTy
 
 async def handle_admin_delete_subject_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1228,7 +1229,7 @@ async def handle_admin_delete_subject_do(update: Update, context: ContextTypes.D
 
 async def handle_admin_move_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1243,7 +1244,7 @@ async def handle_admin_move_test_subject(update: Update, context: ContextTypes.D
 
 async def handle_admin_move_test_subject_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1277,7 +1278,7 @@ async def handle_admin_move_test_subject_do(update: Update, context: ContextType
 
 async def handle_admin_detach_test_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1313,7 +1314,7 @@ async def handle_admin_detach_test_subject(update: Update, context: ContextTypes
 
 async def handle_admin_user_manage(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1332,7 +1333,7 @@ async def handle_admin_user_manage(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_admin_tests(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1341,7 +1342,7 @@ async def handle_admin_tests(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def handle_admin_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1356,7 +1357,7 @@ async def handle_admin_test_menu(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_admin_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1365,7 +1366,7 @@ async def handle_admin_summary(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_admin_test_overview(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1377,7 +1378,7 @@ async def handle_admin_test_overview(update: Update, context: ContextTypes.DEFAU
 
 async def handle_admin_validate_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1389,7 +1390,7 @@ async def handle_admin_validate_test(update: Update, context: ContextTypes.DEFAU
 
 async def handle_admin_test_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1399,7 +1400,7 @@ async def handle_admin_test_stats(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_admin_rating(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1409,7 +1410,7 @@ async def handle_admin_rating(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_admin_test_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1427,7 +1428,7 @@ async def handle_admin_test_users(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_admin_test_user_detail(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1456,7 +1457,7 @@ async def handle_admin_test_user_detail(update: Update, context: ContextTypes.DE
 
 async def handle_admin_frequent_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
@@ -1466,23 +1467,23 @@ async def handle_admin_frequent_errors(update: Update, context: ContextTypes.DEF
 
 async def handle_admin_export_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
-    path = export_csv(None)
+    path = await asyncio.to_thread(export_csv, None)
     await query.message.reply_document(InputFile(path), caption="📤 Экспорт всех данных")
     await query.edit_message_text(admin_export_menu_text(), reply_markup=admin_export_menu_keyboard())
 
 async def handle_admin_export_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     if not is_admin(query.from_user.id):
         await query.edit_message_text("Админ-панель недоступна.")
         return
     _, _, test_id = query.data.split(":")
-    path = export_csv(test_id)
+    path = await asyncio.to_thread(export_csv, test_id)
     await query.message.reply_document(InputFile(path), caption=f"📤 Экспорт по тесту: {effective_test_info(test_id)['title']}")
     await query.edit_message_text(admin_export_menu_text(), reply_markup=admin_export_menu_keyboard())
