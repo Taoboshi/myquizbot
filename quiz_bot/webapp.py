@@ -446,3 +446,74 @@ def register_webapp_routes(app: Any) -> None:
             "title": data.get("title", safe_name),
             "questions_count": len(questions),
         })
+
+    @app.route("/api/admin/tests", methods=["GET"])
+    def api_admin_tests():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        items = []
+        for t_id, qs in LOADED_TESTS.items():
+            info = effective_test_info(t_id)
+            items.append({
+                "id": t_id,
+                "title": info.get("title", t_id),
+                "subject_id": info.get("subject_id", "default"),
+                "subject_title": info.get("subject_title", "Не привязан"),
+                "questions_count": len(qs),
+                "file": TESTS.get(t_id, {}).get("file", ""),
+            })
+        return jsonify({"items": items})
+
+    @app.route("/api/admin/rename_test", methods=["POST"])
+    def api_admin_rename_test():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        data = request.get_json(force=True) or {}
+        test_id = data.get("test_id")
+        title = data.get("title", "").strip()
+        if not test_id or not title:
+            return jsonify({"error": "test_id and title required"}), 400
+
+        set_test_metadata_setting(test_id, title=title, updated_by=int(user_id or 0))
+        return jsonify({"success": True, "test_id": test_id, "title": title})
+
+    @app.route("/api/admin/delete_test", methods=["POST"])
+    def api_admin_delete_test():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        data = request.get_json(force=True) or {}
+        test_id = data.get("test_id")
+        if not test_id:
+            return jsonify({"error": "test_id required"}), 400
+
+        # Delete file if exists
+        file_path = BASE_DIR / "tests" / f"{test_id}.json"
+        if file_path.exists():
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        LOADED_TESTS.pop(test_id, None)
+        return jsonify({"success": True, "deleted_id": test_id})
+
+    @app.route("/api/admin/reset_user", methods=["POST"])
+    def api_admin_reset_user():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        data = request.get_json(force=True) or {}
+        target_uid = data.get("target_user_id")
+        if not target_uid:
+            return jsonify({"error": "target_user_id required"}), 400
+
+        from .storage import reset_user_progress
+        reset_user_progress(int(target_uid))
+        return jsonify({"success": True, "target_user_id": target_uid})
+
