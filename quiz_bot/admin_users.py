@@ -1,5 +1,7 @@
 """Admin user, blocking and broadcast helpers."""
 
+import time
+
 from .admin_core import *  # noqa: F401,F403 - split from legacy admin UI module
 from .admin_core import _percent, _safe_count
 
@@ -28,14 +30,25 @@ def ensure_admin_tables() -> None:
     _ADMIN_TABLES_READY = True
 
 
+_BLOCKED_USERS_CACHE: dict[int, tuple[bool, float]] = {}
+BLOCKED_CACHE_TTL = 60.0  # seconds
+
+
 def is_user_blocked(user_id: int) -> bool:
+    now = time.time()
+    cached = _BLOCKED_USERS_CACHE.get(user_id)
+    if cached is not None and now < cached[1]:
+        return cached[0]
+
     ensure_admin_tables()
     with db_connect() as conn:
         row = conn.execute(
             "SELECT user_id FROM blocked_users WHERE user_id = ?",
             (user_id,),
         ).fetchone()
-    return row is not None
+    blocked = row is not None
+    _BLOCKED_USERS_CACHE[user_id] = (blocked, now + BLOCKED_CACHE_TTL)
+    return blocked
 
 
 def get_blocked_user(user_id: int):
@@ -68,6 +81,7 @@ def block_user(user_id: int, blocked_by: int, reason: str | None = None) -> None
             (user_id, blocked_by, reason),
         )
         conn.commit()
+    _BLOCKED_USERS_CACHE[user_id] = (True, time.time() + BLOCKED_CACHE_TTL)
 
 
 def unblock_user(user_id: int) -> None:
@@ -75,6 +89,7 @@ def unblock_user(user_id: int) -> None:
     with db_connect() as conn:
         conn.execute("DELETE FROM blocked_users WHERE user_id = ?", (user_id,))
         conn.commit()
+    _BLOCKED_USERS_CACHE[user_id] = (False, time.time() + BLOCKED_CACHE_TTL)
 
 
 def broadcast_users() -> list[int]:

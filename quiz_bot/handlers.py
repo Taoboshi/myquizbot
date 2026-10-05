@@ -1,3 +1,4 @@
+import asyncio
 import random
 from datetime import datetime
 
@@ -122,35 +123,39 @@ async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await asyncio.to_thread(upsert_user, update.effective_user)
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
-    open_tests = _open_tests_for_user(update.effective_user.id)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
+    open_tests = await asyncio.to_thread(_open_tests_for_user, update.effective_user.id)
     if len(open_tests) == 1:
         test_id = open_tests[0]
-        await update.message.reply_text(my_stats_text(update.effective_user.id, test_id), reply_markup=stats_keyboard(test_id))
+        text = await asyncio.to_thread(my_stats_text, update.effective_user.id, test_id)
+        await update.message.reply_text(text, reply_markup=stats_keyboard(test_id))
     else:
-        await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
+        keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
+        await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
 
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
     state = get_state(update.effective_chat.id)
     if state.get("test_id") and state.get("mode") in RESUMABLE_MODES:
-        delete_active_session(update.effective_user.id, state.get("test_id"))
+        await asyncio.to_thread(delete_active_session, update.effective_user.id, state.get("test_id"))
     USER_STATE.pop(update.effective_chat.id, None)
-    await update.message.reply_text("Текущее действие сброшено.", reply_markup=subject_select_keyboard(update.effective_user.id))
+    keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
+    await update.message.reply_text("Текущее действие сброшено.", reply_markup=keyboard)
 
 async def reset_errors_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
-    open_tests = _open_tests_for_user(update.effective_user.id)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
+    open_tests = await asyncio.to_thread(_open_tests_for_user, update.effective_user.id)
     if len(open_tests) == 1:
         test_id = open_tests[0]
         await update.message.reply_text("Сбросить ошибки?", reply_markup=reset_errors_keyboard(test_id))
     else:
-        await update.message.reply_text("Выбери предмет:", reply_markup=subject_select_keyboard(update.effective_user.id))
+        keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
+        await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
 
 
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
     await update.message.reply_text(f"Твой Telegram ID: {update.effective_user.id}")
 
 def _open_tests_for_user(user_id: int) -> list[str]:
@@ -232,14 +237,16 @@ def get_state_or_restore(chat_id: int, user_id: int, test_id: str) -> dict:
 
 async def handle_learn_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
     state = get_state(query.message.chat_id)
     clear_text_waiting_state(state)
 
-    await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
+    text = await asyncio.to_thread(learn_menu_text, query.from_user.id, test_id)
+    keyboard = await asyncio.to_thread(learn_menu_keyboard, test_id)
+    await query.edit_message_text(text, reply_markup=keyboard)
 
 async def handle_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -249,14 +256,15 @@ async def handle_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def handle_tests_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
-    await query.edit_message_text("Выбери предмет:", reply_markup=subject_select_keyboard(query.from_user.id))
+    keyboard = await asyncio.to_thread(subject_select_keyboard, query.from_user.id)
+    await query.edit_message_text("Выбери предмет:", reply_markup=keyboard)
 
 
 async def handle_locked_subject(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, subject_id = query.data.split(":", 1)
 
@@ -278,7 +286,7 @@ async def handle_locked_subject(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def handle_enter_subject_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, subject_id = query.data.split(":", 1)
 
@@ -302,7 +310,7 @@ async def handle_enter_subject_code(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_subject_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, subject_id = query.data.split(":", 1)
 
@@ -321,15 +329,16 @@ async def handle_subject_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     state = get_state(query.message.chat_id)
     clear_text_waiting_state(state)
 
+    keyboard = await asyncio.to_thread(subject_tests_keyboard, subject_id, query.from_user.id)
     await query.edit_message_text(
         f"{emoji} {title}\n\nВыбери тест:",
-        reply_markup=subject_tests_keyboard(subject_id, query.from_user.id),
+        reply_markup=keyboard,
     )
 
 
 async def handle_locked_test(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":", 1)
 
@@ -346,7 +355,7 @@ async def handle_locked_test(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def handle_enter_access_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":", 1)
 
@@ -366,7 +375,7 @@ async def handle_enter_access_code(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
@@ -386,7 +395,8 @@ async def handle_test_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             )
         return
 
-    await query.edit_message_text(test_main_text(query.from_user.id, test_id), reply_markup=test_main_keyboard(test_id))
+    text = await asyncio.to_thread(test_main_text, query.from_user.id, test_id)
+    await query.edit_message_text(text, reply_markup=test_main_keyboard(test_id))
 
 
 async def handle_my_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -431,12 +441,12 @@ def _short_question_line(test_id: str, index: int) -> str:
 
 async def handle_profile_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     parts = query.data.split(":")
     test_id = parts[1]
     page = int(parts[2]) if len(parts) > 2 else 0
-    items, total = list_favorites(query.from_user.id, test_id, page)
+    items, total = await asyncio.to_thread(list_favorites, query.from_user.id, test_id, page)
     title = TESTS[test_id]["title"]
     start = page * PAGE_SIZE
     lines = ["⭐ Избранные", "", title, "", f"Всего: {total}"]
@@ -454,11 +464,11 @@ async def handle_profile_favorites(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_favorite_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, pos_str = query.data.split(":")
     pos = int(pos_str)
-    items, total = list_favorites(query.from_user.id, test_id, page=0, page_size=100000)
+    items, total = await asyncio.to_thread(list_favorites, query.from_user.id, test_id, page=0, page_size=100000)
     if not items:
         await query.edit_message_text("Избранных вопросов пока нет.", reply_markup=profile_keyboard(test_id))
         return
@@ -475,12 +485,12 @@ async def handle_favorite_show(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_profile_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     parts = query.data.split(":")
     test_id = parts[1]
     page = int(parts[2]) if len(parts) > 2 else 0
-    items, total, counts = list_profile_errors(query.from_user.id, test_id, page)
+    items, total, counts = await asyncio.to_thread(list_profile_errors, query.from_user.id, test_id, page)
     title = TESTS[test_id]["title"]
     start = page * PAGE_SIZE
     lines = [
@@ -509,11 +519,11 @@ async def handle_profile_errors(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def handle_profile_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, pos_str = query.data.split(":")
     pos = int(pos_str)
-    items = get_profile_error_items(query.from_user.id, test_id)
+    items = await asyncio.to_thread(get_profile_error_items, query.from_user.id, test_id)
     if not items:
         await query.edit_message_text("Ошибок пока нет.", reply_markup=profile_keyboard(test_id))
         return
@@ -529,21 +539,22 @@ async def handle_profile_error_show(update: Update, context: ContextTypes.DEFAUL
         f"Статус: {status}\n\n"
         f"{_question_options_text(test_id, idx, item.get('last_wrong_answer_index'), show_wrong=True)}"
     )
+    is_fav = await asyncio.to_thread(is_favorite, query.from_user.id, test_id, idx)
     await query.edit_message_text(
         text,
-        reply_markup=profile_error_detail_keyboard(test_id, pos, len(items), idx, is_favorite(query.from_user.id, test_id, idx)),
+        reply_markup=profile_error_detail_keyboard(test_id, pos, len(items), idx, is_fav),
         parse_mode="HTML",
     )
 
 
 async def handle_profile_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     parts = query.data.split(":")
     test_id = parts[1]
     page = int(parts[2]) if len(parts) > 2 else 0
-    attempts, total = list_attempts(query.from_user.id, test_id, page)
+    attempts, total = await asyncio.to_thread(list_attempts, query.from_user.id, test_id, page)
     start = page * PAGE_SIZE
     lines = ["📜 История попыток", "", TESTS[test_id]["title"]]
     if total:
@@ -563,16 +574,16 @@ async def handle_profile_history(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_history_attempt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, attempt_id_str, page_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
     page = int(page_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Попытка не найдена.", reply_markup=profile_keyboard(test_id))
         return
-    wrongs = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    wrongs = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, attempt_id)
     answered = int(attempt.get("answered") or 0)
     correct = int(attempt.get("correct") or 0)
     text = (
@@ -592,17 +603,17 @@ async def handle_history_attempt(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_attempt_errors_page(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, attempt_id_str, page_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
     page = int(page_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Попытка не найдена.")
         return
     test_id = attempt["test_id"]
-    all_items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    all_items = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, attempt_id)
     total = len(all_items)
     start = page * PAGE_SIZE
     items = all_items[start:start + PAGE_SIZE]
@@ -621,17 +632,17 @@ async def handle_attempt_errors_page(update: Update, context: ContextTypes.DEFAU
 
 async def handle_attempt_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, attempt_id_str, pos_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
     pos = int(pos_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Попытка не найдена.")
         return
     test_id = attempt["test_id"]
-    items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    items = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, attempt_id)
     if not items:
         await query.edit_message_text("Ошибок в этой попытке нет.")
         return
@@ -645,31 +656,33 @@ async def handle_attempt_error_show(update: Update, context: ContextTypes.DEFAUL
         f"Вопрос {idx + 1}\n\n"
         f"{_question_options_text(test_id, idx, item.get('wrong_answer_index'), show_wrong=True)}"
     )
+    is_fav = await asyncio.to_thread(is_favorite, query.from_user.id, test_id, idx)
     await query.edit_message_text(
         text,
-        reply_markup=attempt_error_detail_keyboard(test_id, attempt_id, pos, len(items), idx, is_favorite(query.from_user.id, test_id, idx)),
+        reply_markup=attempt_error_detail_keyboard(test_id, attempt_id, pos, len(items), idx, is_fav),
         parse_mode="HTML",
     )
 
 
 async def handle_repeat_attempt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, attempt_id_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Попытка не найдена.")
         return
     answered = int(attempt.get("answered") or 0)
-    order = get_attempt_order(attempt_id)[:answered]
+    order_raw = await asyncio.to_thread(get_attempt_order, attempt_id)
+    order = (order_raw or [])[:answered]
     if not order:
         await query.answer("Для старых попыток повтор может быть недоступен", show_alert=True)
         return
     test_id = attempt["test_id"]
     state = get_state(query.message.chat_id)
-    start_quiz_mode(state, query.from_user.id, test_id, "repeat_attempt", order)
+    await asyncio.to_thread(start_quiz_mode, state, query.from_user.id, test_id, "repeat_attempt", order)
     index = state["order"][state["pos"]]
     await query.edit_message_text(
         build_question_text(index, state),
@@ -680,17 +693,17 @@ async def handle_repeat_attempt(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def handle_result_errors_page(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, attempt_id_str, page_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
     page = int(page_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Результат недоступен.")
         return
     test_id = attempt["test_id"]
-    all_items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    all_items = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, attempt_id)
     total = len(all_items)
     start = page * PAGE_SIZE
     items = all_items[start:start + PAGE_SIZE]
@@ -709,17 +722,17 @@ async def handle_result_errors_page(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_result_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, attempt_id_str, pos_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
     pos = int(pos_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Результат недоступен.")
         return
     test_id = attempt["test_id"]
-    items = get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id)
+    items = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, attempt_id)
     if not items:
         await query.edit_message_text("Ошибок в этом прохождении нет.")
         return
@@ -738,24 +751,26 @@ async def handle_result_error_show(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_show_result_attempt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, attempt_id_str = query.data.split(":")
     attempt_id = int(attempt_id_str)
-    attempt = get_attempt(attempt_id)
+    attempt = await asyncio.to_thread(get_attempt, attempt_id)
     if not attempt or int(attempt.get("user_id") or 0) != query.from_user.id:
         await query.edit_message_text("Результат недоступен.")
         return
     test_id = attempt["test_id"]
     answered = int(attempt.get("answered") or 0)
     correct = int(attempt.get("correct") or 0)
+    order_raw = await asyncio.to_thread(get_attempt_order, attempt_id)
+    wrongs = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, attempt_id)
     fake_state = {
         "test_id": test_id,
         "mode": attempt.get("mode"),
         "total": answered,
         "correct": correct,
-        "order": get_attempt_order(attempt_id) or list(range(answered)),
-        "wrong_answers": get_attempt_wrong_answers(query.from_user.id, test_id, attempt_id),
+        "order": order_raw or list(range(answered)),
+        "wrong_answers": wrongs,
         "attempt_id": attempt_id,
         "duration_seconds": attempt.get("duration_seconds"),
     }
@@ -764,10 +779,10 @@ async def handle_show_result_attempt(update: Update, context: ContextTypes.DEFAU
 
 async def handle_toggle_favorite(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     _, test_id, index_str = query.data.split(":")
     index = int(index_str)
-    value = toggle_favorite(query.from_user.id, test_id, index)
+    value = await asyncio.to_thread(toggle_favorite, query.from_user.id, test_id, index)
     await query.answer("Добавлено в избранное" if value else "Убрано из избранного")
 
     state = get_state(query.message.chat_id)
@@ -794,14 +809,15 @@ async def handle_toggle_favorite(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_solve_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
     state = get_state(query.message.chat_id)
     state["pending_start_from_number_test_id"] = None
 
-    await query.edit_message_text("📝 Решать\n\nВыбери режим:", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
+    keyboard = await asyncio.to_thread(solve_menu_keyboard, test_id, query.from_user.id)
+    await query.edit_message_text("📝 Решать\n\nВыбери режим:", reply_markup=keyboard)
 
 async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     import asyncio
@@ -830,7 +846,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def handle_start_from_number_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
@@ -1026,7 +1042,7 @@ async def handle_next_question(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, index_str = query.data.split(":")
 
@@ -1037,7 +1053,7 @@ async def handle_question_menu(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, _index_str = query.data.split(":")
     state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
@@ -1065,7 +1081,7 @@ async def handle_question_continue(update: Update, context: ContextTypes.DEFAULT
 
 async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
     state = get_state_or_restore(query.message.chat_id, query.from_user.id, test_id)
@@ -1073,19 +1089,22 @@ async def handle_pause_to_menu(update: Update, context: ContextTypes.DEFAULT_TYP
     if state.get("test_id") == test_id:
         state["active"] = False
         if state.get("mode") in RESUMABLE_MODES:
-            save_active_session(query.from_user.id, state)
+            asyncio.create_task(asyncio.to_thread(save_active_session, query.from_user.id, dict(state)))
 
-    await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
+    text = await asyncio.to_thread(learn_menu_text, query.from_user.id, test_id)
+    keyboard = await asyncio.to_thread(learn_menu_keyboard, test_id)
+    await query.edit_message_text(text, reply_markup=keyboard)
 
 async def handle_continue_session(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
-    data = load_active_session(query.from_user.id, test_id)
+    data = await asyncio.to_thread(load_active_session, query.from_user.id, test_id)
     if not data:
-        await query.edit_message_text("Незавершённой попытки нет.", reply_markup=solve_menu_keyboard(test_id, query.from_user.id))
+        keyboard = await asyncio.to_thread(solve_menu_keyboard, test_id, query.from_user.id)
+        await query.edit_message_text("Незавершённой попытки нет.", reply_markup=keyboard)
         return
 
     state = restore_state(query.message.chat_id, data)
@@ -1107,7 +1126,7 @@ async def handle_continue_session(update: Update, context: ContextTypes.DEFAULT_
 
 async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     state = get_state(query.message.chat_id)
 
@@ -1117,11 +1136,11 @@ async def handle_finish_button(update: Update, context: ContextTypes.DEFAULT_TYP
 
     state["active"] = False
     state["awaiting_next"] = False
-    finish_attempt_if_needed(query.from_user.id, state, finished_by_user=True)
+    await asyncio.to_thread(finish_attempt_if_needed, query.from_user.id, state, finished_by_user=True)
     await query.edit_message_text(result_text(state, query.from_user.id, finished_by_user=True), reply_markup=after_finish_keyboard(query.from_user.id, state), parse_mode="HTML")
 
 async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
     state = get_state(update.effective_chat.id)
 
     if not state.get("test_id"):
@@ -1130,12 +1149,12 @@ async def finish_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     state["active"] = False
     state["awaiting_next"] = False
-    finish_attempt_if_needed(update.effective_user.id, state, finished_by_user=True)
+    await asyncio.to_thread(finish_attempt_if_needed, update.effective_user.id, state, finished_by_user=True)
     await update.message.reply_text(result_text(state, update.effective_user.id, finished_by_user=True), reply_markup=after_finish_keyboard(update.effective_user.id, state), parse_mode="HTML")
 
 async def handle_session_error_show(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, pos_str = query.data.split(":")
     pos = int(pos_str)
@@ -1143,7 +1162,7 @@ async def handle_session_error_show(update: Update, context: ContextTypes.DEFAUL
     state = get_state(query.message.chat_id)
     items = state.get("wrong_answers", [])
     if not items:
-        items = get_attempt_wrong_answers(query.from_user.id, test_id, state.get("attempt_id"))
+        items = await asyncio.to_thread(get_attempt_wrong_answers, query.from_user.id, test_id, state.get("attempt_id"))
 
     if not items:
         await query.edit_message_text("Ошибок в этом решении нет.", reply_markup=learn_menu_keyboard(test_id))
@@ -1159,7 +1178,7 @@ async def handle_session_error_show(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
     state = get_state(query.message.chat_id)
@@ -1173,7 +1192,7 @@ async def handle_show_result(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
     state = get_state(query.message.chat_id)
@@ -1193,7 +1212,7 @@ async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEF
         )
         return
 
-    start_quiz_mode(state, query.from_user.id, test_id, "errors", order)
+    await asyncio.to_thread(start_quiz_mode, state, query.from_user.id, test_id, "errors", order)
     index = state["order"][state["pos"]]
     await query.edit_message_text(
         build_question_text(index, state),
@@ -1202,9 +1221,8 @@ async def handle_repeat_session_errors(update: Update, context: ContextTypes.DEF
     )
 
 async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    import asyncio
     query = update.callback_query
-    await asyncio.to_thread(upsert_user, query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
     
@@ -1215,29 +1233,31 @@ async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def handle_public_rating(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
-    await query.edit_message_text(public_rating_text(test_id), reply_markup=public_rating_keyboard(test_id))
+    text = await asyncio.to_thread(public_rating_text, test_id)
+    await query.edit_message_text(text, reply_markup=public_rating_keyboard(test_id))
 
 async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
     await query.edit_message_text("Сбросить ошибки?", reply_markup=reset_errors_keyboard(test_id))
 
 async def handle_reset_errors_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer("Ошибки сброшены")
     _, test_id = query.data.split(":")
-    clear_all_time_errors(query.from_user.id, test_id)
-    await query.edit_message_text(learn_menu_text(query.from_user.id, test_id), reply_markup=learn_menu_keyboard(test_id))
+    await asyncio.to_thread(clear_all_time_errors, query.from_user.id, test_id)
+    text = await asyncio.to_thread(learn_menu_text, query.from_user.id, test_id)
+    await query.edit_message_text(text, reply_markup=learn_menu_keyboard(test_id))
 
 async def handle_find_question_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
@@ -1251,7 +1271,7 @@ async def handle_find_question_menu(update: Update, context: ContextTypes.DEFAUL
 
 async def handle_find_by_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
@@ -1267,7 +1287,7 @@ async def handle_find_by_number(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def handle_find_by_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id = query.data.split(":")
 
@@ -1280,7 +1300,7 @@ async def handle_find_by_text(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def handle_view_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, index_str = query.data.split(":")
     index = max(0, min(int(index_str), len(get_questions(test_id)) - 1))
@@ -1297,7 +1317,7 @@ async def handle_view_question(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def handle_find_results_page(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    upsert_user(query.from_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
     await query.answer()
     _, test_id, page_str = query.data.split(":")
     page = int(page_str)
@@ -1313,7 +1333,7 @@ async def handle_find_results_page(update: Update, context: ContextTypes.DEFAULT
     await query.edit_message_text(find_results_text(test_id, query_text, indices, page), reply_markup=find_results_keyboard(test_id, indices, page))
 
 async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    upsert_user(update.effective_user)
+    asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
     state = get_state(update.effective_chat.id)
     text = (update.message.text or "").strip()
 
@@ -1368,7 +1388,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
         state["pending_start_from_number_test_id"] = None
         order = list(range(start_number - 1, total_questions))
-        start_quiz_mode(state, update.effective_user.id, start_test_id, "from_number", order)
+        await asyncio.to_thread(start_quiz_mode, state, update.effective_user.id, start_test_id, "from_number", order)
         index = state["order"][state["pos"]]
 
         await update.message.reply_text(build_question_text(index, state), reply_markup=answer_keyboard(start_test_id, index, user_id=update.effective_user.id), parse_mode="HTML")

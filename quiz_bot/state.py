@@ -3,7 +3,7 @@ from typing import Any
 
 from .config import RESUMABLE_MODES
 from .loader import get_questions
-from .runtime import USER_STATE
+from .runtime import USER_STATE, touch_user_state
 from .storage import db_connect, record_attempt_start, record_attempt_order
 
 RUNTIME_MODES = set(RESUMABLE_MODES) | {"mini", "errors"}
@@ -11,6 +11,7 @@ _RUNTIME_TABLE_READY = False
 
 
 def get_state(chat_id: int) -> dict[str, Any]:
+    touch_user_state(chat_id)
     if chat_id not in USER_STATE:
         USER_STATE[chat_id] = {
             "test_id": None,

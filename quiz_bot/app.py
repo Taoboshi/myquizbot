@@ -10,10 +10,22 @@ from .config import get_bot_token
 from .user_routes import register_user_handlers
 from .handlers import setup_bot_commands
 from .helpers import is_admin
-from .runtime import keep_alive
+from .runtime import cleanup_expired_user_state, keep_alive
 from .storage import acquire_polling_lock, init_db, release_polling_lock
 
 logger = logging.getLogger(__name__)
+
+
+async def _periodic_cleanup(context) -> None:
+    removed = cleanup_expired_user_state()
+    if removed > 0:
+        logger.info("Cleaned up %d expired user states from memory", removed)
+
+
+async def _post_init(app) -> None:
+    await setup_bot_commands(app)
+    if app.job_queue:
+        app.job_queue.run_repeating(_periodic_cleanup, interval=3600, first=60)
 
 async def error_handler(update, context) -> None:
     err = context.error
@@ -51,7 +63,7 @@ def build_application():
     app = (
         ApplicationBuilder()
         .token(get_bot_token(required=True))
-        .post_init(setup_bot_commands)
+        .post_init(_post_init)
         .concurrent_updates(int(os.getenv("BOT_CONCURRENT_UPDATES", "8")))
         .build()
     )

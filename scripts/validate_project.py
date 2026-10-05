@@ -55,7 +55,8 @@ def check_tests_loaded() -> None:
 
 
 def check_storage_smoke() -> None:
-    with tempfile.TemporaryDirectory() as tmpdir:
+    # ignore_cleanup_errors=True is needed on Windows where SQLite file locks can prevent immediate rmtree
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
         db_path = Path(tmpdir) / "smoke.sqlite3"
         os.environ["DB_PATH"] = str(db_path)
 
