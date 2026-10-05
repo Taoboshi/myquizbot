@@ -83,10 +83,12 @@ from .storage import (
 async def setup_bot_commands(app) -> None:
     user_commands = [
         BotCommand("start", "Запуск🎯"),
+        BotCommand("app", "Открыть ohTest📱"),
     ]
 
     admin_commands = [
         BotCommand("start", "Запуск🎯"),
+        BotCommand("app", "Открыть ohTest📱"),
         BotCommand("admin", "Админ-панель"),
     ]
 
@@ -97,6 +99,21 @@ async def setup_bot_commands(app) -> None:
             await app.bot.set_my_commands(
                 admin_commands,
                 scope=BotCommandScopeChat(chat_id=admin_id),
+            )
+        except Exception:
+            pass
+
+    webapp_url = os.getenv("WEBAPP_URL", "").strip()
+    if not webapp_url:
+        render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+        if render_url:
+            webapp_url = f"{render_url.rstrip('/')}/app"
+
+    if webapp_url:
+        from telegram import MenuButtonWebApp, WebAppInfo
+        try:
+            await app.bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(text="ohTest", web_app=WebAppInfo(url=webapp_url))
             )
         except Exception:
             pass
