@@ -464,6 +464,34 @@
       box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
     }
 
+    /* Flashcard Action Buttons (Clean matte, non-glowing, zero sticky hover) */
+    .fc-card-btn {
+      -webkit-tap-highlight-color: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .fc-card-btn:focus,
+    .fc-card-btn:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    @media (hover: hover) {
+      #fc-btn-dontknow:hover {
+        background-color: rgba(244, 63, 94, 0.18) !important;
+      }
+      #fc-btn-know:hover {
+        background-color: rgba(5, 150, 105, 1) !important;
+      }
+    }
+    @media (hover: none) {
+      .fc-card-btn:hover {
+        filter: none !important;
+        box-shadow: none !important;
+      }
+    }
+
     /* Option button styles */
     .option-btn-unanswered {
       background: var(--glass-surface) !important;
@@ -678,17 +706,17 @@
       <section id="view-home" class="space-y-4">
         
         <!-- PROMINENT ACTIVE ATTEMPT BANNER -->
-        <div id="home-active-attempt-card" class="hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
+        <div id="home-active-attempt-card" class="active-attempt-card hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-ping"></span>
               АКТУАЛЬНАЯ ПОПЫТКА
             </span>
-            <span class="text-xs font-mono text-slate-300" id="home-attempt-counter">Вопрос X из Y</span>
+            <span class="attempt-counter text-xs font-mono text-slate-300" id="home-attempt-counter">Вопрос X из Y</span>
           </div>
           <div>
-            <h3 class="text-sm font-extrabold text-white" id="home-attempt-title">Название теста</h3>
-            <p class="text-[11px] text-brand-300" id="home-attempt-mode">Режим: По порядку</p>
+            <h3 class="attempt-title text-sm font-extrabold text-white" id="home-attempt-title">Название теста</h3>
+            <p class="attempt-mode text-[11px] text-brand-300" id="home-attempt-mode">Режим: По порядку</p>
           </div>
           <div class="flex items-center gap-2 pt-1">
             <button onclick="resumeActiveAttempt()" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-1.5">
@@ -730,6 +758,29 @@
       <!-- VIEW 2: TESTS LIST IN SUBJECT -->
       <!-- ========================================== -->
       <section id="view-tests" class="hidden space-y-4">
+        <!-- PROMINENT ACTIVE ATTEMPT BANNER IN TESTS LIST -->
+        <div id="tests-active-attempt-card" class="active-attempt-card hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-ping"></span>
+              АКТУАЛЬНАЯ ПОПЫТКА
+            </span>
+            <span class="attempt-counter text-xs font-mono text-slate-300">Вопрос X из Y</span>
+          </div>
+          <div>
+            <h3 class="attempt-title text-sm font-extrabold text-white">Название теста</h3>
+            <p class="attempt-mode text-[11px] text-brand-300">Режим: По порядку</p>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button onclick="resumeActiveAttempt()" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-1.5">
+              <span>▶️</span> Продолжить решение
+            </button>
+            <button onclick="discardActiveAttempt()" class="px-3.5 py-2.5 rounded-xl bg-app-surface border border-app-border text-slate-400 hover:text-rose-400 font-medium text-xs active:scale-95 transition">
+              Сброс
+            </button>
+          </div>
+        </div>
+
         <div class="p-4 rounded-2xl bg-app-card border border-app-border space-y-1">
           <span class="text-[11px] font-bold text-brand-400 uppercase tracking-wider" id="tests-subj-label">Раздел</span>
           <h2 class="text-base font-bold text-white" id="tests-subj-title">Название дисциплины</h2>
@@ -747,6 +798,29 @@
       <!-- ========================================== -->
       <section id="view-hub" class="hidden space-y-4">
         
+        <!-- PROMINENT ACTIVE ATTEMPT BANNER IN TEST HUB -->
+        <div id="hub-active-attempt-card" class="active-attempt-card hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-ping"></span>
+              АКТУАЛЬНАЯ ПОПЫТКА
+            </span>
+            <span class="attempt-counter text-xs font-mono text-slate-300">Вопрос X из Y</span>
+          </div>
+          <div>
+            <h3 class="attempt-title text-sm font-extrabold text-white">Название теста</h3>
+            <p class="attempt-mode text-[11px] text-brand-300">Режим: По порядку</p>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button onclick="resumeActiveAttempt()" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-1.5">
+              <span>▶️</span> Продолжить решение
+            </button>
+            <button onclick="discardActiveAttempt()" class="px-3.5 py-2.5 rounded-xl bg-app-surface border border-app-border text-slate-400 hover:text-rose-400 font-medium text-xs active:scale-95 transition">
+              Сброс
+            </button>
+          </div>
+        </div>
+
         <!-- Test Info Card -->
         <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-3">
           <div class="flex items-center justify-between">
@@ -768,13 +842,6 @@
               <span class="block text-[10px] text-slate-400 font-medium">В избранном</span>
               <span class="text-xs font-bold text-slate-300 font-mono" id="hub-q-favs">0</span>
             </div>
-          </div>
-
-          <!-- Resume Incomplete attempt if exists for this test -->
-          <div id="hub-resume-box" class="hidden pt-1">
-            <button onclick="resumeActiveAttempt()" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-2">
-              <span>▶️</span> Продолжить решение (Вопрос <span id="hub-resume-q">1</span>)
-            </button>
           </div>
         </div>
 
@@ -1056,19 +1123,22 @@
 
           <!-- Quizlet Bottom Bar: Undo (Previous card) and Knowledge Action Buttons -->
           <div class="flex items-center gap-3 px-2 pt-1">
-            <button id="fc-btn-prev" onclick="this.blur(); fcPrevCard()" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none shrink-0" title="Предыдущая карточка (Отмена)">
+            <button id="fc-btn-prev" onclick="this.blur(); fcPrevCard()" class="w-11 h-11 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none shrink-0" title="Предыдущая карточка (Отмена)">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a5 5 0 015 5v2m-15-7l4-4m-4 4l4 4"/></svg>
             </button>
 
-            <!-- Quick Knowledge Buttons (Expanded and comfortable to tap) -->
+            <!-- Quick Knowledge Buttons (Optically dead center between prev button and right spacer) -->
             <div class="flex-1 grid grid-cols-2 gap-2.5">
-              <button type="button" onclick="this.blur(); fcNext(false)" class="w-full py-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-xs hover:bg-rose-500/20 active:scale-95 transition focus:outline-none focus:ring-0 flex items-center justify-center gap-1.5">
+              <button id="fc-btn-dontknow" type="button" onclick="this.blur(); fcNext(false)" class="fc-card-btn w-full py-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-xs active:bg-rose-500/25 active:scale-95 transition flex items-center justify-center gap-1.5">
                 <span>Не знаю</span> <span class="text-sm">✕</span>
               </button>
-              <button type="button" onclick="this.blur(); fcNext(true)" class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition focus:outline-none focus:ring-0 flex items-center justify-center gap-1.5">
+              <button id="fc-btn-know" type="button" onclick="this.blur(); fcNext(true)" class="fc-card-btn w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-xs border border-emerald-500/40 active:bg-emerald-700 active:scale-95 transition flex items-center justify-center gap-1.5">
                 <span>Знаю</span> <span class="text-sm">✓</span>
               </button>
             </div>
+
+            <!-- Symmetrical spacer on the right matching prev button width to keep buttons strictly centered -->
+            <div class="w-11 h-11 shrink-0 pointer-events-none" aria-hidden="true"></div>
           </div>
         </div>
 
@@ -1132,6 +1202,29 @@
       <!-- TAB 2: PROFILE (КАБИНЕТ СТУДЕНТА, РЕЙТИНГ ПО ДИСЦИПЛИНАМ, ОШИБКИ, ИЗБРАННОЕ, ИСТОРИЯ) -->
       <!-- ========================================== -->
       <section id="view-tab-profile" class="hidden space-y-4">
+        <!-- PROMINENT ACTIVE ATTEMPT BANNER IN PROFILE -->
+        <div id="profile-active-attempt-card" class="active-attempt-card hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-ping"></span>
+              АКТУАЛЬНАЯ ПОПЫТКА
+            </span>
+            <span class="attempt-counter text-xs font-mono text-slate-300">Вопрос X из Y</span>
+          </div>
+          <div>
+            <h3 class="attempt-title text-sm font-extrabold text-white">Название теста</h3>
+            <p class="attempt-mode text-[11px] text-brand-300">Режим: По порядку</p>
+          </div>
+          <div class="flex items-center gap-2 pt-1">
+            <button onclick="resumeActiveAttempt()" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-1.5">
+              <span>▶️</span> Продолжить решение
+            </button>
+            <button onclick="discardActiveAttempt()" class="px-3.5 py-2.5 rounded-xl bg-app-surface border border-app-border text-slate-400 hover:text-rose-400 font-medium text-xs active:scale-95 transition">
+              Сброс
+            </button>
+          </div>
+        </div>
+
         <!-- User Identity Card with Rank & Level -->
         <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-4">
           <div class="flex items-center space-x-3.5">
@@ -2532,32 +2625,49 @@
   }
 
   function renderActiveAttemptBanner() {
-    const banner = document.getElementById('home-active-attempt-card');
-    if (state.activeAttempt && state.activeAttempt.testId) {
-      banner.classList.remove('hidden');
-      document.getElementById('home-attempt-title').innerText = state.activeAttempt.testTitle;
-      document.getElementById('home-attempt-counter').innerText = `Вопрос ${state.activeAttempt.qIndex + 1} из ${state.activeAttempt.total}`;
-      const modeNames = {
-        normal: 'По порядку',
-        random: 'Вразброс',
-        reverse: 'С конца',
-        mini10: 'Мини-тест',
-        errors_solve: 'Разбор ошибок'
-      };
-      document.getElementById('home-attempt-mode').innerText = `Режим: ${modeNames[state.activeAttempt.mode] || 'Контроль'}`;
-    } else {
-      banner.classList.add('hidden');
+    const hasAttempt = Boolean(state.activeAttempt && state.activeAttempt.testId);
+    const modeNames = {
+      normal: 'По порядку',
+      random: 'Вразброс',
+      reverse: 'С конца',
+      mini10: 'Мини-тест',
+      errors_solve: 'Разбор ошибок'
+    };
+
+    const banners = document.querySelectorAll('.active-attempt-card');
+    banners.forEach(banner => {
+      if (hasAttempt) {
+        banner.classList.remove('hidden');
+        const titleEl = banner.querySelector('.attempt-title') || document.getElementById('home-attempt-title');
+        const counterEl = banner.querySelector('.attempt-counter') || document.getElementById('home-attempt-counter');
+        const modeEl = banner.querySelector('.attempt-mode') || document.getElementById('home-attempt-mode');
+
+        if (titleEl) titleEl.innerText = state.activeAttempt.testTitle || state.activeAttempt.testId;
+        if (counterEl) counterEl.innerText = `Вопрос ${state.activeAttempt.qIndex + 1} из ${state.activeAttempt.total}`;
+        if (modeEl) modeEl.innerText = `Режим: ${modeNames[state.activeAttempt.mode] || 'Контроль'}`;
+      } else {
+        banner.classList.add('hidden');
+      }
+    });
+
+    const homeBanner = document.getElementById('home-active-attempt-card');
+    if (homeBanner) {
+      if (hasAttempt) {
+        homeBanner.classList.remove('hidden');
+        const t = document.getElementById('home-attempt-title');
+        const c = document.getElementById('home-attempt-counter');
+        const m = document.getElementById('home-attempt-mode');
+        if (t) t.innerText = state.activeAttempt.testTitle || state.activeAttempt.testId;
+        if (c) c.innerText = `Вопрос ${state.activeAttempt.qIndex + 1} из ${state.activeAttempt.total}`;
+        if (m) m.innerText = `Режим: ${modeNames[state.activeAttempt.mode] || 'Контроль'}`;
+      } else {
+        homeBanner.classList.add('hidden');
+      }
     }
   }
 
   function updateHubResumeButton() {
-    const box = document.getElementById('hub-resume-box');
-    if (state.activeAttempt && state.activeAttempt.testId === state.activeTestId) {
-      box.classList.remove('hidden');
-      document.getElementById('hub-resume-q').innerText = (state.activeAttempt.qIndex + 1);
-    } else {
-      box.classList.add('hidden');
-    }
+    renderActiveAttemptBanner();
   }
 
   function resumeActiveAttempt() {
@@ -3792,6 +3902,9 @@
   }
 
   function fcNext(known) {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     const q = state.activeQuestions[fcIndex];
     fcHistoryStack.push({ index: fcIndex, question: q, known: known });
 
@@ -3829,6 +3942,9 @@
   }
 
   function fcPrevCard() {
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     if (fcHistoryStack.length === 0) return;
     triggerHaptic('light');
     const lastAction = fcHistoryStack.pop();
