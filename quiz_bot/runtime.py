@@ -116,7 +116,12 @@ def home() -> Any:
     web_file = Path(__file__).resolve().parent / "web" / "index.html"
     if web_file.exists():
         with open(web_file, "r", encoding="utf-8") as f:
-            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+            return f.read(), 200, {
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
     return "ohTest quiz bot is running!"
 
 
@@ -125,7 +130,12 @@ def serve_webapp() -> Any:
     web_file = Path(__file__).resolve().parent / "web" / "index.html"
     if web_file.exists():
         with open(web_file, "r", encoding="utf-8") as f:
-            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+            return f.read(), 200, {
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
     return "ohTest Mini App is starting up...", 200
 
 

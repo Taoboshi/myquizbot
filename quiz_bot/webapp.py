@@ -73,7 +73,12 @@ def register_webapp_routes(app: Any) -> None:
         index_file = Path(__file__).resolve().parent / "web" / "index.html"
         if index_file.exists():
             with open(index_file, "r", encoding="utf-8") as f:
-                return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+                return f.read(), 200, {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
         return "ohTest Mini App is starting up...", 200
 
     @app.route("/api/bootstrap", methods=["GET", "POST"])
