@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -15,10 +14,9 @@ from .config import (
     FIND_PAGE_SIZE,
     LETTERS,
     RESUMABLE_MODES,
-    TESTS,
 )
 from .access import can_view_subject, is_subject_code_locked_for_user, can_view_test, is_code_locked_for_user
-from .loader import get_questions, get_subject_info, get_subjects, get_tests_for_subject, test_subject_id
+from .loader import get_questions, get_subjects, get_tests_for_subject, test_subject_id
 from .quiz import build_question_text
 from .runtime import safe_callback
 from .state import active_session_button_text
@@ -94,7 +92,6 @@ def test_main_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📖 Учить", callback_data=f"learn_menu:{test_id}")],
         [InlineKeyboardButton("👤 Профиль", callback_data=f"my_profile:{test_id}")],
-        [InlineKeyboardButton("🏆 Рейтинг", callback_data=f"public_rating:{test_id}")],
         [InlineKeyboardButton(BTN_BACK, callback_data=safe_callback(f"subject_menu:{test_subject_id(test_id)}"))],
     ])
 
@@ -262,11 +259,6 @@ def reset_errors_keyboard(test_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🗑 Да, сбросить ошибки", callback_data=f"reset_errors_do:{test_id}")],
         [InlineKeyboardButton("↩️ Отмена", callback_data=f"learn_menu:{test_id}")],
-    ])
-
-def public_rating_keyboard(test_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(BTN_TEST_MENU, callback_data=f"test_menu:{test_id}")],
     ])
 
 def start_from_number_keyboard(test_id: str) -> InlineKeyboardMarkup:

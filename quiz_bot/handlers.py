@@ -7,7 +7,7 @@ from telegram import BotCommand, BotCommandScopeChat, InlineKeyboardButton, Inli
 from telegram.ext import ContextTypes
 
 from .config import BTN_TEST_MENU, RESUMABLE_MODES, TESTS
-from .helpers import attempt_percent, format_display_datetime, get_admin_ids, mode_title, seconds_to_text, short_question_text
+from .helpers import format_display_datetime, get_admin_ids, mode_title, seconds_to_text, short_question_text
 from .access import can_open_subject, can_open_test, is_code_locked_for_user, verify_access_code, verify_subject_access_code
 from .keyboards import (
     after_finish_keyboard,
@@ -18,7 +18,6 @@ from .keyboards import (
     learn_menu_keyboard,
     profile_keyboard,
     next_keyboard,
-    public_rating_keyboard,
     question_menu_keyboard,
     question_view_keyboard,
     reset_errors_keyboard,
@@ -49,7 +48,6 @@ from .quiz import (
     finish_attempt_if_needed,
     format_session_error_card,
     my_stats_text,
-    public_rating_text,
     result_text,
     wrong_index_for_question,
 )
@@ -63,21 +61,16 @@ def fmt_msk(value) -> str:
 from .storage import (
     clear_all_time_errors,
     get_all_time_error_indices,
-    get_answered_question_count,
     get_attempt_wrong_answers,
     get_attempt,
     get_attempt_order,
     list_attempts,
     list_favorites,
-    favorite_count,
     is_favorite,
-    set_favorite,
     toggle_favorite,
     list_profile_errors,
     get_profile_error_items,
-    error_counts,
     stats_summary,
-    db_connect,
     upsert_user,
 )
 
@@ -1248,14 +1241,6 @@ async def handle_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     keyboard = await asyncio.to_thread(stats_keyboard, test_id)
     await query.edit_message_text(text, reply_markup=keyboard)
 
-
-async def handle_public_rating(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    asyncio.create_task(asyncio.to_thread(upsert_user, query.from_user))
-    await query.answer()
-    _, test_id = query.data.split(":")
-    text = await asyncio.to_thread(public_rating_text, test_id)
-    await query.edit_message_text(text, reply_markup=public_rating_keyboard(test_id))
 
 async def handle_reset_errors_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query

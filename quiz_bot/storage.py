@@ -1395,6 +1395,10 @@ def remove_all_time_error(user_id: int, test_id: str, question_index: int) -> No
         conn.commit()
 
 
+def mark_all_time_error_resolved(user_id: int, test_id: str, question_index: int) -> None:
+    remove_all_time_error(user_id, test_id, question_index)
+
+
 def clear_all_time_errors(user_id: int, test_id: str) -> None:
     with db_connect() as conn:
         conn.execute("DELETE FROM all_time_errors WHERE user_id = ? AND test_id = ?", (user_id, test_id))

@@ -1702,10 +1702,6 @@
     } catch(e) {}
   }
 
-  // Sound signals completely removed per user request
-  function isSoundEnabled() { return false; }
-  function playQuizSound(type) {}
-
   // Admin Access Verification
   async function checkBootstrapAndAdmin() {
     // Enable admin UI if admin is true in state
@@ -2356,11 +2352,9 @@
 
     if (isCorrect) {
       try { triggerHaptic('success'); } catch(e) {}
-      try { playQuizSound('correct'); } catch(e) {}
       state.userErrors.delete(q.id);
     } else {
       try { triggerHaptic('error'); } catch(e) {}
-      try { playQuizSound('wrong'); } catch(e) {}
       // IMMEDIATELY RECORD ERROR TO STATE & LOCALSTORAGE AT THE MOMENT OF SELECTION!
       state.userErrors.add(q.id);
       try {
@@ -2898,11 +2892,9 @@
     const q = state.activeQuestions[fcIndex];
     if (known) {
       triggerHaptic('success');
-      try { playQuizSound('correct'); } catch(e) {}
       fcLearned.push(q);
     } else {
       triggerHaptic('light');
-      try { playQuizSound('wrong'); } catch(e) {}
       fcReview.push(q);
     }
 
@@ -2920,7 +2912,6 @@
 
   function showFCFinishScreen() {
     triggerHaptic('success');
-    try { playQuizSound('finish'); } catch(e) {}
     document.getElementById('fc-active-deck').classList.add('hidden');
     document.getElementById('fc-finish-screen').classList.remove('hidden');
 
@@ -4431,23 +4422,6 @@
     }
   }
 
-  function reassignTest(testId) {
-    const sel = document.getElementById(`move-sel-${testId}`);
-    const targetSub = sel.value;
-    const t = adminStore.testsMeta.find(x => x.id === testId);
-    if (t) {
-      t.subject_id = targetSub;
-      fetch('/api/admin/assign_test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: state.userId, test_id: testId, subject_id: targetSub })
-      }).catch(() => {});
-      alert(`Тест успешно перемещен!`);
-      renderHomeSubjects();
-      updateAdminStats();
-    }
-  }
-
   function assignUnassignedTest(testId) {
     const sel = document.getElementById(`u-assign-${testId}`);
     const targetSub = sel.value;
@@ -4517,20 +4491,6 @@
       }).catch(() => {});
       openAdminModal('subjects_and_tests');
       renderHomeSubjects();
-    }
-  }
-
-  function deleteTestConfirm(testId) {
-    if (confirm('Вы уверены, что хотите удалить этот тест?')) {
-      adminStore.testsMeta = adminStore.testsMeta.filter(x => x.id !== testId);
-      fetch('/api/admin/delete_test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: state.userId, test_id: testId })
-      }).catch(() => {});
-      openAdminModal('tests');
-      renderHomeSubjects();
-      updateAdminStats();
     }
   }
 

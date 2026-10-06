@@ -32,7 +32,6 @@ from .handlers import (
     handle_profile_error_show,
     handle_profile_favorites,
     handle_profile_history,
-    handle_public_rating,
     handle_question_continue,
     handle_question_menu,
     handle_repeat_attempt,
@@ -109,7 +108,6 @@ USER_CALLBACKS = (
     (handle_show_result, r"^show_result:"),
     (handle_repeat_session_errors, r"^repeat_session_errors:"),
     (handle_my_stats, r"^my_stats:"),
-    (handle_public_rating, r"^public_rating:"),
     (handle_reset_errors_confirm, r"^reset_errors_confirm:"),
     (handle_reset_errors_do, r"^reset_errors_do:"),
 )

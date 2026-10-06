@@ -4,7 +4,7 @@ from typing import Any
 
 from .config import FULL_TEST_MODES, LETTERS, RESUMABLE_MODES, SOLUTION_MODES, TESTS
 from .helpers import attempt_percent, mode_title, seconds_to_text, sep, user_display_name
-from .loader import get_questions
+from .loader import effective_test_info, get_questions
 from .state import delete_active_session, delete_runtime_session
 from .storage import db_connect, get_attempt, record_attempt_finish, stats_summary
 
@@ -254,7 +254,8 @@ def my_stats_text(user_id: int, test_id: str) -> str:
 
 
 def public_rating_text(test_id: str) -> str:
-    title = TESTS[test_id]["title"]
+    info = effective_test_info(test_id)
+    title = info["title"] if info else test_id
 
     with db_connect() as conn:
         rows = conn.execute(
