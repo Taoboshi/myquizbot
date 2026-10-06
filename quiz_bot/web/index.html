@@ -26,11 +26,11 @@
               950: '#022c22',
             },
             app: {
-              bg: '#040806',
-              card: '#0a1a12',
-              cardHover: '#10261b',
-              border: '#143825',
-              surface: '#0d2217',
+              bg: '#0a0d14',
+              card: 'rgba(255, 255, 255, 0.045)',
+              cardHover: 'rgba(255, 255, 255, 0.075)',
+              border: 'rgba(255, 255, 255, 0.08)',
+              surface: 'rgba(255, 255, 255, 0.035)',
             }
           }
         }
@@ -324,29 +324,28 @@
       border: 1px solid var(--glass-border) !important;
       box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
     }
-    .bg-app-card {
+    .bg-app-card, [class*="bg-app-card"] {
       background: var(--glass-panel) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--glass-border) !important;
       box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
-      border-radius: 20px !important;
-      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+      border-radius: 20px;
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .bg-app-card:hover {
+    .bg-app-card:hover, [class*="bg-app-card"]:hover {
       background: var(--glass-panel-hover) !important;
       border-color: var(--glass-border-hover) !important;
-      transform: translateY(-2px) !important;
     }
-    .bg-app-surface {
+    .bg-app-surface, [class*="bg-app-surface"] {
       background-color: var(--glass-surface) !important;
-      backdrop-filter: var(--glass-blur) !important;
-      -webkit-backdrop-filter: var(--glass-blur) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
       border: 1px solid var(--glass-border) !important;
       box-shadow: var(--glass-highlight) !important;
-      border-radius: 14px !important;
+      border-radius: 14px;
     }
-    .border-app-border {
+    .border-app-border, [class*="border-app-border"] {
       border-color: var(--glass-border) !important;
     }
 
@@ -751,23 +750,23 @@
         <!-- Test Info Card -->
         <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold text-brand-400 uppercase tracking-wider">Карточка теста</span>
-            <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">Доступен</span>
+            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">Карточка теста</span>
+            <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-medium">Доступен</span>
           </div>
-          <h2 class="text-base font-bold text-white" id="hub-test-title">Название теста</h2>
+          <h2 class="text-base font-bold text-white tracking-tight" id="hub-test-title">Название теста</h2>
           
-          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-app-border">
-            <div class="text-center p-2 rounded-xl bg-app-surface/60">
-              <span class="block text-[10px] text-slate-400">Вопросов</span>
+          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.08]">
+            <div class="text-center p-2.5 rounded-xl bg-white/[0.035] border border-white/[0.07]">
+              <span class="block text-[10px] text-slate-400 font-medium">Вопросов</span>
               <span class="text-xs font-bold text-white font-mono" id="hub-q-count">0</span>
             </div>
-            <div class="text-center p-2 rounded-xl bg-app-surface/60">
-              <span class="block text-[10px] text-slate-400">Ошибок</span>
-              <span class="text-xs font-bold text-rose-400 font-mono" id="hub-q-errors">0</span>
+            <div class="text-center p-2.5 rounded-xl bg-white/[0.035] border border-white/[0.07]">
+              <span class="block text-[10px] text-slate-400 font-medium">Ошибок</span>
+              <span class="text-xs font-bold text-slate-300 font-mono" id="hub-q-errors">0</span>
             </div>
-            <div class="text-center p-2 rounded-xl bg-app-surface/60">
-              <span class="block text-[10px] text-slate-400">В избранном</span>
-              <span class="text-xs font-bold text-amber-400 font-mono" id="hub-q-favs">0</span>
+            <div class="text-center p-2.5 rounded-xl bg-white/[0.035] border border-white/[0.07]">
+              <span class="block text-[10px] text-slate-400 font-medium">В избранном</span>
+              <span class="text-xs font-bold text-slate-300 font-mono" id="hub-q-favs">0</span>
             </div>
           </div>
 
@@ -888,8 +887,8 @@
               <div class="text-[10px] text-slate-400">Быстрое запоминание</div>
             </button>
           </div>
-          <button onclick="confirmResetErrors()" class="w-full py-2.5 rounded-xl bg-app-surface/60 border border-app-border text-slate-400 hover:text-rose-400 text-xs font-medium active:scale-95 transition flex items-center justify-center gap-2">
-            <span>🗑</span> Сбросить ошибки этого теста
+          <button onclick="confirmResetErrors()" class="w-full py-2.5 rounded-xl bg-white/[0.035] hover:bg-rose-500/10 border border-white/[0.08] hover:border-rose-500/30 text-slate-300 hover:text-rose-300 text-xs font-medium active:scale-95 transition flex items-center justify-center gap-2 shadow-sm">
+            <span>🗑</span> <span>Сбросить ошибки этого теста</span>
           </button>
         </div>
       </section>
@@ -1151,22 +1150,22 @@
           </div>
 
           <!-- Quick Stats Grid (4 Metrics) -->
-          <div class="grid grid-cols-4 gap-2 pt-2 border-t border-app-border/70">
-            <div class="text-center p-2 rounded-2xl bg-app-surface/80 border border-app-border/40">
-              <span class="block text-[9px] text-slate-400">Пройдено</span>
+          <div class="grid grid-cols-4 gap-2 pt-2 border-t border-white/[0.08]">
+            <div class="text-center p-2.5 rounded-2xl bg-white/[0.035] border border-white/[0.07]">
+              <span class="block text-[10px] text-slate-400 font-medium">Пройдено</span>
               <span id="profile-attempts-count" class="text-xs font-bold text-white font-mono">0</span>
             </div>
-            <div class="text-center p-2 rounded-2xl bg-app-surface/80 border border-app-border/40">
-              <span class="block text-[9px] text-slate-400">Точность</span>
-              <span id="profile-acc-rate" class="text-xs font-bold text-brand-400 font-mono">0%</span>
+            <div class="text-center p-2.5 rounded-2xl bg-white/[0.035] border border-white/[0.07]">
+              <span class="block text-[10px] text-slate-400 font-medium">Точность</span>
+              <span id="profile-acc-rate" class="text-xs font-bold text-emerald-400 font-mono">0%</span>
             </div>
-            <div onclick="switchProfileTab('errors')" class="text-center p-2 rounded-2xl bg-app-surface/80 border border-app-border/40 cursor-pointer active:scale-95 transition hover:border-rose-500/40">
-              <span class="block text-[9px] text-slate-400">Ошибок</span>
-              <span id="profile-err-count" class="text-xs font-bold text-rose-400 font-mono">0</span>
+            <div onclick="switchProfileTab('errors')" class="text-center p-2.5 rounded-2xl bg-white/[0.035] border border-white/[0.07] cursor-pointer active:scale-95 transition hover:border-rose-500/40 hover:bg-rose-500/5">
+              <span class="block text-[10px] text-slate-400 font-medium">Ошибок</span>
+              <span id="profile-err-count" class="text-xs font-bold text-slate-300 font-mono">0</span>
             </div>
-            <div onclick="switchProfileTab('favs')" class="text-center p-2 rounded-2xl bg-app-surface/80 border border-app-border/40 cursor-pointer active:scale-95 transition hover:border-amber-500/40">
-              <span class="block text-[9px] text-slate-400">Избранное</span>
-              <span id="profile-fav-count" class="text-xs font-bold text-amber-400 font-mono">0</span>
+            <div onclick="switchProfileTab('favs')" class="text-center p-2.5 rounded-2xl bg-white/[0.035] border border-white/[0.07] cursor-pointer active:scale-95 transition hover:border-amber-500/40 hover:bg-amber-500/5">
+              <span class="block text-[10px] text-slate-400 font-medium">Избранное</span>
+              <span id="profile-fav-count" class="text-xs font-bold text-slate-300 font-mono">0</span>
             </div>
           </div>
         </div>
@@ -2652,8 +2651,16 @@
 
     document.getElementById('hub-test-title').innerText = state.activeTestTitle;
     document.getElementById('hub-q-count').innerText = state.currentTestOriginalQuestions.length;
-    document.getElementById('hub-q-errors').innerText = state.userErrors.size;
-    document.getElementById('hub-q-favs').innerText = state.favorites.size;
+    const hubErrEl = document.getElementById('hub-q-errors');
+    if (hubErrEl) {
+      hubErrEl.innerText = state.userErrors.size;
+      hubErrEl.className = `text-xs font-bold font-mono ${state.userErrors.size > 0 ? 'text-rose-400' : 'text-slate-300'}`;
+    }
+    const hubFavEl = document.getElementById('hub-q-favs');
+    if (hubFavEl) {
+      hubFavEl.innerText = state.favorites.size;
+      hubFavEl.className = `text-xs font-bold font-mono ${state.favorites.size > 0 ? 'text-amber-400' : 'text-slate-300'}`;
+    }
     document.getElementById('hub-err-tag').innerText = state.userErrors.size;
 
     const hubBadge = document.getElementById('hub-test-badge');
@@ -3642,8 +3649,16 @@
 
     const allErrors = getAllSavedErrors();
     const allFavs = getAllSavedFavorites();
-    document.getElementById('profile-err-count').innerText = allErrors.length;
-    document.getElementById('profile-fav-count').innerText = allFavs.length;
+    const profErrEl = document.getElementById('profile-err-count');
+    if (profErrEl) {
+      profErrEl.innerText = allErrors.length;
+      profErrEl.className = `text-xs font-bold font-mono ${allErrors.length > 0 ? 'text-rose-400' : 'text-slate-300'}`;
+    }
+    const profFavEl = document.getElementById('profile-fav-count');
+    if (profFavEl) {
+      profFavEl.innerText = allFavs.length;
+      profFavEl.className = `text-xs font-bold font-mono ${allFavs.length > 0 ? 'text-amber-400' : 'text-slate-300'}`;
+    }
 
     renderDisciplineMastery();
     switchProfileTab(state.activeProfileSubTab || 'favs');
