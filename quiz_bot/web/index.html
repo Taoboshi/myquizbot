@@ -845,67 +845,74 @@
           </div>
         </div>
 
-        <!-- Action Modes Grid -->
+        <!-- Four Core Quiz Modes (2x2 Grid) -->
         <div class="space-y-2">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Режимы решения</span>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Режимы прохождения</span>
           
-          <div class="grid grid-cols-1 gap-2.5">
+          <div class="grid grid-cols-2 gap-2.5">
             <!-- Normal Mode -->
-            <button onclick="startQuizMode('normal')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
-                  ▶
+            <button onclick="startQuizMode('normal')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+              <div class="flex items-center justify-between w-full mb-2">
+                <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center group-hover:scale-105 transition">
+                  <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
-                <div>
-                  <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">По порядку</h4>
-                  <p class="text-[11px] text-slate-400">С 1-го по последний вопрос строго по порядку</p>
-                </div>
+                <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
               </div>
-              <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">По порядку</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">С 1-го до конца</p>
+              </div>
             </button>
 
             <!-- Random Shuffle Mode -->
-            <button onclick="startQuizMode('random')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-indigo-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+            <button onclick="startQuizMode('random')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-indigo-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+              <div class="flex items-center justify-between w-full mb-2">
+                <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-base group-hover:scale-105 transition">
                   🔀
                 </div>
-                <div>
-                  <h4 class="text-xs font-bold text-white group-hover:text-indigo-300 transition">Вразброс</h4>
-                  <p class="text-[11px] text-slate-400">Случайный порядок вопросов при каждом запуске</p>
-                </div>
+                <span class="text-xs text-slate-500 group-hover:text-indigo-400 transition">→</span>
               </div>
-              <span class="text-xs text-slate-500 group-hover:text-indigo-400 transition">→</span>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-indigo-300 transition">Вразброс</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">Случайный порядок</p>
+              </div>
             </button>
 
             <!-- Reverse Mode -->
-            <button onclick="startQuizMode('reverse')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-cyan-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+            <button onclick="startQuizMode('reverse')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-cyan-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+              <div class="flex items-center justify-between w-full mb-2">
+                <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center text-base group-hover:scale-105 transition">
                   ⏮
                 </div>
-                <div>
-                  <h4 class="text-xs font-bold text-white group-hover:text-cyan-300 transition">С конца</h4>
-                  <p class="text-[11px] text-slate-400">Решение в обратном порядке от последнего к первому</p>
-                </div>
+                <span class="text-xs text-slate-500 group-hover:text-cyan-400 transition">→</span>
               </div>
-              <span class="text-xs text-slate-500 group-hover:text-cyan-400 transition">→</span>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-cyan-300 transition">С конца</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">В обратном порядке</p>
+              </div>
             </button>
 
             <!-- Start from Number Mode -->
-            <button onclick="openStartFromModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-amber-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+            <button onclick="openStartFromModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-amber-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+              <div class="flex items-center justify-between w-full mb-2">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-base group-hover:scale-105 transition">
                   🔢
                 </div>
-                <div>
-                  <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition">Начать с номера...</h4>
-                  <p class="text-[11px] text-slate-400">Выбрать конкретный стартовый вопрос теста</p>
-                </div>
+                <span class="text-xs text-slate-500 group-hover:text-amber-400 transition">→</span>
               </div>
-              <span class="text-xs text-slate-500 group-hover:text-amber-400 transition">→</span>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition">С номера...</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">Выбрать стартовый</p>
+              </div>
             </button>
+          </div>
+        </div>
 
+        <!-- Training & Error Practice (Separated Section) -->
+        <div class="space-y-2 pt-1">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Тренировка и ошибки</span>
+          
+          <div class="grid grid-cols-1 gap-2.5">
             <!-- Training Mode -->
             <button onclick="openTrainingSelectorModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
               <div class="flex items-center space-x-3">
