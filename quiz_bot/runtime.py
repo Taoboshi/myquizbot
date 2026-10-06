@@ -134,6 +134,15 @@ def healthz() -> tuple[str, int]:
     return "ok", 200
 
 
+@WEB_APP.route("/logo.png")
+def serve_logo() -> Any:
+    logo_file = Path(__file__).resolve().parent / "web" / "logo.png"
+    if logo_file.exists():
+        with open(logo_file, "rb") as f:
+            return f.read(), 200, {"Content-Type": "image/png"}
+    return "Not found", 404
+
+
 try:
     from .webapp import register_webapp_routes
     register_webapp_routes(WEB_APP)

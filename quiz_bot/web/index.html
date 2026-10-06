@@ -13,21 +13,24 @@
         extend: {
           colors: {
             brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-              900: '#312e81',
-              950: '#1e1b4b',
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
             },
             app: {
-              bg: '#090b11',
-              card: '#111522',
-              cardHover: '#171d2e',
-              border: '#1e2638',
-              surface: '#141928',
+              bg: '#040806',
+              card: '#0a1a12',
+              cardHover: '#10261b',
+              border: '#143825',
+              surface: '#0d2217',
             }
           }
         }
@@ -46,8 +49,13 @@
       font-family: 'JetBrains Mono', monospace;
     }
     body {
-      background-color: #07090e;
-      color: #f1f5f9;
+      background-color: #030605;
+      color: #f0fdf4;
+      background-image: 
+        radial-gradient(circle at 50% 0%, #072316 0%, transparent 60%),
+        radial-gradient(circle at 85% 50%, #041c10 0%, transparent 45%),
+        radial-gradient(circle at 15% 85%, #03140c 0%, transparent 50%);
+      background-attachment: fixed;
       overscroll-behavior-y: none;
       transition: background-color 0.25s ease, color 0.25s ease;
     }
@@ -64,10 +72,83 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+    /* Liquid Mesh and Glass styles */
+    .liquid-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .liquid-orb-1 {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+      filter: blur(85px);
+      top: -100px;
+      left: 15%;
+      animation: floatLiquid 18s infinite ease-in-out alternate;
+    }
+    .liquid-orb-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(5, 150, 105, 0.18) 0%, transparent 70%);
+      filter: blur(95px);
+      bottom: 10%;
+      right: -80px;
+      animation: floatLiquid 24s infinite ease-in-out alternate-reverse;
+    }
+    @keyframes floatLiquid {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, 40px) scale(1.1); }
+      100% { transform: translate(-25px, -30px) scale(0.95); }
+    }
     .glass {
-      background: rgba(17, 21, 34, 0.94);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: rgba(10, 22, 16, 0.75) !important;
+      backdrop-filter: blur(28px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+      border-color: rgba(52, 211, 153, 0.22) !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.18), 0 16px 40px -12px rgba(0, 0, 0, 0.7) !important;
+    }
+    .bg-app-card {
+      background-color: rgba(12, 26, 18, 0.6) !important;
+      backdrop-filter: blur(20px) saturate(170%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
+      border-color: rgba(52, 211, 153, 0.18) !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12), 0 8px 24px -6px rgba(0, 0, 0, 0.5) !important;
+    }
+    .bg-app-card:hover {
+      background-color: rgba(16, 36, 26, 0.75) !important;
+      border-color: rgba(52, 211, 153, 0.35) !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 12px 32px -6px rgba(0, 0, 0, 0.6), 0 0 20px -2px rgba(16, 185, 129, 0.2) !important;
+    }
+    .border-app-border {
+      border-color: rgba(52, 211, 153, 0.2) !important;
+    }
+    .bg-app-surface {
+      background-color: rgba(14, 32, 23, 0.65) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+    }
+    nav.glass {
+      background: rgba(8, 18, 13, 0.85) !important;
+      backdrop-filter: blur(32px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
+      border-top: 1px solid rgba(52, 211, 153, 0.25) !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 -10px 32px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.15) !important;
+    }
+    .btn-brand, .bg-brand-600 {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      border: 1px solid rgba(167, 243, 208, 0.35) !important;
+      box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35), 0 6px 20px -3px rgba(16, 185, 129, 0.45) !important;
+    }
+    .bg-brand-600:active {
+      transform: scale(0.97);
+      box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.3), 0 2px 10px rgba(16, 185, 129, 0.3) !important;
     }
     .perspective-1000 {
       perspective: 1000px;
@@ -231,14 +312,19 @@
       color: #065f46 !important;
     }
 
-    /* Option button visual feedback on answer (High Contrast in Dark & Light) */
+    /* Option button visual feedback on answer (Liquid Glass in Dark & High Contrast in Light) */
     .option-btn-unanswered {
-      background-color: #111522;
-      border-color: #1e2638;
-      color: #f1f5f9;
+      background-color: rgba(14, 28, 20, 0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-color: rgba(52, 211, 153, 0.18);
+      color: #f0fdf4;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
     }
     .option-btn-unanswered:hover {
-      border-color: #6366f1;
+      border-color: #10b981;
+      background-color: rgba(16, 36, 26, 0.7);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
     }
     body.light-theme .option-btn-unanswered {
       background-color: #ffffff !important;
@@ -317,6 +403,12 @@
   </style>
 </head>
 <body class="bg-app-bg text-slate-100 min-h-screen flex flex-col select-none antialiased">
+  <!-- Ambient Liquid Glow Mesh -->
+  <div class="liquid-mesh">
+    <div class="liquid-orb-1"></div>
+    <div class="liquid-orb-2"></div>
+  </div>
+
   <!-- Mobile App Wrapper -->
   <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-app-bg relative shadow-2xl border-x border-app-border/40 overflow-hidden">
 
@@ -327,8 +419,8 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <!-- Logo (Tap 5 times for secret Admin Unlock) -->
-        <div id="header-logo-icon" onclick="handleLogoTap()" class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer active:scale-95 transition">
-          oh
+        <div id="header-logo-icon" onclick="handleLogoTap()" class="w-8 h-8 rounded-xl overflow-hidden bg-black/60 border border-emerald-400/35 flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0 cursor-pointer active:scale-95 transition p-0.5" title="ohTest">
+          <img src="/logo.png" alt="Logo" class="w-full h-full object-contain rounded-lg" onerror="this.onerror=null; this.src='logo.png'">
         </div>
         <div class="min-w-0 flex-1">
           <h1 id="header-title" class="text-xs sm:text-sm font-extrabold text-white tracking-tight leading-tight truncate">ohTest</h1>
@@ -597,7 +689,7 @@
           </div>
           <!-- Real Progress Bar -->
           <div class="w-full h-1.5 rounded-full bg-app-card border border-app-border overflow-hidden">
-            <div id="solver-bar" class="h-full bg-gradient-to-r from-brand-500 to-indigo-400 transition-all duration-300 rounded-full" style="width: 1%;"></div>
+            <div id="solver-bar" class="h-full bg-gradient-to-r from-brand-500 to-teal-300 shadow-[0_0_12px_rgba(52,211,153,0.7)] transition-all duration-300 rounded-full" style="width: 1%;"></div>
           </div>
         </div>
 
@@ -803,7 +895,7 @@
         <!-- User Identity Card with Rank & Level -->
         <div class="p-5 rounded-3xl bg-gradient-to-br from-brand-950/70 via-app-card to-app-card border border-brand-500/30 shadow-xl space-y-4">
           <div class="flex items-center space-x-3.5">
-            <div id="profile-avatar" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-brand-500/30 ring-2 ring-brand-400/30">
+            <div id="profile-avatar" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-brand-500/30 ring-2 ring-brand-400/30">
               С
             </div>
             <div class="flex-1 min-w-0">
@@ -829,7 +921,7 @@
               <span id="profile-next-rank-text" class="text-brand-300 font-mono">До след. ранга: 100 XP</span>
             </div>
             <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-white/5">
-              <div id="profile-xp-bar" class="h-2 rounded-full bg-gradient-to-r from-brand-500 to-indigo-400 transition-all duration-500" style="width: 15%;"></div>
+              <div id="profile-xp-bar" class="h-2 rounded-full bg-gradient-to-r from-brand-500 to-teal-300 transition-all duration-500" style="width: 15%;"></div>
             </div>
           </div>
 
