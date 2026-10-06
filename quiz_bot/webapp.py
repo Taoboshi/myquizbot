@@ -319,6 +319,26 @@ def register_webapp_routes(app: Any) -> None:
 
         return jsonify({"success": True, "attempt_id": attempt_id})
 
+    @app.route("/api/errors/record", methods=["POST"])
+    def api_record_single_error():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or 9990001
+        test_id = data.get("test_id")
+        question_id = data.get("question_id")
+        user_answer = data.get("user_answer")
+
+        if not test_id or question_id is None:
+            return jsonify({"error": "test_id and question_id required"}), 400
+
+        try:
+            uid = int(user_id)
+            qid = int(question_id)
+            add_all_time_error(uid, test_id, qid - 1, user_answer)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+        return jsonify({"success": True, "recorded": qid})
+
     @app.route("/api/errors/resolve", methods=["POST"])
     def api_resolve_error():
         data = request.get_json(force=True) or {}

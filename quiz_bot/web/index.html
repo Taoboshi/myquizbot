@@ -166,6 +166,45 @@
       border-color: #6366f1 !important;
       background-color: #f8fafc !important;
     }
+
+    /* Option button visual feedback on answer */
+    .option-btn-correct {
+      background-color: #064e3b !important;
+      border-color: #10b981 !important;
+      color: #ecfdf5 !important;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+    }
+    .option-btn-wrong {
+      background-color: #881337 !important;
+      border-color: #f43f5e !important;
+      color: #fff1f2 !important;
+      box-shadow: 0 4px 14px rgba(244, 63, 94, 0.3) !important;
+    }
+    .option-btn-muted {
+      background-color: rgba(17, 21, 34, 0.4) !important;
+      border-color: rgba(30, 38, 56, 0.5) !important;
+      color: #64748b !important;
+      opacity: 0.45 !important;
+    }
+
+    body.light-theme .option-btn-correct {
+      background-color: #dcfce7 !important;
+      border-color: #22c55e !important;
+      color: #15803d !important;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2) !important;
+    }
+    body.light-theme .option-btn-wrong {
+      background-color: #fee2e2 !important;
+      border-color: #ef4444 !important;
+      color: #b91c1c !important;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+    }
+    body.light-theme .option-btn-muted {
+      background-color: #f1f5f9 !important;
+      border-color: #e2e8f0 !important;
+      color: #94a3b8 !important;
+      opacity: 0.45 !important;
+    }
     body.light-theme .fixed.inset-0 {
       background-color: rgba(15, 23, 42, 0.45) !important;
       backdrop-filter: blur(8px);
@@ -220,15 +259,17 @@
 
       <!-- Action Buttons Right -->
       <div class="flex items-center space-x-1.5">
-        <!-- Matrix / Grid view in solver (prominent & visible) -->
-        <button id="btn-grid-modal" class="hidden px-2.5 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/50 text-brand-300 hover:bg-brand-500/30 active:scale-95 transition flex items-center gap-1.5 text-xs font-bold shadow-sm" onclick="toggleMatrixModal()">
-          <span class="text-xs">☷</span>
+        <!-- Matrix / Grid view in solver (same exact size and shape as btn-finish-early) -->
+        <button id="btn-grid-modal" class="hidden px-2.5 py-1.5 rounded-xl bg-brand-950/40 border border-brand-500/40 text-[11px] font-bold text-brand-300 hover:bg-brand-900/50 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm" onclick="toggleMatrixModal()">
+          <span>☷</span>
           <span>Сетка</span>
         </button>
         <!-- Finish Early Button in solver -->
         <button id="btn-finish-early" class="hidden px-2.5 py-1.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] font-bold text-rose-300 hover:bg-rose-900/50 active:scale-95 transition" onclick="requestFinishQuiz()">
           Завершить 🎯
         </button>
+        <!-- Invisible placeholder so getElementById never returns null -->
+        <button id="btn-fav-toggle" class="hidden" style="display:none;"></button>
         <!-- Admin badge indicator -->
         <div id="header-admin-pill" class="hidden px-2 py-0.5 rounded-full bg-brand-500/20 border border-brand-500/40 text-[10px] font-bold text-brand-300">
           ADMIN
@@ -756,13 +797,18 @@
               <input type="checkbox" id="set-haptic" checked class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
             </div>
 
-            <!-- Sound Signals -->
+            <!-- Sound Signals (checked by default + test button) -->
             <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
               <div>
                 <div class="font-bold text-white">Звуковые сигналы</div>
                 <div class="text-[10px] text-slate-400">Звук правильного ответа</div>
               </div>
-              <input type="checkbox" id="set-sound" class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
+              <div class="flex items-center gap-2">
+                <button onclick="playQuizSound('correct')" class="px-2.5 py-1 rounded-xl bg-app-card border border-app-border text-[10px] font-bold text-brand-300 hover:text-white active:scale-95 transition">
+                  🔊 Тест
+                </button>
+                <input type="checkbox" id="set-sound" checked class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
+              </div>
             </div>
 
             <!-- Clear Cache Button -->
@@ -915,17 +961,20 @@
 
     </main>
 
-    <!-- Matrix Modal -->
-    <div id="modal-matrix" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
-      <div class="w-full max-w-sm rounded-3xl bg-app-card border border-app-border p-5 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-bold text-white">Сетка вопросов теста</h3>
-          <button onclick="toggleMatrixModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+    <!-- Matrix Modal (same window size as finish confirmation modal: max-w-xs centered) -->
+    <div id="modal-matrix" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-xs rounded-3xl bg-app-card border border-app-border p-5 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-app-border pb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-base">☷</span>
+            <h3 class="text-sm font-bold text-white">Сетка вопросов</h3>
+          </div>
+          <button onclick="toggleMatrixModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
         </div>
-        <div id="matrix-grid-box" class="flex-1 overflow-y-auto grid grid-cols-5 gap-2 p-1">
+        <div id="matrix-grid-box" class="flex-1 overflow-y-auto grid grid-cols-5 gap-2 p-1 hide-scrollbar max-h-[55vh]">
           <!-- Filled dynamically -->
         </div>
-        <button onclick="toggleMatrixModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-300">
+        <button onclick="toggleMatrixModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-300 hover:text-white">
           Закрыть
         </button>
       </div>
@@ -1353,20 +1402,24 @@
   function isSoundEnabled() {
     const toggle = document.getElementById('set-sound');
     if (toggle) return toggle.checked;
-    const val = localStorage.getItem('quiz_sound_enabled');
-    return val === null ? true : val === 'true';
+    return true;
   }
 
   function playQuizSound(type) {
     if (!isSoundEnabled()) return;
     try {
-      const ctx = getAudioCtx();
-      if (!ctx) return;
-      if (ctx.state === 'suspended') {
-        ctx.resume().then(() => emitSound(ctx, type)).catch(() => {});
-        return;
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtxClass) return;
+      if (!audioContext) {
+        audioContext = new AudioCtxClass();
       }
-      emitSound(ctx, type);
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          emitSound(audioContext, type);
+        }).catch(() => {});
+      } else {
+        emitSound(audioContext, type);
+      }
     } catch(e) {
       console.warn('Audio play error:', e);
     }
@@ -1498,9 +1551,11 @@
     }
   }
 
-  // Active Attempt Persistence
+  // Active Attempt Persistence (Preserves main quiz attempt during errors_solve!)
   function saveActiveAttemptState() {
     if (state.activeQuestions.length === 0) return;
+    // DO NOT overwrite active main attempt during error reviews
+    if (state.currentMode === 'errors_solve') return;
     state.activeAttempt = {
       testId: state.activeTestId,
       testTitle: state.activeTestTitle,
@@ -1570,7 +1625,7 @@
     document.getElementById('view-solver').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle').classList.remove('hidden');
+    document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
     updateTelegramBackButton();
 
@@ -1801,6 +1856,18 @@
   }
 
   function startQuizMode(mode) {
+    // If starting a new mode and an unfinished attempt exists for this test: prompt confirmation!
+    if (mode !== 'errors_solve' && state.activeAttempt && state.activeAttempt.testId === state.activeTestId) {
+      const qNum = (state.activeAttempt.qIndex || 0) + 1;
+      const totalQ = state.activeAttempt.total || state.activeQuestions.length;
+      const confirmed = confirm(`У вас есть незавершённая попытка в этом тесте (вопрос ${qNum} из ${totalQ}). Начать заново? Текущий прогресс будет сброшен.`);
+      if (!confirmed) return;
+      state.activeAttempt = null;
+      localStorage.removeItem('ohtest_active_attempt');
+      renderActiveAttemptBanner();
+      updateHubResumeButton();
+    }
+
     triggerHaptic('light');
 
     if (mode === 'errors_solve') {
@@ -1914,23 +1981,30 @@
       } else {
         // Answered: GREEN ON CORRECT, RED ON WRONG + GREEN ON CORRECT!
         if (isCorrectOption) {
-          btn.className += "bg-emerald-950/80 border-emerald-500 text-emerald-200 font-bold shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-400";
+          btn.className += "option-btn-correct font-bold ring-1 ring-emerald-400";
         } else if (isUserChoice && !isCorrectOption) {
-          btn.className += "bg-rose-950/80 border-rose-500 text-rose-200 font-bold shadow-lg shadow-rose-950/50 ring-1 ring-rose-400";
+          btn.className += "option-btn-wrong font-bold ring-1 ring-rose-400";
         } else {
-          btn.className += "bg-app-card/40 border-app-border/40 text-slate-500 opacity-50";
+          btn.className += "option-btn-muted";
         }
       }
 
       const letters = ['А', 'Б', 'В', 'Г', 'Д', 'Е'][idx] || (idx + 1);
       let badgeIcon = letters;
+      let badgeStyle = "bg-app-surface border-app-border text-slate-300";
+
       if (ans !== undefined || isRevealed) {
-        if (isCorrectOption) badgeIcon = '✓';
-        else if (isUserChoice) badgeIcon = '✕';
+        if (isCorrectOption) {
+          badgeIcon = '✓';
+          badgeStyle = "bg-emerald-500 border-emerald-400 text-white font-black shadow-sm";
+        } else if (isUserChoice) {
+          badgeIcon = '✕';
+          badgeStyle = "bg-rose-500 border-rose-400 text-white font-black shadow-sm";
+        }
       }
 
       btn.innerHTML = `
-        <span class="w-6 h-6 rounded-full bg-app-surface border border-app-border flex items-center justify-center text-xs font-bold text-slate-300 shrink-0 mt-0.5 font-mono">${badgeIcon}</span>
+        <span class="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-mono shrink-0 mt-0.5 ${badgeStyle}">${badgeIcon}</span>
         <span class="flex-1 leading-snug">${opt}</span>
       `;
       box.appendChild(btn);
@@ -1941,6 +2015,7 @@
 
   function selectOption(idx) {
     const q = state.activeQuestions[state.currentQIndex];
+    if (state.userAnswers[q.id] !== undefined) return; // Prevent double select
     state.userAnswers[q.id] = idx;
 
     const isCorrect = (idx === q.correct);
@@ -1951,17 +2026,33 @@
     } else {
       triggerHaptic('error');
       playQuizSound('wrong');
+      // IMMEDIATELY RECORD ERROR TO STATE & LOCALSTORAGE AT THE MOMENT OF SELECTION!
       state.userErrors.add(q.id);
+      try {
+        fetch('/api/errors/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: state.userId,
+            test_id: state.activeTestId,
+            question_id: q.id,
+            user_answer: idx
+          })
+        }).catch(() => {});
+      } catch(e) {}
     }
 
     try {
       localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
     } catch(e) {}
 
-    // Update error counters
-    document.getElementById('hub-q-errors').innerText = state.userErrors.size;
-    document.getElementById('hub-err-tag').innerText = state.userErrors.size;
-    document.getElementById('profile-err-count').innerText = state.userErrors.size;
+    // Update error counters immediately
+    const hubErrors = document.getElementById('hub-q-errors');
+    if (hubErrors) hubErrors.innerText = state.userErrors.size;
+    const hubErrTag = document.getElementById('hub-err-tag');
+    if (hubErrTag) hubErrTag.innerText = state.userErrors.size;
+    const profErrCount = document.getElementById('profile-err-count');
+    if (profErrCount) profErrCount.innerText = getAllSavedErrors().length;
 
     renderCurrentQuestion();
   }
@@ -2005,7 +2096,7 @@
     const total = state.activeQuestions.length;
     const unanswered = total - answered;
     if (unanswered > 0) {
-      document.getElementById('confirm-finish-text').innerText = `Вы ответили на ${answered} из ${total} вопросов. Осталось без ответа: ${unanswered}. Пропущенные вопросы будут засчитаны за ошибки. Завершить?`;
+      document.getElementById('confirm-finish-text').innerText = `Вы ответили на ${answered} из ${total} вопросов. Без ответа: ${unanswered}. Завершить тест и сохранить результаты?`;
     } else {
       document.getElementById('confirm-finish-text').innerText = `Вы ответили на все ${total} вопросов теста! Завершить и сохранить результат?`;
     }
@@ -2026,7 +2117,7 @@
     hideAllViews();
     state.homeActiveView = 'result';
     document.getElementById('btn-grid-modal').classList.add('hidden');
-    document.getElementById('btn-fav-toggle').classList.add('hidden');
+    document.getElementById('btn-fav-toggle')?.classList.add('hidden');
     document.getElementById('btn-finish-early').classList.add('hidden');
     document.getElementById('view-result').classList.remove('hidden');
     updateTelegramBackButton();
@@ -2037,14 +2128,18 @@
       const ans = state.userAnswers[q.id];
       if (ans === q.correct) {
         correct++;
-      } else {
-        // EITHER answered incorrectly OR left unanswered (skipped) -> BOTH COUNT AS ERRORS!
+      } else if (ans !== undefined) {
+        // ONLY user's actual incorrect answers count as errors!
         wrongQuestionIds.push(q.id);
         state.userErrors.add(q.id);
       }
+      // Skipped/unanswered questions are NOT added to userErrors!
     });
     const total = state.activeQuestions.length;
-    const pct = Math.round((correct / total) * 100);
+    const answeredCount = Object.keys(state.userAnswers).length;
+    const errorsCount = wrongQuestionIds.length;
+    const skippedCount = total - answeredCount;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
 
     // Persist error set to localStorage
     try {
@@ -2054,21 +2149,23 @@
     // Update hub tags and profile count
     document.getElementById('hub-q-errors').innerText = state.userErrors.size;
     document.getElementById('hub-err-tag').innerText = state.userErrors.size;
-    document.getElementById('profile-err-count').innerText = state.userErrors.size;
+    document.getElementById('profile-err-count').innerText = getAllSavedErrors().length;
 
     document.getElementById('result-percent').innerText = `${pct}%`;
-    document.getElementById('result-counts').innerText = `${correct} из ${total} правильно`;
-    document.getElementById('result-errors').innerText = `${total - correct}`;
+    document.getElementById('result-counts').innerText = `${correct} из ${total} правильно${skippedCount > 0 ? ` (пропущено: ${skippedCount})` : ''}`;
+    document.getElementById('result-errors').innerText = `${errorsCount}`;
 
     const mins = String(Math.floor(state.timerSeconds / 60)).padStart(2, '0');
     const secs = String(state.timerSeconds % 60).padStart(2, '0');
     document.getElementById('result-time').innerText = `${mins}:${secs}`;
 
-    // Clear active attempt since test finished
-    state.activeAttempt = null;
-    localStorage.removeItem('ohtest_active_attempt');
-    renderActiveAttemptBanner();
-    updateHubResumeButton();
+    // Clear active attempt only for regular tests (PRESERVES main attempt if this was error review)
+    if (state.currentMode !== 'errors_solve') {
+      state.activeAttempt = null;
+      localStorage.removeItem('ohtest_active_attempt');
+      renderActiveAttemptBanner();
+      updateHubResumeButton();
+    }
 
     // Save full question snapshot in history
     const qSnapshot = state.activeQuestions.map(q => ({
@@ -3121,7 +3218,7 @@
     document.getElementById('view-solver').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle').classList.remove('hidden');
+    document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
     document.getElementById('header-title').innerText = "Разбор ошибок";
     document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
@@ -3153,7 +3250,7 @@
     document.getElementById('view-solver').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle').classList.remove('hidden');
+    document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
     document.getElementById('header-title').innerText = "Решение ошибки";
     document.getElementById('header-subtitle').innerText = `Вопрос #${qid}`;
@@ -3317,7 +3414,7 @@
     document.getElementById('view-solver').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle').classList.remove('hidden');
+    document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
     document.getElementById('header-title').innerText = "Тренировка избранного";
     document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
@@ -4069,7 +4166,7 @@
     hideAllViews();
     document.getElementById('nav-back-btn').classList.add('hidden');
     document.getElementById('btn-grid-modal').classList.add('hidden');
-    document.getElementById('btn-fav-toggle').classList.add('hidden');
+    document.getElementById('btn-fav-toggle')?.classList.add('hidden');
     document.getElementById('btn-finish-early').classList.add('hidden');
 
     if (tabId === 'home') {
@@ -4078,7 +4175,7 @@
         document.getElementById('view-solver').classList.remove('hidden');
         document.getElementById('nav-back-btn').classList.remove('hidden');
         document.getElementById('btn-grid-modal').classList.remove('hidden');
-        document.getElementById('btn-fav-toggle').classList.remove('hidden');
+        document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
         document.getElementById('btn-finish-early').classList.remove('hidden');
         document.getElementById('header-title').innerText = "Решение теста";
         document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
@@ -4160,7 +4257,7 @@
       const prev = viewStack[viewStack.length - 1];
       hideAllViews();
       document.getElementById('btn-grid-modal').classList.add('hidden');
-      document.getElementById('btn-fav-toggle').classList.add('hidden');
+      document.getElementById('btn-fav-toggle')?.classList.add('hidden');
       document.getElementById('btn-finish-early').classList.add('hidden');
 
       if (prev === 'home') {
