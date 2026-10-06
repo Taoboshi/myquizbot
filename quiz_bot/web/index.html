@@ -1060,7 +1060,7 @@
 
             <!-- Quick Knowledge Buttons -->
             <div class="flex items-center gap-2">
-              <button onclick="fcNext(false)" class="px-4 py-2.5 rounded-2xl bg-app-surface border border-rose-500/30 text-rose-300 font-bold text-xs hover:border-rose-500 hover:text-white active:scale-95 transition">
+              <button onclick="fcNext(false)" class="px-4 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-400 !text-rose-400 font-bold text-xs hover:bg-rose-500/20 hover:border-rose-500/60 active:scale-95 transition focus:outline-none focus:text-rose-400">
                 Не знаю ✕
               </button>
               <button onclick="fcNext(true)" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition">
@@ -1188,7 +1188,7 @@
             </div>
             <div onclick="switchProfileTab('errors')" class="text-center p-2.5 rounded-2xl bg-white/[0.035] border border-white/[0.07] cursor-pointer active:scale-95 transition hover:border-rose-500/40 hover:bg-rose-500/5">
               <span class="block text-[10px] text-slate-400 font-medium">Ошибок</span>
-              <span id="profile-err-count" class="text-xs font-bold text-slate-300 font-mono">0</span>
+              <span id="profile-err-count" class="text-xs font-bold font-mono text-rose-400 !text-rose-400">0</span>
             </div>
             <div onclick="switchProfileTab('favs')" class="text-center p-2.5 rounded-2xl bg-white/[0.035] border border-white/[0.07] cursor-pointer active:scale-95 transition hover:border-amber-500/40 hover:bg-amber-500/5">
               <span class="block text-[10px] text-slate-400 font-medium">Избранное</span>
@@ -1852,8 +1852,8 @@
     </div>
 
     <!-- Edit Profile Modal (Никнейм и Аватарка) -->
-    <div id="modal-edit-profile" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" onclick="onModalEditBackdropClick(event)">
-      <div class="w-full max-w-sm rounded-3xl bg-app-card border border-white/[0.1] shadow-2xl my-auto max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+    <div id="modal-edit-profile" class="hidden fixed inset-0 z-[100] bg-slate-950/95 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in" onclick="onModalEditBackdropClick(event)">
+      <div class="w-full max-w-sm rounded-3xl !bg-[#0f172a] border border-white/[0.1] shadow-2xl my-auto max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-app-border p-4 shrink-0">
           <div class="flex items-center space-x-2">
@@ -1906,7 +1906,7 @@
         </div>
 
         <!-- Sticky Actions Footer -->
-        <div class="flex items-center justify-end space-x-2 p-3.5 border-t border-app-border bg-app-card/90 backdrop-blur-md shrink-0">
+        <div class="flex items-center justify-end space-x-2 p-3.5 border-t border-app-border !bg-[#0f172a] shrink-0">
           <button onclick="closeEditProfileModal()" class="px-3.5 py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-300 hover:text-white transition">
             Отмена
           </button>
@@ -1918,8 +1918,8 @@
     </div>
 
     <!-- Quizlet Options Modal (Настройки карточек: Перемешать, Рестарт, Избранное) -->
-    <div id="modal-fc-options" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" onclick="closeFCOptionsModal()">
-      <div class="w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-app-card border border-white/[0.1] shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
+    <div id="modal-fc-options" class="hidden fixed inset-0 z-[100] bg-slate-950/95 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" onclick="closeFCOptionsModal()">
+      <div class="w-full max-w-sm rounded-t-3xl sm:rounded-3xl !bg-[#0f172a] border border-white/[0.1] shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <h3 class="text-base font-bold text-white">Параметры</h3>
@@ -2235,7 +2235,7 @@
     renderProfileAvatarElement(document.getElementById('profile-avatar'), state.userAvatar, state.userName);
     document.getElementById('profile-attempts-count').innerText = state.historyAttempts.length;
     document.getElementById('profile-fav-count').innerText = state.favorites.size;
-    document.getElementById('profile-err-count').innerText = state.userErrors.size;
+    updateProfileErrorBadge(getAllSavedErrors().length);
 
     // Check Admin Privileges
     await checkBootstrapAndAdmin();
@@ -3076,8 +3076,7 @@
       if (hubErrors) hubErrors.innerText = state.userErrors.size;
       const hubErrTag = document.getElementById('hub-err-tag');
       if (hubErrTag) hubErrTag.innerText = state.userErrors.size;
-      const profErrCount = document.getElementById('profile-err-count');
-      if (profErrCount) profErrCount.innerText = getAllSavedErrors().length;
+      updateProfileErrorBadge(getAllSavedErrors().length);
     } catch(e) {}
 
     renderCurrentQuestion();
@@ -3182,8 +3181,7 @@
         if (hubErr) hubErr.innerText = state.userErrors.size;
         const hubErrTag = document.getElementById('hub-err-tag');
         if (hubErrTag) hubErrTag.innerText = state.userErrors.size;
-        const profErr = document.getElementById('profile-err-count');
-        if (profErr) profErr.innerText = getAllSavedErrors().length;
+        updateProfileErrorBadge(getAllSavedErrors().length);
       } catch(e) {}
 
       const resPct = document.getElementById('result-percent');
@@ -3444,7 +3442,7 @@
       } catch(e) {}
       document.getElementById('hub-q-errors').innerText = '0';
       document.getElementById('hub-err-tag').innerText = '0';
-      document.getElementById('profile-err-count').innerText = '0';
+      updateProfileErrorBadge(getAllSavedErrors().length);
       alert('История ошибок теста успешно очищена!');
     }
   }
@@ -3944,11 +3942,7 @@
 
     const allErrors = getAllSavedErrors();
     const allFavs = getAllSavedFavorites();
-    const profErrEl = document.getElementById('profile-err-count');
-    if (profErrEl) {
-      profErrEl.innerText = allErrors.length;
-      profErrEl.className = `text-xs font-bold font-mono ${allErrors.length > 0 ? 'text-rose-400' : 'text-slate-300'}`;
-    }
+    updateProfileErrorBadge(allErrors.length);
     const profFavEl = document.getElementById('profile-fav-count');
     if (profFavEl) {
       profFavEl.innerText = allFavs.length;
@@ -4285,6 +4279,27 @@
     });
   }
 
+  // Global Toast Notification (Clean floating pill)
+  let toastTimer = null;
+  function showToast(text) {
+    let toast = document.getElementById('app-global-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'app-global-toast';
+      toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-[110] px-4 py-2.5 rounded-2xl bg-slate-900/90 text-white font-semibold text-xs border border-white/10 shadow-2xl backdrop-blur-md pointer-events-none transition-all duration-300 opacity-0 -translate-y-2';
+      document.body.appendChild(toast);
+    }
+    toast.innerText = text;
+    toast.classList.remove('opacity-0', '-translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('opacity-100', 'translate-y-0');
+      toast.classList.add('opacity-0', '-translate-y-2');
+    }, 2200);
+  }
+
   // ==========================================
   // PROFILE CUSTOMIZATION (NICKNAME & AVATAR)
   // ==========================================
@@ -4523,6 +4538,14 @@
     return result;
   }
 
+  function updateProfileErrorBadge(count) {
+    const el = document.getElementById('profile-err-count');
+    if (!el) return;
+    const c = (count !== undefined && count !== null) ? Number(count) : getAllSavedErrors().length;
+    el.innerText = c;
+    el.className = `text-xs font-bold font-mono ${c > 0 ? 'text-rose-400 !text-rose-400' : 'text-slate-400'}`;
+  }
+
   function getResolvedErrors() {
     const result = [];
     try {
@@ -4743,7 +4766,7 @@
       }
     } catch(e) {}
     renderErrorsSubtab();
-    document.getElementById('profile-err-count').innerText = getAllSavedErrors().length;
+    updateProfileErrorBadge(getAllSavedErrors().length);
   }
 
   function clearAllProfileErrors() {
@@ -4758,7 +4781,7 @@
       state.userErrors = new Set();
     } catch(e) {}
     renderErrorsSubtab();
-    document.getElementById('profile-err-count').innerText = 0;
+    updateProfileErrorBadge(0);
   }
 
   function getAllSavedFavorites() {
@@ -6298,7 +6321,7 @@
       // Reset Profile stats
       document.getElementById('profile-attempts-count').innerText = '0';
       document.getElementById('profile-fav-count').innerText = '0';
-      document.getElementById('profile-err-count').innerText = '0';
+      updateProfileErrorBadge(0);
       renderProfileSubtab(state.activeProfileSubTab || 'favs');
 
       // Reset Hub stats
