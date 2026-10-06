@@ -1062,16 +1062,17 @@
 
             <!-- Quick Knowledge Buttons -->
             <div class="flex items-center gap-2">
-              <button onclick="fcNext(false)" class="px-4 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-400 !text-rose-400 font-bold text-xs hover:bg-rose-500/20 hover:border-rose-500/60 active:scale-95 transition focus:outline-none focus:text-rose-400">
+              <button type="button" onclick="this.blur(); fcNext(false)" class="px-4 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-xs hover:bg-rose-500/20 active:scale-95 transition focus:outline-none focus:ring-0">
                 Не знаю ✕
               </button>
-              <button onclick="fcNext(true)" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition">
+              <button type="button" onclick="this.blur(); fcNext(true)" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition focus:outline-none focus:ring-0">
                 Знаю ✓
               </button>
             </div>
 
-            <button id="fc-btn-next-arrow" onclick="fcNext(true)" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition" title="Следующая карточка">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <!-- Next Card (Skip / Forward without categorizing) -->
+            <button id="fc-btn-next-arrow" type="button" onclick="this.blur(); fcSkipNext()" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition focus:outline-none focus:ring-0" title="Следующая карточка">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </button>
           </div>
         </div>
@@ -3785,18 +3786,34 @@
     }
   }
 
+  function fcSkipNext() {
+    triggerHaptic('light');
+    const q = state.activeQuestions[fcIndex];
+    fcHistoryStack.push({ index: fcIndex, question: q, known: null });
+
+    if (fcIndex < state.activeQuestions.length - 1) {
+      fcIndex++;
+      renderFCCard();
+    } else {
+      showFCFinishScreen();
+    }
+  }
+
   function fcPrevCard() {
     if (fcHistoryStack.length === 0) return;
     triggerHaptic('light');
     const lastAction = fcHistoryStack.pop();
 
-    if (lastAction.known) {
+    if (lastAction.known === true) {
       const idx = fcLearned.lastIndexOf(lastAction.question);
       if (idx !== -1) fcLearned.splice(idx, 1);
-    } else {
+    } else if (lastAction.known === false) {
       const idx = fcReview.lastIndexOf(lastAction.question);
       if (idx !== -1) fcReview.splice(idx, 1);
     }
+
+    document.getElementById('fc-tag-known').innerText = fcLearned.length;
+    document.getElementById('fc-tag-review').innerText = fcReview.length;
 
     fcIndex = Math.max(0, lastAction.index);
     renderFCCard();
