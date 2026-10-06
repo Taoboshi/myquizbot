@@ -53,16 +53,6 @@ def subject_select_keyboard(user_id: int) -> InlineKeyboardMarkup:
     if not rows:
         rows.append([InlineKeyboardButton("Пока нет доступных предметов", callback_data="noop")])
 
-    webapp_url = os.getenv("WEBAPP_URL", "").strip()
-    if not webapp_url:
-        render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
-        if render_url:
-            webapp_url = f"{render_url.rstrip('/')}/app"
-
-    if webapp_url:
-        from telegram import WebAppInfo
-        rows.insert(0, [InlineKeyboardButton("✨ Открыть ohTest (Mini App)", web_app=WebAppInfo(url=webapp_url))])
-
     return InlineKeyboardMarkup(rows)
 
 
