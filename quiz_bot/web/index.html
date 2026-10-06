@@ -2034,29 +2034,22 @@
   const storedDeletedSubjects = new Set(JSON.parse(localStorage.getItem('ohtest_deleted_subjects') || '[]'));
   const storedUnassignedTests = new Set(JSON.parse(localStorage.getItem('ohtest_unassigned_tests') || '[]'));
 
-  // Admin In-memory store (NO FAKE DATA)
+  // Restore cached subjects & tests metadata from localStorage
+  const cachedSubjectsRaw = localStorage.getItem('ohtest_cached_subjects');
+  const cachedTestsMetaRaw = localStorage.getItem('ohtest_cached_tests_meta');
+  let initialSubjects = [];
+  let initialTestsMeta = [];
+  try {
+    if (cachedSubjectsRaw) initialSubjects = JSON.parse(cachedSubjectsRaw);
+    if (cachedTestsMetaRaw) initialTestsMeta = JSON.parse(cachedTestsMetaRaw);
+  } catch(e) {}
+
+  // Admin In-memory store (Synchronized from backend / localStorage cache)
   const adminStore = {
     users: [],
     frequentErrors: [],
-    subjects: [
-      { id: 'luchevaya_diagnostika', title: 'Основы лучевой диагностики', emoji: '🩻', tests_count: 4 },
-      { id: 'oziz', title: 'ОЗ и Здравоохранение', emoji: '📊', tests_count: 4 }
-    ].filter(s => !storedDeletedSubjects.has(s.id)),
-    testsMeta: Object.keys(BUNDLED_TESTS).map(tid => {
-      let sub = 'default';
-      if (!storedUnassignedTests.has(tid)) {
-        if (tid.startsWith('luchevaya_')) sub = 'luchevaya_diagnostika';
-        else if (tid.startsWith('oziz_') || tid.startsWith('voprosi')) sub = 'oziz';
-      }
-      return {
-        id: tid,
-        title: BUNDLED_TESTS[tid].title,
-        subject_id: sub,
-        questions_count: BUNDLED_TESTS[tid].questions.length,
-        access_type: 'public',
-        access_code: ''
-      };
-    })
+    subjects: initialSubjects.filter(s => !storedDeletedSubjects.has(s.id)),
+    testsMeta: initialTestsMeta.length > 0 ? initialTestsMeta : []
   };
 
   // User State
@@ -2445,6 +2438,12 @@
           if (loadedMeta.length > 0) {
             adminStore.testsMeta = loadedMeta;
           }
+
+          // Persist actual data to localStorage cache
+          try {
+            localStorage.setItem('ohtest_cached_subjects', JSON.stringify(adminStore.subjects));
+            localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta));
+          } catch(e) {}
         }
       }
     } catch(e) {}
@@ -2586,6 +2585,21 @@
       const testsOfSubj = adminStore.testsMeta.filter(t => t.subject_id === subj.id);
       return testsOfSubj.length > 0;
     });
+
+    if (activeSubjects.length === 0) {
+      list.innerHTML = `
+        <div class="p-5 rounded-3xl bg-app-card border border-app-border space-y-3 animate-pulse">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-2xl bg-white/5"></div>
+            <div class="space-y-1.5 flex-1">
+              <div class="h-3.5 bg-white/10 rounded w-1/2"></div>
+              <div class="h-2.5 bg-white/5 rounded w-1/4"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
 
     // Alphabetical sort with pinned on top
     const sortedSubjects = [...activeSubjects].sort((a, b) => {
