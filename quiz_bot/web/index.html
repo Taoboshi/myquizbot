@@ -1054,26 +1054,21 @@
             </div>
           </div>
 
-          <!-- Quizlet Bottom Bar: Undo (Previous card), Knowledge Action / Next Arrow -->
-          <div class="flex items-center justify-between px-4 pt-1">
-            <button id="fc-btn-prev" onclick="fcPrevCard()" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none" title="Предыдущая карточка">
+          <!-- Quizlet Bottom Bar: Undo (Previous card) and Knowledge Action Buttons -->
+          <div class="flex items-center gap-3 px-2 pt-1">
+            <button id="fc-btn-prev" onclick="this.blur(); fcPrevCard()" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none shrink-0" title="Предыдущая карточка (Отмена)">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a5 5 0 015 5v2m-15-7l4-4m-4 4l4 4"/></svg>
             </button>
 
-            <!-- Quick Knowledge Buttons -->
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="this.blur(); fcNext(false)" class="px-4 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-xs hover:bg-rose-500/20 active:scale-95 transition focus:outline-none focus:ring-0">
-                Не знаю ✕
+            <!-- Quick Knowledge Buttons (Expanded and comfortable to tap) -->
+            <div class="flex-1 grid grid-cols-2 gap-2.5">
+              <button type="button" onclick="this.blur(); fcNext(false)" class="w-full py-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-xs hover:bg-rose-500/20 active:scale-95 transition focus:outline-none focus:ring-0 flex items-center justify-center gap-1.5">
+                <span>Не знаю</span> <span class="text-sm">✕</span>
               </button>
-              <button type="button" onclick="this.blur(); fcNext(true)" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition focus:outline-none focus:ring-0">
-                Знаю ✓
+              <button type="button" onclick="this.blur(); fcNext(true)" class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition focus:outline-none focus:ring-0 flex items-center justify-center gap-1.5">
+                <span>Знаю</span> <span class="text-sm">✓</span>
               </button>
             </div>
-
-            <!-- Next Card (Skip / Forward without categorizing) -->
-            <button id="fc-btn-next-arrow" type="button" onclick="this.blur(); fcSkipNext()" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition focus:outline-none focus:ring-0" title="Следующая карточка">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-            </button>
           </div>
         </div>
 
