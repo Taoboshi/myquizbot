@@ -1021,8 +1021,8 @@
               <!-- Front -->
               <div class="absolute inset-0 w-full h-full p-6 sm:p-8 rounded-3xl bg-app-card border border-white/10 backface-hidden flex flex-col justify-between">
                 <div class="flex items-center justify-between text-slate-400 text-sm">
-                  <span class="text-base select-none">🔊</span>
-                  <button type="button" onclick="event.stopPropagation(); toggleFCCurrentStar();" id="fc-star-btn" class="text-xl text-slate-400 hover:text-amber-400 active:scale-90 transition">
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400">ВОПРОС</span>
+                  <button type="button" onclick="event.stopPropagation(); toggleFCCurrentStar();" id="fc-star-btn" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg text-slate-400 hover:text-amber-400 active:scale-90 transition" title="В избранное">
                     ☆
                   </button>
                 </div>
@@ -1037,8 +1037,10 @@
               <!-- Back -->
               <div class="absolute inset-0 w-full h-full p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-950/90 to-app-card border border-emerald-500/30 backface-hidden rotate-y-180 flex flex-col justify-between">
                 <div class="flex items-center justify-between text-slate-400 text-sm">
-                  <span class="text-base select-none">🔊</span>
-                  <span class="text-xs font-mono font-semibold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">ОТВЕТ</span>
+                  <span class="text-[10px] font-mono font-semibold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">ОТВЕТ</span>
+                  <button type="button" onclick="event.stopPropagation(); toggleFCCurrentStar();" id="fc-star-btn-back" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg text-slate-400 hover:text-amber-400 active:scale-90 transition" title="В избранное">
+                    ☆
+                  </button>
                 </div>
                 <div class="flex-1 flex items-center justify-center my-auto px-2">
                   <div id="fc-back-answer" class="text-base sm:text-lg font-bold text-emerald-300 text-center leading-relaxed">
@@ -3628,12 +3630,18 @@
     document.getElementById('fc-tag-known').innerText = fcLearned.length;
     document.getElementById('fc-tag-review').innerText = fcReview.length;
 
-    // Update Star button
+    // Update Star buttons (both front and back)
+    const qid = q.id;
+    const isFav = state.favorites.has(qid) || state.favorites.has(Number(qid)) || state.favorites.has(String(qid));
     const starBtn = document.getElementById('fc-star-btn');
     if (starBtn) {
-      const isFav = state.favorites.has(q.id);
       starBtn.innerText = isFav ? '★' : '☆';
-      starBtn.className = `text-xl ${isFav ? 'text-amber-400' : 'text-slate-400'} hover:text-amber-300 active:scale-90 transition`;
+      starBtn.className = `w-8 h-8 rounded-full flex items-center justify-center text-lg active:scale-90 transition ${isFav ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-amber-300'}`;
+    }
+    const starBtnBack = document.getElementById('fc-star-btn-back');
+    if (starBtnBack) {
+      starBtnBack.innerText = isFav ? '★' : '☆';
+      starBtnBack.className = `w-8 h-8 rounded-full flex items-center justify-center text-lg active:scale-90 transition ${isFav ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-amber-300'}`;
     }
 
     // Prev Button State
@@ -3647,14 +3655,35 @@
     const q = state.activeQuestions[fcIndex];
     if (!q) return;
     triggerHaptic('light');
-    if (state.favorites.has(q.id)) {
-      state.favorites.delete(q.id);
+
+    const qid = q.id;
+    const hasFav = state.favorites.has(qid) || state.favorites.has(Number(qid)) || state.favorites.has(String(qid));
+
+    if (hasFav) {
+      state.favorites.delete(qid);
+      state.favorites.delete(Number(qid));
+      state.favorites.delete(String(qid));
       showToast('Удалено из избранного');
     } else {
-      state.favorites.add(q.id);
+      state.favorites.add(qid);
       showToast('★ Добавлено в избранное');
     }
-    saveFavorites();
+
+    // Persist to localStorage
+    try {
+      const arr = Array.from(state.favorites);
+      localStorage.setItem(`ohtest_favs_${state.activeTestId}`, JSON.stringify(arr));
+    } catch(e) {
+      console.warn('Failed saving favorites to localStorage:', e);
+    }
+
+    // Update global counters and badges
+    const hubFavsEl = document.getElementById('hub-q-favs');
+    if (hubFavsEl) hubFavsEl.innerText = state.favorites.size;
+    const profFavsEl = document.getElementById('profile-fav-count');
+    if (profFavsEl) profFavsEl.innerText = state.favorites.size;
+    updateFavUI(state.favorites.has(qid));
+
     renderFCCard();
   }
 
