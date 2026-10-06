@@ -419,11 +419,11 @@ def register_webapp_routes(app: Any) -> None:
 
     @app.route("/api/admin/assign_test", methods=["POST"])
     def api_admin_assign_test():
-        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
         if not is_admin_user(user_id):
             return jsonify({"error": "Forbidden"}), 403
 
-        data = request.get_json(force=True) or {}
         test_id = data.get("test_id")
         subject_id = data.get("subject_id")
 
@@ -433,13 +433,27 @@ def register_webapp_routes(app: Any) -> None:
         set_test_metadata_setting(test_id, subject_id=subject_id, updated_by=int(user_id or 0))
         return jsonify({"success": True, "test_id": test_id, "subject_id": subject_id})
 
-    @app.route("/api/admin/add_subject", methods=["POST"])
-    def api_admin_add_subject():
-        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+    @app.route("/api/admin/unlink_test", methods=["POST"])
+    def api_admin_unlink_test():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
         if not is_admin_user(user_id):
             return jsonify({"error": "Forbidden"}), 403
 
+        test_id = data.get("test_id")
+        if not test_id:
+            return jsonify({"error": "test_id required"}), 400
+
+        set_test_metadata_setting(test_id, subject_id="default", updated_by=int(user_id or 0))
+        return jsonify({"success": True, "unlinked_id": test_id})
+
+    @app.route("/api/admin/add_subject", methods=["POST"])
+    def api_admin_add_subject():
         data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
         sub_id = data.get("id") or data.get("title", "").strip().lower().replace(" ", "_")
         title = data.get("title", "").strip()
         emoji = data.get("emoji", "📚").strip()
@@ -450,13 +464,30 @@ def register_webapp_routes(app: Any) -> None:
         set_subject_setting(sub_id, title=title, emoji=emoji, updated_by=int(user_id or 0))
         return jsonify({"success": True, "subject_id": sub_id, "title": title})
 
-    @app.route("/api/admin/delete_subject", methods=["POST"])
-    def api_admin_delete_subject():
-        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+    @app.route("/api/admin/edit_subject", methods=["POST"])
+    def api_admin_edit_subject():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
         if not is_admin_user(user_id):
             return jsonify({"error": "Forbidden"}), 403
 
+        sub_id = data.get("id")
+        title = data.get("title", "").strip()
+        emoji = data.get("emoji", "📚").strip()
+
+        if not sub_id or not title:
+            return jsonify({"error": "id and title required"}), 400
+
+        set_subject_setting(sub_id, title=title, emoji=emoji, updated_by=int(user_id or 0))
+        return jsonify({"success": True, "subject_id": sub_id, "title": title, "emoji": emoji})
+
+    @app.route("/api/admin/delete_subject", methods=["POST"])
+    def api_admin_delete_subject():
         data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
         sub_id = data.get("id")
         if not sub_id:
             return jsonify({"error": "id required"}), 400

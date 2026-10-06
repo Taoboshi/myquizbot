@@ -166,6 +166,35 @@
       border-color: #6366f1 !important;
       background-color: #f8fafc !important;
     }
+    body.light-theme .fixed.inset-0 {
+      background-color: rgba(15, 23, 42, 0.45) !important;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    body.light-theme #modal-matrix > div,
+    body.light-theme #modal-start-from > div,
+    body.light-theme #modal-confirm-finish > div,
+    body.light-theme #modal-admin-action > div,
+    body.light-theme #modal-training-select > div,
+    body.light-theme #modal-discipline-stats > div,
+    body.light-theme #modal-view-attempt > div,
+    body.light-theme #modal-pin-action > div {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    }
+    body.light-theme select,
+    body.light-theme input,
+    body.light-theme textarea {
+      background-color: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    body.light-theme .bg-slate-800,
+    body.light-theme .bg-slate-800\/80 {
+      background-color: #e2e8f0 !important;
+    }
   </style>
 </head>
 <body class="bg-app-bg text-slate-100 min-h-screen flex flex-col select-none antialiased">
@@ -185,22 +214,19 @@
         </div>
         <div>
           <h1 id="header-title" class="text-sm font-extrabold text-white tracking-tight leading-none">ohTest</h1>
-          <span id="header-subtitle" class="text-[11px] text-slate-400 font-medium leading-none">Платформа тестирования</span>
+          <span id="header-subtitle" class="text-[11px] text-slate-400 font-medium leading-none">Медицинские тесты</span>
         </div>
       </div>
 
       <!-- Action Buttons Right -->
       <div class="flex items-center space-x-1.5">
-        <!-- Matrix / Grid view in solver -->
-        <button id="btn-grid-modal" class="hidden p-1.5 rounded-lg bg-app-surface border border-app-border text-slate-400 hover:text-white active:scale-90 transition" onclick="toggleMatrixModal()">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-        </button>
-        <!-- Favorite Star in solver -->
-        <button id="btn-fav-toggle" class="hidden p-1.5 rounded-lg bg-app-surface border border-app-border text-slate-400 hover:text-amber-400 active:scale-90 transition" onclick="toggleCurrentFavorite()">
-          <svg id="header-fav-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+        <!-- Matrix / Grid view in solver (prominent & visible) -->
+        <button id="btn-grid-modal" class="hidden px-2.5 py-1.5 rounded-xl bg-brand-500/20 border border-brand-500/50 text-brand-300 hover:bg-brand-500/30 active:scale-95 transition flex items-center gap-1.5 text-xs font-bold shadow-sm" onclick="toggleMatrixModal()">
+          <span class="text-xs">☷</span>
+          <span>Сетка</span>
         </button>
         <!-- Finish Early Button in solver -->
-        <button id="btn-finish-early" class="hidden px-2.5 py-1 rounded-lg bg-rose-950/40 border border-rose-500/40 text-[11px] font-bold text-rose-300 hover:bg-rose-900/50 active:scale-95 transition" onclick="requestFinishQuiz()">
+        <button id="btn-finish-early" class="hidden px-2.5 py-1.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] font-bold text-rose-300 hover:bg-rose-900/50 active:scale-95 transition" onclick="requestFinishQuiz()">
           Завершить 🎯
         </button>
         <!-- Admin badge indicator -->
@@ -380,15 +406,15 @@
               <span class="text-xs text-slate-500 group-hover:text-amber-400 transition">→</span>
             </button>
 
-            <!-- Mini Test (10) -->
-            <button onclick="startQuizMode('mini10')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-emerald-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
+            <!-- Training Mode -->
+            <button onclick="openTrainingSelectorModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-emerald-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
               <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
                   ⚡
                 </div>
                 <div>
-                  <h4 class="text-xs font-bold text-white group-hover:text-emerald-300 transition">Мини-тест (10 вопросов)</h4>
-                  <p class="text-[11px] text-slate-400">Быстрая проверка знаний за 2 минуты</p>
+                  <h4 class="text-xs font-bold text-white group-hover:text-emerald-300 transition">Тренировка</h4>
+                  <p class="text-[11px] text-slate-400">Выбор произвольного количества вопросов</p>
                 </div>
               </div>
               <span class="text-xs text-slate-500 group-hover:text-emerald-400 transition">→</span>
@@ -443,9 +469,12 @@
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs">
             <span id="solver-mode-tag" class="px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 font-semibold text-[11px]">По порядку</span>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
               <span id="solver-timer" class="font-mono text-slate-400 text-[11px]">⏱ 00:00</span>
-              <span id="solver-counter" class="font-mono text-brand-400 font-bold">1 / 100</span>
+              <button onclick="toggleMatrixModal()" class="px-2 py-0.5 rounded-lg bg-app-surface border border-brand-500/40 text-brand-300 hover:text-white font-mono font-bold text-[11px] flex items-center gap-1 active:scale-95 transition" title="Открыть сетку вопросов">
+                <span>☷</span>
+                <span id="solver-counter">1 / 100</span>
+              </button>
             </div>
           </div>
           <!-- Real Progress Bar -->
@@ -675,19 +704,19 @@
           </div>
         </div>
 
-        <!-- 4 Profile Subtabs: Рейтинг, Ошибки, Избранное, История -->
+        <!-- 4 Profile Subtabs: Избранное, Ошибки, История, Рейтинг -->
         <div class="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-app-surface border border-app-border">
-          <button id="ptab-btn-rating" onclick="switchProfileTab('rating')" class="py-2.5 px-1 rounded-xl bg-brand-600 text-white font-bold text-xs transition shadow-sm text-center truncate">
-            🏆 Рейтинг
+          <button id="ptab-btn-favs" onclick="switchProfileTab('favs')" class="py-2.5 px-1 rounded-xl bg-brand-600 text-white font-bold text-xs transition shadow-sm text-center truncate">
+            ★ Избранное
           </button>
           <button id="ptab-btn-errors" onclick="switchProfileTab('errors')" class="py-2.5 px-1 rounded-xl text-slate-400 hover:text-white font-semibold text-xs transition text-center truncate">
             🧠 Ошибки
           </button>
-          <button id="ptab-btn-favs" onclick="switchProfileTab('favs')" class="py-2.5 px-1 rounded-xl text-slate-400 hover:text-white font-semibold text-xs transition text-center truncate">
-            ★ Избранное
-          </button>
           <button id="ptab-btn-history" onclick="switchProfileTab('history')" class="py-2.5 px-1 rounded-xl text-slate-400 hover:text-white font-semibold text-xs transition text-center truncate">
             🕒 История
+          </button>
+          <button id="ptab-btn-rating" onclick="switchProfileTab('rating')" class="py-2.5 px-1 rounded-xl text-slate-400 hover:text-white font-semibold text-xs transition text-center truncate">
+            🏆 Рейтинг
           </button>
         </div>
 
@@ -752,7 +781,7 @@
         <!-- System Info -->
         <div class="p-4 rounded-2xl bg-app-card border border-app-border space-y-1 text-center text-xs text-slate-400">
           <div class="font-bold text-white">ohTest WebApp v2.6.0</div>
-          <div>Интеграция с Telegram Bot API & PostgreSQL</div>
+          <div>Официальная платформа тестирования</div>
         </div>
 
         <!-- ADMIN PANEL ENTRY BLOCK -->
@@ -760,7 +789,7 @@
           <div class="p-4 rounded-3xl bg-gradient-to-r from-brand-950 via-app-card to-app-card border border-brand-500/60 shadow-xl space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300">ДОСТУП АДМИНИСТРАТОРА</span>
-              <span class="text-xs text-brand-400 font-mono">ROOT</span>
+              <span class="text-xs text-brand-400 font-mono">Администратор</span>
             </div>
             <h3 class="text-sm font-extrabold text-white">Панель управления</h3>
             <p class="text-xs text-slate-300">Управление пользователями, тестами, рассылками и дисциплинами.</p>
@@ -785,7 +814,7 @@
         <!-- Admin Header Banner -->
         <div class="p-5 rounded-3xl bg-gradient-to-br from-brand-950 via-app-card to-app-card border border-brand-500/40 shadow-xl space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono">РЕАЛЬНЫЕ ДАННЫЕ СИСТЕМЫ</span>
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono">СТАТИСТИКА СИСТЕМЫ</span>
             <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">ONLINE</span>
           </div>
           <h2 class="text-base font-extrabold text-white">Центр управления ohTest</h2>
@@ -816,36 +845,24 @@
           </div>
         </div>
 
-        <!-- 8 Full Admin Action Tools -->
+        <!-- Unified Admin Action Tools -->
         <div class="space-y-2">
           <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Инструменты управления</span>
 
           <div class="grid grid-cols-1 gap-2">
-            <!-- 1. Test Management -->
-            <button onclick="openAdminModal('tests')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition">
+            <!-- 1. Unified Subject & Test Management -->
+            <button onclick="openAdminModal('subjects_and_tests')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition">
               <div class="flex items-center space-x-3">
-                <span class="text-xl">📋</span>
+                <span class="text-xl">📁</span>
                 <div>
-                  <div class="text-xs font-bold text-white">Управление тестами</div>
-                  <div class="text-[11px] text-slate-400">Переименование, перемещение между предметами, удаление</div>
+                  <div class="text-xs font-bold text-white">Управление предметами и тестами</div>
+                  <div class="text-[11px] text-slate-400">Редактирование предметов, тестов внутри них, отвязка и переименование</div>
                 </div>
               </div>
-              <span class="text-xs text-brand-400">Открыть →</span>
+              <span class="text-xs text-brand-400">Управление →</span>
             </button>
 
-            <!-- 2. Unassigned Tests -->
-            <button onclick="openAdminModal('unassigned')" class="p-3.5 rounded-2xl bg-app-card border border-amber-500/30 hover:border-amber-500 flex items-center justify-between text-left active:scale-[0.98] transition">
-              <div class="flex items-center space-x-3">
-                <span class="text-xl">🧷</span>
-                <div>
-                  <div class="text-xs font-bold text-white">Непривязанные тесты</div>
-                  <div class="text-[11px] text-slate-400">Привязать загруженные тесты к конкретному предмету</div>
-                </div>
-              </div>
-              <span class="text-xs text-amber-400">Привязать →</span>
-            </button>
-
-            <!-- 3. Upload JSON -->
+            <!-- 2. Upload JSON -->
             <button onclick="openAdminModal('upload')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-emerald-500 flex items-center justify-between text-left active:scale-[0.98] transition">
               <div class="flex items-center space-x-3">
                 <span class="text-xl">📥</span>
@@ -857,31 +874,19 @@
               <span class="text-xs text-emerald-400">Загрузить →</span>
             </button>
 
-            <!-- 4. Subject Management -->
-            <button onclick="openAdminModal('subjects')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-purple-500 flex items-center justify-between text-left active:scale-[0.98] transition">
-              <div class="flex items-center space-x-3">
-                <span class="text-xl">📁</span>
-                <div>
-                  <div class="text-xs font-bold text-white">Управление предметами</div>
-                  <div class="text-[11px] text-slate-400">Создание новых дисциплин, эмодзи, переименование</div>
-                </div>
-              </div>
-              <span class="text-xs text-purple-400">Настроить →</span>
-            </button>
-
-            <!-- 5. User Management (REAL DB DATA) -->
+            <!-- 3. User Management -->
             <button onclick="openAdminModal('users')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-blue-500 flex items-center justify-between text-left active:scale-[0.98] transition">
               <div class="flex items-center space-x-3">
                 <span class="text-xl">👥</span>
                 <div>
                   <div class="text-xs font-bold text-white">База пользователей</div>
-                  <div class="text-[11px] text-slate-400">Поиск по ID/username, сброс прогресса, реальная статистика</div>
+                  <div class="text-[11px] text-slate-400">Поиск по ID/username, сброс прогресса, статистика</div>
                 </div>
               </div>
               <span class="text-xs text-blue-400">Просмотр →</span>
             </button>
 
-            <!-- 6. Error Analytics (REAL DB DATA) -->
+            <!-- 4. Error Analytics -->
             <button onclick="openAdminModal('errors')" class="p-3.5 rounded-2xl bg-app-card border border-rose-500/30 hover:border-rose-500 flex items-center justify-between text-left active:scale-[0.98] transition">
               <div class="flex items-center space-x-3">
                 <span class="text-xl">🧠</span>
@@ -893,13 +898,13 @@
               <span class="text-xs text-rose-400">Анализ →</span>
             </button>
 
-            <!-- 7. Broadcast System -->
+            <!-- 5. Broadcast System -->
             <button onclick="openAdminModal('broadcast')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition">
               <div class="flex items-center space-x-3">
                 <span class="text-xl">📢</span>
                 <div>
                   <div class="text-xs font-bold text-white">Рассылка сообщений</div>
-                  <div class="text-[11px] text-slate-400">Массовое оповещение всех учеников через Telegram</div>
+                  <div class="text-[11px] text-slate-400">Оповещение всех зарегистрированных учеников</div>
                 </div>
               </div>
               <span class="text-xs text-brand-400">Отправить →</span>
@@ -974,6 +979,81 @@
       </div>
     </div>
 
+    <!-- Training Count Selector Modal -->
+    <div id="modal-training-select" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div class="w-full max-w-sm rounded-3xl bg-app-card border border-emerald-500/40 p-5 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">⚡</span>
+            <h3 class="text-sm font-bold text-white">Режим тренировки</h3>
+          </div>
+          <button onclick="closeTrainingSelectorModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
+        </div>
+        <p class="text-xs text-slate-400">Выберите количество вопросов для быстрой проверки:</p>
+        <div id="training-options-list" class="grid grid-cols-2 gap-2">
+          <!-- Populated by JS -->
+        </div>
+        <button onclick="closeTrainingSelectorModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-300">
+          Отмена
+        </button>
+      </div>
+    </div>
+
+    <!-- Discipline Statistics Modal (Viewing statistics only, NO solve button) -->
+    <div id="modal-discipline-stats" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div class="w-full max-w-sm rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-app-border pb-3">
+          <div>
+            <h3 id="disc-modal-title" class="text-sm font-extrabold text-white flex items-center gap-1.5">📚 Дисциплина</h3>
+            <p id="disc-modal-subtitle" class="text-[11px] text-slate-400">Статистика освоения</p>
+          </div>
+          <button onclick="closeDisciplineStatsModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
+        </div>
+        <div id="disc-modal-body" class="flex-1 overflow-y-auto space-y-2.5 hide-scrollbar">
+          <!-- Dynamic Content -->
+        </div>
+        <button onclick="closeDisciplineStatsModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-bold text-slate-300 hover:text-white">
+          Закрыть
+        </button>
+      </div>
+    </div>
+
+    <!-- View Attempt Breakdown Modal -->
+    <div id="modal-view-attempt" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div class="w-full max-w-md rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-app-border pb-3">
+          <div>
+            <h3 id="view-attempt-title" class="text-sm font-extrabold text-white truncate max-w-[240px]">Просмотр попытки</h3>
+            <p id="view-attempt-subtitle" class="text-[11px] text-slate-400">Детальный разбор ответов</p>
+          </div>
+          <button onclick="closeViewAttemptModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
+        </div>
+        <div id="view-attempt-body" class="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
+          <!-- Detailed questions list -->
+        </div>
+        <button onclick="closeViewAttemptModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-bold text-slate-300 hover:text-white">
+          Закрыть
+        </button>
+      </div>
+    </div>
+
+    <!-- Pin Action Modal (Home page long-press) -->
+    <div id="modal-pin-action" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+      <div class="w-full max-w-xs rounded-3xl bg-app-card border border-app-border p-5 space-y-3 shadow-2xl text-center">
+        <div id="pin-modal-icon" class="text-3xl mx-auto">📌</div>
+        <h3 id="pin-modal-title" class="text-sm font-bold text-white">Действие</h3>
+        <p id="pin-modal-desc" class="text-xs text-slate-400">Закрепить элемент вверху списка?</p>
+        <div class="space-y-2 pt-2">
+          <button id="pin-modal-toggle-btn" onclick="confirmTogglePin()" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition">
+            📌 Закрепить вверху
+          </button>
+          <button onclick="closePinActionModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-400 hover:text-white transition">
+            Отмена
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Bottom Navigation Bar (3 Buttons: Главная, Профиль, Настройки) -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass border-t border-app-border safe-bottom px-6 py-2.5 flex items-center justify-around">
       <button id="tab-home" onclick="switchTab('home')" class="flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition">
@@ -1019,7 +1099,8 @@
   let state = {
     currentTab: 'home',
     homeActiveView: 'home', // 'home' | 'tests' | 'hub' | 'solver' | 'result' | 'flashcards' | 'search'
-    activeProfileSubTab: 'favs', // 'favs' | 'errors' | 'history'
+    activeProfileSubTab: 'favs', // 'favs' | 'errors' | 'history' | 'rating'
+    showAllErrors: false,
     activeSubjectId: 'luchevaya_diagnostika',
     activeSubjectTitle: 'Основы лучевой диагностики',
     activeTestId: 'luchevaya_razdel_2',
@@ -1027,6 +1108,7 @@
     currentTestOriginalQuestions: [...BUNDLED_TESTS['luchevaya_razdel_2'].questions],
     activeQuestions: [...BUNDLED_TESTS['luchevaya_razdel_2'].questions],
     currentMode: 'normal',
+    trainingCount: 10,
     currentQIndex: 0,
     userAnswers: {},
     revealedAnswers: new Set(),
@@ -1042,6 +1124,93 @@
     historyAttempts: [],
     logoTaps: 0
   };
+
+  let pinnedSubjects = new Set(JSON.parse(localStorage.getItem('ohtest_pinned_subjects') || '[]'));
+  let pinnedTests = new Set(JSON.parse(localStorage.getItem('ohtest_pinned_tests') || '[]'));
+  let pinActionTarget = null;
+
+  function attachLongPress(el, onLongPress) {
+    let timer = null;
+    let hasTriggered = false;
+
+    el.addEventListener('touchstart', (e) => {
+      hasTriggered = false;
+      timer = setTimeout(() => {
+        hasTriggered = true;
+        triggerHaptic('medium');
+        onLongPress();
+      }, 450);
+    }, { passive: true });
+
+    el.addEventListener('touchmove', () => {
+      if (timer) clearTimeout(timer);
+    }, { passive: true });
+
+    el.addEventListener('touchend', (e) => {
+      if (timer) clearTimeout(timer);
+      if (hasTriggered) {
+        e.preventDefault();
+      }
+    });
+
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      onLongPress();
+    });
+  }
+
+  function showPinActionModal(type, id, title) {
+    pinActionTarget = { type, id, title };
+    const modal = document.getElementById('modal-pin-action');
+    const titleEl = document.getElementById('pin-modal-title');
+    const descEl = document.getElementById('pin-modal-desc');
+    const btnEl = document.getElementById('pin-modal-toggle-btn');
+
+    const isPinned = (type === 'subject') ? pinnedSubjects.has(id) : pinnedTests.has(id);
+    const itemTypeRu = (type === 'subject') ? 'предмет' : 'тест';
+
+    titleEl.innerText = title;
+    if (isPinned) {
+      descEl.innerText = `Этот ${itemTypeRu} сейчас закреплен вверху списка. Открепить?`;
+      btnEl.innerText = 'Открепить';
+      btnEl.className = "w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-slate-300 hover:text-white font-bold text-xs transition";
+    } else {
+      descEl.innerText = `Закрепить этот ${itemTypeRu} в самом верху списка на главной?`;
+      btnEl.innerText = '📌 Закрепить вверху';
+      btnEl.className = "w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition";
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function closePinActionModal() {
+    document.getElementById('modal-pin-action').classList.add('hidden');
+    pinActionTarget = null;
+  }
+
+  function confirmTogglePin() {
+    if (!pinActionTarget) return;
+    triggerHaptic('light');
+    const { type, id } = pinActionTarget;
+    if (type === 'subject') {
+      if (pinnedSubjects.has(id)) {
+        pinnedSubjects.delete(id);
+      } else {
+        pinnedSubjects.add(id);
+      }
+      localStorage.setItem('ohtest_pinned_subjects', JSON.stringify([...pinnedSubjects]));
+      renderHomeSubjects();
+    } else {
+      if (pinnedTests.has(id)) {
+        pinnedTests.delete(id);
+      } else {
+        pinnedTests.add(id);
+      }
+      localStorage.setItem('ohtest_pinned_tests', JSON.stringify([...pinnedTests]));
+      openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
+    }
+    closePinActionModal();
+  }
 
   let viewStack = ['home'];
   let fcIndex = 0;
@@ -1435,10 +1604,20 @@
     const list = document.getElementById('home-subjects-list');
     list.innerHTML = '';
 
-    adminStore.subjects.forEach(subj => {
+    // Alphabetical sort with pinned on top
+    const sortedSubjects = [...adminStore.subjects].sort((a, b) => {
+      const aPinned = pinnedSubjects.has(a.id) ? 1 : 0;
+      const bPinned = pinnedSubjects.has(b.id) ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return a.title.localeCompare(b.title, 'ru');
+    });
+
+    sortedSubjects.forEach(subj => {
+      const isPinned = pinnedSubjects.has(subj.id);
       const card = document.createElement('div');
-      card.className = "p-4 rounded-3xl bg-app-card border border-app-border hover:border-brand-500/60 active:scale-[0.98] transition cursor-pointer shadow-lg space-y-2 group";
+      card.className = "p-4 rounded-3xl bg-app-card border border-app-border hover:border-brand-500/60 active:scale-[0.98] transition cursor-pointer shadow-lg space-y-2 group relative";
       card.onclick = () => openSubjectTests(subj.id, subj.title);
+      attachLongPress(card, () => showPinActionModal('subject', subj.id, subj.title));
 
       const testsOfSubj = adminStore.testsMeta.filter(t => t.subject_id === subj.id);
       const testsCount = testsOfSubj.length;
@@ -1448,7 +1627,10 @@
           <div class="flex items-center space-x-3">
             <span class="text-2xl p-2 rounded-2xl bg-app-surface border border-app-border group-hover:scale-110 transition">${subj.emoji}</span>
             <div>
-              <h3 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${subj.title}</h3>
+              <div class="flex items-center gap-1.5">
+                <h3 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${subj.title}</h3>
+                ${isPinned ? '<span class="text-xs" title="Закреплено">📌</span>' : ''}
+              </div>
               <span class="text-[11px] text-slate-400">${testsCount} ${testsCount === 1 ? 'тест' : (testsCount < 5 ? 'теста' : 'тестов')}</span>
             </div>
           </div>
@@ -1479,23 +1661,36 @@
     container.innerHTML = '';
 
     const tests = adminStore.testsMeta.filter(t => t.subject_id === subjectId);
-    if (tests.length === 0) {
+    // Alphabetical sort with pinned on top
+    const sortedTests = [...tests].sort((a, b) => {
+      const aPinned = pinnedTests.has(a.id) ? 1 : 0;
+      const bPinned = pinnedTests.has(b.id) ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return a.title.localeCompare(b.title, 'ru');
+    });
+
+    if (sortedTests.length === 0) {
       container.innerHTML = `
         <div class="p-8 text-center rounded-2xl bg-app-card border border-app-border text-slate-400 text-xs">
           В этом разделе пока нет тестов. Вы можете привязать их в панели администратора.
         </div>
       `;
     } else {
-      tests.forEach(t => {
-        const btn = document.createElement('button');
-        btn.className = "w-full text-left p-4 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between active:scale-[0.98] transition group";
+      sortedTests.forEach(t => {
+        const isPinned = pinnedTests.has(t.id);
+        const btn = document.createElement('div');
+        btn.className = "w-full text-left p-4 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between active:scale-[0.98] transition group cursor-pointer";
         btn.onclick = () => selectTest(t.id);
+        attachLongPress(btn, () => showPinActionModal('test', t.id, t.title));
         btn.innerHTML = `
           <div class="space-y-1">
-            <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-brand-300 transition">${t.title}</h4>
+            <div class="flex items-center gap-1.5">
+              <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-brand-300 transition">${t.title}</h4>
+              ${isPinned ? '<span class="text-xs" title="Закреплено">📌</span>' : ''}
+            </div>
             <div class="flex items-center gap-2">
               <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 font-bold">${t.questions_count} вопросов</span>
-              <span class="text-[10px] text-emerald-400 font-medium">✓ Полная база</span>
+              <span class="text-[10px] text-emerald-400 font-medium">✓ Готов к сдаче</span>
             </div>
           </div>
           <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
@@ -1568,6 +1763,43 @@
   }
 
   // Quiz Solver Modes
+  function openTrainingSelectorModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('modal-training-select');
+    const container = document.getElementById('training-options-list');
+    const totalQ = state.currentTestOriginalQuestions.length;
+
+    const counts = [10, 20, 30, 50].filter(c => c < totalQ);
+    counts.push(totalQ);
+
+    container.innerHTML = '';
+    counts.forEach(count => {
+      const btn = document.createElement('button');
+      btn.className = "p-3 rounded-2xl bg-app-surface border border-app-border hover:border-emerald-500 text-center active:scale-95 transition group";
+      const isAll = (count === totalQ);
+      btn.onclick = () => {
+        closeTrainingSelectorModal();
+        startTrainingWithCount(count);
+      };
+      btn.innerHTML = `
+        <div class="text-base font-extrabold text-white group-hover:text-emerald-300 font-mono">${isAll ? 'Все' : count}</div>
+        <div class="text-[10px] text-slate-400">${isAll ? `${totalQ} вопр.` : 'вопросов'}</div>
+      `;
+      container.appendChild(btn);
+    });
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeTrainingSelectorModal() {
+    document.getElementById('modal-training-select').classList.add('hidden');
+  }
+
+  function startTrainingWithCount(count) {
+    state.trainingCount = count;
+    startQuizMode('training');
+  }
+
   function startQuizMode(mode) {
     triggerHaptic('light');
 
@@ -1586,8 +1818,9 @@
         state.activeQuestions = qs.sort(() => Math.random() - 0.5);
       } else if (mode === 'reverse') {
         state.activeQuestions = qs.reverse();
-      } else if (mode === 'mini10') {
-        state.activeQuestions = qs.sort(() => Math.random() - 0.5).slice(0, 10);
+      } else if (mode === 'training' || mode === 'mini10') {
+        const count = state.trainingCount || 10;
+        state.activeQuestions = qs.sort(() => Math.random() - 0.5).slice(0, count);
       }
     }
 
@@ -1601,7 +1834,6 @@
     document.getElementById('view-solver').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle').classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
     updateTelegramBackButton();
 
@@ -1609,7 +1841,8 @@
       normal: 'Контроль (по порядку)',
       random: 'Контроль (вразброс)',
       reverse: 'Контроль (с конца)',
-      mini10: 'Мини-тест 10',
+      training: `⚡ Тренировка (${state.activeQuestions.length} вопр.)`,
+      mini10: `⚡ Тренировка (${state.activeQuestions.length} вопр.)`,
       errors_solve: 'Разбор ошибок'
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[mode] || 'Контрольный тест';
@@ -1837,11 +2070,26 @@
     renderActiveAttemptBanner();
     updateHubResumeButton();
 
-    // Save in history
+    // Save full question snapshot in history
+    const qSnapshot = state.activeQuestions.map(q => ({
+      id: q.id,
+      question: q.question,
+      options: q.options,
+      correct: q.correct,
+      userAnswer: state.userAnswers[q.id]
+    }));
+
     state.historyAttempts.unshift({
       date: 'Только что',
       title: state.activeTestTitle,
-      score: `${correct}/${total} (${pct}%)`
+      testId: state.activeTestId,
+      score: `${correct}/${total} (${pct}%)`,
+      total: total,
+      correct: correct,
+      pct: pct,
+      mode: state.currentMode,
+      duration: state.timerSeconds,
+      questionsSnapshot: qSnapshot
     });
     try {
       localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts.slice(0, 50)));
@@ -1881,6 +2129,12 @@
         if (state.userAnswers[q.id] === q.correct) {
           state.userErrors.delete(q.id);
           try {
+            const resKey = `ohtest_resolved_errors_${state.activeTestId}`;
+            const curRes = new Set(JSON.parse(localStorage.getItem(resKey) || '[]'));
+            curRes.add(q.id);
+            localStorage.setItem(resKey, JSON.stringify([...curRes]));
+          } catch(e) {}
+          try {
             fetch('/api/errors/resolve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1913,9 +2167,6 @@
           </button>
           <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">
             🏛 В меню этого теста
-          </button>
-          <button onclick="switchTab('home')" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs transition">
-            🏠 На главную
           </button>
         `;
       } else {
@@ -2068,20 +2319,89 @@
 
   function updateFavUI(isFav) {
     const icon = document.getElementById('solver-fav-icon');
+    if (icon) {
+      if (isFav) {
+        icon.innerText = '★';
+        icon.className = 'text-amber-400 font-bold text-lg';
+      } else {
+        icon.innerText = '☆';
+        icon.className = 'text-slate-400 text-lg';
+      }
+    }
     const headerIcon = document.getElementById('header-fav-icon');
-
-    if (isFav) {
-      icon.innerText = '★';
-      icon.className = 'text-amber-400 font-bold';
-      headerIcon.classList.add('text-amber-400', 'fill-amber-400');
-    } else {
-      icon.innerText = '☆';
-      icon.className = 'text-slate-400';
-      headerIcon.classList.remove('text-amber-400', 'fill-amber-400');
+    if (headerIcon) {
+      if (isFav) {
+        headerIcon.classList.add('text-amber-400', 'fill-amber-400');
+      } else {
+        headerIcon.classList.remove('text-amber-400', 'fill-amber-400');
+      }
     }
   }
 
-  // Flashcards
+  // Flashcards (always loads all test questions + Quizlet-style touch swipe gestures)
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchCurrentX = 0;
+  let touchIsDragging = false;
+  let fcGesturesAttached = false;
+
+  function initFlashcardGestures() {
+    const card = document.getElementById('fc-card');
+    if (!card || fcGesturesAttached) return;
+    fcGesturesAttached = true;
+
+    card.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchCurrentX = touchStartX;
+      touchIsDragging = true;
+      card.style.transition = 'none';
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+      if (!touchIsDragging || e.touches.length !== 1) return;
+      touchCurrentX = e.touches[0].clientX;
+      const dx = touchCurrentX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        const rot = (dx / 18);
+        const flipRot = fcFlipped ? 180 : 0;
+        card.style.transform = `translateX(${dx}px) rotate(${rot}deg) rotateY(${flipRot}deg)`;
+      }
+    }, { passive: true });
+
+    card.addEventListener('touchend', (e) => {
+      if (!touchIsDragging) return;
+      touchIsDragging = false;
+      const dx = touchCurrentX - touchStartX;
+      const dy = e.changedTouches[0] ? (e.changedTouches[0].clientY - touchStartY) : 0;
+      card.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+
+      if (Math.abs(dx) > 70) {
+        const isRight = dx > 0;
+        const flyX = isRight ? 450 : -450;
+        const rot = isRight ? 25 : -25;
+        const flipRot = fcFlipped ? 180 : 0;
+        card.style.transform = `translateX(${flyX}px) rotate(${rot}deg) rotateY(${flipRot}deg)`;
+        setTimeout(() => {
+          card.style.transition = 'none';
+          card.style.transform = fcFlipped ? 'rotateY(180deg)' : 'none';
+          fcNext(isRight);
+          setTimeout(() => {
+            card.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
+          }, 30);
+        }, 180);
+      } else {
+        if (Math.abs(dx) < 12 && Math.abs(dy) < 12) {
+          flipCard();
+        } else {
+          card.style.transform = fcFlipped ? 'rotateY(180deg)' : 'none';
+        }
+      }
+    });
+  }
+
   function openFlashcards() {
     triggerHaptic('light');
     state.homeActiveView = 'flashcards';
@@ -2091,15 +2411,21 @@
     document.getElementById('header-title').innerText = "Флеш-карточки";
     document.getElementById('header-subtitle').innerText = state.activeTestTitle;
     updateTelegramBackButton();
+
+    // ALWAYS reset to original full test questions (prevents error-only bug)
+    state.activeQuestions = [...state.currentTestOriginalQuestions];
     fcIndex = 0;
     renderFCCard();
+    initFlashcardGestures();
     viewStack.push('flashcards');
   }
 
   function renderFCCard() {
     const q = state.activeQuestions[fcIndex];
     fcFlipped = false;
-    document.getElementById('fc-card').classList.remove('rotate-y-180');
+    const card = document.getElementById('fc-card');
+    card.classList.remove('rotate-y-180');
+    card.style.transform = 'none';
     document.getElementById('fc-counter').innerText = `Карточка ${fcIndex + 1} из ${state.activeQuestions.length}`;
     document.getElementById('fc-front-text').innerText = q.question;
     document.getElementById('fc-back-answer').innerText = q.options[q.correct];
@@ -2293,11 +2619,7 @@
 
       const item = document.createElement('div');
       item.className = "p-3 rounded-2xl bg-app-surface border border-app-border/70 space-y-2 cursor-pointer hover:border-brand-500/40 transition active:scale-[0.99]";
-      item.onclick = () => {
-        state.ratingActiveSubject = sub.id;
-        state.ratingActiveTest = 'all';
-        switchProfileTab('rating');
-      };
+      item.onclick = () => openDisciplineStatsModal(sub.id);
 
       item.innerHTML = `
         <div class="flex items-center justify-between text-xs">
@@ -2319,10 +2641,73 @@
     });
   }
 
+  function openDisciplineStatsModal(subjectId) {
+    triggerHaptic('light');
+    const modal = document.getElementById('modal-discipline-stats');
+    const titleEl = document.getElementById('disc-modal-title');
+    const bodyEl = document.getElementById('disc-modal-body');
+
+    const subj = adminStore.subjects.find(s => s.id === subjectId) || { title: 'Дисциплина', emoji: '📚' };
+    titleEl.innerText = `${subj.emoji} ${subj.title}`;
+
+    const tests = adminStore.testsMeta.filter(t => t.subject_id === subjectId);
+    if (tests.length === 0) {
+      bodyEl.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">В этом разделе пока нет тестов.</div>';
+    } else {
+      let cardsHtml = tests.map(t => {
+        const testAttempts = state.historyAttempts.filter(h => h.testId === t.id);
+        const attemptsCount = testAttempts.length;
+        let bestPct = 0;
+        testAttempts.forEach(h => {
+          const p = h.pct || 0;
+          if (p > bestPct) bestPct = p;
+        });
+
+        const testErrors = JSON.parse(localStorage.getItem(`ohtest_errors_${t.id}`) || '[]');
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-bold text-white">${t.title}</h4>
+              <span class="text-[10px] font-mono font-bold text-brand-300">${t.questions_count} вопр.</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 pt-1 text-center text-[10px]">
+              <div class="p-1.5 rounded-xl bg-app-card border border-app-border/40">
+                <span class="block text-slate-400">Попыток</span>
+                <span class="font-bold text-white font-mono">${attemptsCount}</span>
+              </div>
+              <div class="p-1.5 rounded-xl bg-app-card border border-app-border/40">
+                <span class="block text-slate-400">Рекорд</span>
+                <span class="font-bold ${bestPct >= 80 ? 'text-emerald-400' : 'text-amber-400'} font-mono">${attemptsCount > 0 ? `${bestPct}%` : '—'}</span>
+              </div>
+              <div class="p-1.5 rounded-xl bg-app-card border border-app-border/40">
+                <span class="block text-slate-400">Ошибок</span>
+                <span class="font-bold text-rose-400 font-mono">${testErrors.length}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      bodyEl.innerHTML = `
+        <div class="space-y-2">
+          <div class="text-[11px] text-slate-400 px-1">Статистика освоения по тестам:</div>
+          ${cardsHtml}
+        </div>
+      `;
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeDisciplineStatsModal() {
+    document.getElementById('modal-discipline-stats').classList.add('hidden');
+  }
+
   function switchProfileTab(subtab) {
     triggerHaptic('light');
     state.activeProfileSubTab = subtab;
-    ['rating', 'errors', 'favs', 'history'].forEach(t => {
+    ['favs', 'errors', 'history', 'rating'].forEach(t => {
       const btn = document.getElementById('ptab-btn-' + t);
       if (!btn) return;
       if (t === subtab) {
@@ -2390,7 +2775,6 @@
             </h3>
             <p class="text-[11px] text-slate-400">Рейтинг успеваемости по тестам</p>
           </div>
-          <span class="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium font-mono">Живые данные</span>
         </div>
 
         <div class="flex flex-wrap gap-1.5 pt-1">
@@ -2575,62 +2959,139 @@
     return result;
   }
 
+  function getResolvedErrors() {
+    const result = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('ohtest_resolved_errors_')) {
+          const testId = k.replace('ohtest_resolved_errors_', '');
+          const qids = JSON.parse(localStorage.getItem(k) || '[]');
+          const tData = BUNDLED_TESTS[testId];
+          if (tData && Array.isArray(qids)) {
+            qids.forEach(qid => {
+              const q = tData.questions.find(item => item.id == qid);
+              if (q) {
+                result.push({
+                  testId: testId,
+                  testTitle: tData.title,
+                  question: q,
+                  status: 'resolved'
+                });
+              }
+            });
+          }
+        }
+      }
+    } catch(e) {}
+    return result;
+  }
+
+  function toggleShowAllErrors(checked) {
+    triggerHaptic('light');
+    state.showAllErrors = checked;
+    renderErrorsSubtab();
+  }
+
+  function clearResolvedErrors() {
+    if (!confirm('Очистить список усвоенных (решённых) ошибок?')) return;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('ohtest_resolved_errors_')) {
+          localStorage.removeItem(k);
+        }
+      }
+    } catch(e) {}
+    renderErrorsSubtab();
+  }
+
   function renderErrorsSubtab() {
     const box = document.getElementById('profile-subtab-content');
-    const errors = getAllSavedErrors();
+    const unresolvedErrors = getAllSavedErrors().map(e => ({ ...e, status: 'unresolved' }));
+    const resolvedErrors = getResolvedErrors();
 
-    if (errors.length === 0) {
+    let displayList = state.showAllErrors ? [...unresolvedErrors, ...resolvedErrors] : [...unresolvedErrors];
+    // Unresolved always sorted to top!
+    displayList.sort((a, b) => {
+      if (a.status === 'unresolved' && b.status === 'resolved') return -1;
+      if (a.status === 'resolved' && b.status === 'unresolved') return 1;
+      return 0;
+    });
+
+    if (displayList.length === 0 && !state.showAllErrors) {
       box.innerHTML = `
-        <div class="p-8 text-center rounded-3xl bg-app-card border border-app-border space-y-2.5">
+        <div class="p-8 text-center rounded-3xl bg-app-card border border-app-border space-y-3">
           <div class="text-4xl">🎉</div>
-          <div class="text-xs font-bold text-white">В блокноте ошибок пусто!</div>
+          <div class="text-xs font-bold text-white">В блокноте нет активных ошибок!</div>
           <p class="text-[11px] text-slate-400 leading-relaxed">
-            Вопросы, на которые вы ответите неверно или пропустите при сдаче тестов, автоматически появятся здесь для повторной отработки.
+            Все вопросы усвоены или ещё не решались. Вопросы с неверными ответами появятся здесь автоматически.
           </p>
+          ${resolvedErrors.length > 0 ? `
+            <div class="pt-2">
+              <button onclick="toggleShowAllErrors(true)" class="px-3 py-1.5 rounded-xl bg-app-surface border border-app-border text-xs text-brand-300 font-semibold">
+                Показать решённые ошибки (${resolvedErrors.length})
+              </button>
+            </div>
+          ` : ''}
         </div>
       `;
       return;
     }
 
-    let itemsHtml = errors.map((errItem, idx) => {
+    let itemsHtml = displayList.map(errItem => {
       const q = errItem.question;
+      const isResolved = (errItem.status === 'resolved');
       const correctText = (q.options && q.options[q.correct]) ? q.options[q.correct] : '—';
+
       return `
-        <div class="p-4 rounded-2xl bg-app-card border border-rose-500/30 space-y-2.5">
+        <div class="p-4 rounded-2xl bg-app-card border ${isResolved ? 'border-emerald-500/30' : 'border-rose-500/30'} space-y-2.5">
           <div class="flex justify-between items-center text-xs">
-            <span class="text-[10px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-              ${errItem.testTitle} • Вопрос #${q.id}
+            <span class="text-[10px] font-bold ${isResolved ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border border-rose-500/20'} px-2 py-0.5 rounded-full truncate max-w-[200px]">
+              ${errItem.testTitle} • #${q.id} ${isResolved ? '✓ Усвоено' : '⚠️ Требует повторения'}
             </span>
             <div class="flex items-center space-x-2">
-              <button onclick="solveOneError('${errItem.testId}', ${q.id})" class="px-2.5 py-1 rounded-xl bg-rose-600/30 hover:bg-rose-600 text-rose-200 text-[11px] font-semibold active:scale-95 transition">
-                ▶ Решить
+              <button onclick="solveOneError('${errItem.testId}', ${q.id})" class="px-2.5 py-1 rounded-xl ${isResolved ? 'bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200' : 'bg-rose-600/30 hover:bg-rose-600 text-rose-200'} text-[11px] font-semibold active:scale-95 transition">
+                ▶ ${isResolved ? 'Повторить' : 'Решить'}
               </button>
-              <button onclick="dismissOneError('${errItem.testId}', ${q.id})" class="text-slate-500 hover:text-rose-400 text-xs px-1">
+              <button onclick="dismissOneError('${errItem.testId}', ${q.id}, '${errItem.status}')" class="text-slate-500 hover:text-rose-400 text-xs px-1">
                 ✕
               </button>
             </div>
           </div>
           <p class="text-xs text-white font-medium leading-relaxed">${q.question}</p>
           <div class="p-2.5 rounded-xl bg-app-surface text-[11px] text-emerald-400 border border-emerald-500/20 font-medium">
-            ✓ Правильный ответ: <span class="text-slate-200">${correctText}</span>
+            ✓ Ответ: <span class="text-slate-200">${correctText}</span>
           </div>
         </div>
       `;
     }).join('');
 
     box.innerHTML = `
-      <div class="flex items-center justify-between p-3.5 rounded-2xl bg-rose-950/30 border border-rose-500/30">
-        <div>
-          <div class="text-xs font-bold text-white">Активных ошибок: ${errors.length}</div>
-          <div class="text-[10px] text-slate-400">Тренировка сложных вопросов</div>
+      <div class="p-3.5 rounded-2xl bg-app-card border border-app-border space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-200 font-semibold select-none">
+            <input type="checkbox" ${state.showAllErrors ? 'checked' : ''} onchange="toggleShowAllErrors(this.checked)" class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
+            <span>Показать все (включая решённые)</span>
+          </label>
+          <span class="text-[10px] font-mono text-slate-400">Активных: ${unresolvedErrors.length}</span>
         </div>
-        <div class="flex items-center space-x-2">
-          <button onclick="startAllErrorsSession()" class="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-md active:scale-95 transition flex items-center gap-1">
-            <span>▶</span> Решить все (${errors.length})
-          </button>
-          <button onclick="clearAllProfileErrors()" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-300 active:scale-95 transition text-xs" title="Очистить все">
-            🗑
-          </button>
+        <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-xs">
+          ${unresolvedErrors.length > 0 ? `
+            <button onclick="startAllErrorsSession()" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md active:scale-95 transition flex items-center gap-1.5">
+              <span>▶</span> Решить нерешённые (${unresolvedErrors.length})
+            </button>
+          ` : '<span class="text-xs text-emerald-400 font-semibold">✓ Все ошибки отработаны!</span>'}
+          <div class="flex items-center gap-2">
+            ${resolvedErrors.length > 0 ? `
+              <button onclick="clearResolvedErrors()" class="text-[10px] text-slate-400 hover:text-emerald-300">
+                Очистить решённые
+              </button>
+            ` : ''}
+            <button onclick="clearAllProfileErrors()" class="p-1.5 rounded-xl text-slate-500 hover:text-rose-400" title="Очистить все">
+              🗑
+            </button>
+          </div>
         </div>
       </div>
       <div class="space-y-2.5">
@@ -2700,14 +3161,21 @@
     updateTelegramBackButton();
   }
 
-  function dismissOneError(testId, qid) {
+  function dismissOneError(testId, qid, status) {
     try {
-      const k = `ohtest_errors_${testId}`;
-      const arr = JSON.parse(localStorage.getItem(k) || '[]');
-      const filtered = arr.filter(id => id != qid);
-      localStorage.setItem(k, JSON.stringify(filtered));
-      if (state.activeTestId === testId) {
-        state.userErrors.delete(qid);
+      if (status === 'resolved') {
+        const k = `ohtest_resolved_errors_${testId}`;
+        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        const filtered = arr.filter(id => id != qid);
+        localStorage.setItem(k, JSON.stringify(filtered));
+      } else {
+        const k = `ohtest_errors_${testId}`;
+        const arr = JSON.parse(localStorage.getItem(k) || '[]');
+        const filtered = arr.filter(id => id != qid);
+        localStorage.setItem(k, JSON.stringify(filtered));
+        if (state.activeTestId === testId) {
+          state.userErrors.delete(qid);
+        }
       }
     } catch(e) {}
     renderErrorsSubtab();
@@ -2871,6 +3339,82 @@
     document.getElementById('profile-fav-count').innerText = getAllSavedFavorites().length;
   }
 
+  function getModeNameRu(mode) {
+    const map = {
+      normal: 'По порядку',
+      random: 'Вразброс',
+      reverse: 'С конца',
+      training: 'Тренировка',
+      mini10: 'Тренировка',
+      errors_solve: 'Разбор ошибок',
+      all_errors: 'Все ошибки',
+      all_favs: 'Избранное'
+    };
+    return map[mode] || mode || 'Тест';
+  }
+
+  function openViewAttemptModal(idx) {
+    triggerHaptic('light');
+    const attempt = state.historyAttempts[idx];
+    if (!attempt) return;
+
+    const modal = document.getElementById('modal-view-attempt');
+    const titleEl = document.getElementById('view-attempt-title');
+    const subtitleEl = document.getElementById('view-attempt-subtitle');
+    const bodyEl = document.getElementById('view-attempt-body');
+
+    titleEl.innerText = attempt.title || 'Попытка';
+    const modeBadge = getModeNameRu(attempt.mode);
+    subtitleEl.innerText = `${attempt.date || ''} • ${modeBadge} • Результат: ${attempt.score || ''}`;
+
+    if (!attempt.questionsSnapshot || attempt.questionsSnapshot.length === 0) {
+      bodyEl.innerHTML = `
+        <div class="p-6 text-center text-xs text-slate-400 space-y-2">
+          <div class="text-2xl">📋</div>
+          <div class="font-bold text-white">Детальный разбор недоступен</div>
+          <p class="text-[11px] text-slate-500">Эта попытка была записана до обновления системы детализации. Для всех новых тестов сохраняется полный разбор вопросов.</p>
+        </div>
+      `;
+    } else {
+      let qListHtml = attempt.questionsSnapshot.map((q, qIndex) => {
+        const userChoice = q.userAnswer;
+        const isCorrect = (userChoice === q.correct);
+        const userOptText = (userChoice !== undefined && q.options[userChoice]) ? q.options[userChoice] : 'Без ответа (пропуск)';
+        const correctOptText = (q.options && q.options[q.correct]) ? q.options[q.correct] : '—';
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-app-surface border ${isCorrect ? 'border-emerald-500/30' : 'border-rose-500/30'} text-xs space-y-2">
+            <div class="flex items-center justify-between font-bold">
+              <span class="text-slate-300">Вопрос #${q.id}</span>
+              <span class="${isCorrect ? 'text-emerald-400' : 'text-rose-400'} font-semibold font-mono">
+                ${isCorrect ? '✓ Верно' : '✕ Ошибка'}
+              </span>
+            </div>
+            <p class="text-white font-medium leading-relaxed">${q.question}</p>
+            <div class="space-y-1 pt-1 text-[11px]">
+              <div class="p-2 rounded-xl ${isCorrect ? 'bg-emerald-950/40 text-emerald-300' : 'bg-rose-950/40 text-rose-300'}">
+                Ваш ответ: <span class="font-semibold">${userOptText}</span>
+              </div>
+              ${!isCorrect ? `
+                <div class="p-2 rounded-xl bg-emerald-950/40 text-emerald-300">
+                  Правильный ответ: <span class="font-semibold">${correctOptText}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      bodyEl.innerHTML = qListHtml;
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeViewAttemptModal() {
+    document.getElementById('modal-view-attempt').classList.add('hidden');
+  }
+
   function renderHistorySubtab() {
     const box = document.getElementById('profile-subtab-content');
     if (state.historyAttempts.length === 0) {
@@ -2879,7 +3423,7 @@
           <div class="text-4xl">🕒</div>
           <div class="text-xs font-bold text-white">История прохождений пока пуста</div>
           <p class="text-[11px] text-slate-400 leading-relaxed">
-            Пройдите любой тест в приложении, и ваша статистика, точность и затраченное время сохранятся здесь.
+            Пройдите любой тест в приложении, и ваша статистика, точность и детальный разбор ответов сохранятся здесь.
           </p>
         </div>
       `;
@@ -2892,16 +3436,17 @@
       const mins = h.duration ? String(Math.floor(h.duration / 60)).padStart(2, '0') : '';
       const secs = h.duration ? String(h.duration % 60).padStart(2, '0') : '';
       const timeStr = (mins && secs) ? `${mins}:${secs}` : '';
+      const modeLabel = getModeNameRu(h.mode);
 
       return `
-        <div class="p-3.5 rounded-2xl bg-app-card border border-app-border space-y-2">
+        <div class="p-3.5 rounded-2xl bg-app-card border border-app-border space-y-2.5">
           <div class="flex justify-between items-start">
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold text-white truncate">${h.title || 'Тест'}</div>
-              <div class="text-[10px] text-slate-400 mt-0.5 flex items-center space-x-2">
-                <span>${h.date || 'Недавно'}</span>
+              <div class="text-[10px] text-slate-400 mt-1 flex flex-wrap items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded-md bg-app-surface text-brand-300 font-semibold">${modeLabel}</span>
+                <span>• ${h.date || 'Недавно'}</span>
                 ${timeStr ? `<span>• ⏱ ${timeStr}</span>` : ''}
-                ${h.mode ? `<span>• Режим: ${h.mode}</span>` : ''}
               </div>
             </div>
             <div class="text-right shrink-0 ml-2">
@@ -2909,13 +3454,16 @@
               ${pct ? `<div class="text-[10px] text-slate-400 font-mono">${pct}%</div>` : ''}
             </div>
           </div>
-          ${h.testId ? `
-            <div class="pt-1 flex justify-end">
-              <button onclick="retakeTestFromHistory('${h.testId}')" class="px-2.5 py-1 rounded-xl bg-app-surface hover:bg-brand-600/30 border border-app-border text-[10px] font-semibold text-brand-300 hover:text-white active:scale-95 transition">
+          <div class="pt-1 flex items-center justify-end gap-2 border-t border-app-border/40">
+            <button onclick="openViewAttemptModal(${idx})" class="px-2.5 py-1 rounded-xl bg-app-surface hover:bg-brand-600/30 border border-app-border text-[10px] font-semibold text-brand-300 hover:text-white active:scale-95 transition flex items-center gap-1">
+              <span>🔍</span> Просмотреть попытку
+            </button>
+            ${h.testId ? `
+              <button onclick="retakeTestFromHistory('${h.testId}')" class="px-2.5 py-1 rounded-xl bg-app-surface hover:bg-slate-700 border border-app-border text-[10px] font-semibold text-slate-300 hover:text-white active:scale-95 transition">
                 ↻ Пройти снова
               </button>
-            </div>
-          ` : ''}
+            ` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -2990,71 +3538,108 @@
 
     modal.classList.remove('hidden');
 
-    if (type === 'tests') {
-      title.innerHTML = '<span>📋</span> Управление тестами';
+    if (type === 'subjects_and_tests' || type === 'tests' || type === 'subjects' || type === 'unassigned') {
+      title.innerHTML = '<span>📁</span> Управление предметами и тестами';
+      
+      const unassignedTests = adminStore.testsMeta.filter(t => t.subject_id === 'default' || !t.subject_id);
+
+      let subjectsHtml = adminStore.subjects.map(s => {
+        const testsInSub = adminStore.testsMeta.filter(t => t.subject_id === s.id);
+        
+        let testsListHtml = '';
+        if (testsInSub.length === 0) {
+          testsListHtml = '<div class="p-2 text-center text-[11px] text-slate-400">В этом предмете пока нет привязанных тестов.</div>';
+        } else {
+          testsListHtml = testsInSub.map(t => `
+            <div class="p-3 rounded-xl bg-app-card border border-app-border space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-white">${t.title}</span>
+                <span class="font-mono text-[10px] text-brand-300 font-bold">${t.questions_count} вопр.</span>
+              </div>
+              <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2">
+                <button onclick="renameTestPrompt('${t.id}', '${t.title.replace(/'/g, "\\'")}')" class="text-brand-300 hover:underline">
+                  ✏️ Переименовать
+                </button>
+                <button onclick="unlinkTest('${t.id}')" class="text-amber-400 hover:underline">
+                  🔗 Отвязать от предмета
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-lg">${s.emoji}</span>
+                <span class="text-xs font-bold text-white">${s.title}</span>
+                <span class="text-[10px] text-slate-400 font-mono">(${testsInSub.length})</span>
+              </div>
+              <div class="flex items-center gap-1.5 text-xs">
+                <button onclick="editSubjectPrompt('${s.id}', '${s.title.replace(/'/g, "\\'")}', '${s.emoji}')" class="px-2 py-0.5 rounded-lg bg-app-card border border-app-border text-[10px] text-brand-300 hover:text-white" title="Редактировать предмет">
+                  ✏️
+                </button>
+                <button onclick="deleteSubject('${s.id}')" class="px-2 py-0.5 rounded-lg bg-app-card border border-app-border text-[10px] text-rose-400 hover:text-white" title="Удалить предмет">
+                  🗑
+                </button>
+              </div>
+            </div>
+            <div class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
+              ${testsListHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      let unassignedSection = '';
+      if (unassignedTests.length > 0) {
+        let unassignedCards = unassignedTests.map(t => `
+          <div class="p-3 rounded-xl bg-app-card border border-amber-500/30 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-white">${t.title}</span>
+              <span class="font-mono text-[10px] text-amber-400 font-bold">${t.questions_count} вопр.</span>
+            </div>
+            <div class="flex items-center gap-2 pt-1">
+              <select id="u-assign-${t.id}" class="flex-1 px-2 py-1.5 rounded-xl bg-app-surface border border-app-border text-xs text-white">
+                ${adminStore.subjects.map(s => `<option value="${s.id}">${s.emoji} ${s.title}</option>`).join('')}
+              </select>
+              <button onclick="assignUnassignedTest('${t.id}')" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">
+                Привязать
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        unassignedSection = `
+          <div class="space-y-2 pt-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">🧷 Непривязанные тесты (${unassignedTests.length})</span>
+            </div>
+            <div class="space-y-2">${unassignedCards}</div>
+          </div>
+        `;
+      }
+
       body.innerHTML = `
-        <div class="space-y-2">
-          <p class="text-xs text-slate-300">Все тесты в системе. Вы можете переименовать или переместить любой тест:</p>
-          <div id="adm-all-tests-list" class="space-y-2"></div>
+        <div class="space-y-3">
+          <!-- Add Subject Box -->
+          <div class="p-3 rounded-2xl bg-app-surface border border-app-border space-y-2">
+            <div class="text-xs font-bold text-white">Добавить новый предмет</div>
+            <div class="flex gap-2">
+              <input id="new-subj-title" placeholder="Название предмета..." class="flex-1 px-3 py-1.5 rounded-xl bg-app-card border border-app-border text-xs text-white">
+              <input id="new-subj-emoji" value="📚" class="w-12 text-center px-1 py-1.5 rounded-xl bg-app-card border border-app-border text-xs text-white">
+              <button onclick="addNewSubject()" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">Создать</button>
+            </div>
+          </div>
+
+          <div class="space-y-2.5">
+            ${subjectsHtml}
+          </div>
+
+          ${unassignedSection}
         </div>
       `;
-      const list = document.getElementById('adm-all-tests-list');
-      adminStore.testsMeta.forEach(t => {
-        const el = document.createElement('div');
-        el.className = "p-3 rounded-2xl bg-app-surface border border-app-border space-y-2";
-        el.innerHTML = `
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-white">${t.title}</span>
-            <span class="font-mono text-[10px] text-brand-400 font-bold">${t.questions_count} вопр.</span>
-          </div>
-          <div class="flex items-center gap-2 pt-1 border-t border-app-border/80">
-            <select id="move-sel-${t.id}" class="flex-1 px-2 py-1.5 rounded-xl bg-app-card border border-app-border text-xs text-white">
-              <option value="luchevaya_diagnostika" ${t.subject_id === 'luchevaya_diagnostika' ? 'selected' : ''}>Основы лучевой диагностики</option>
-              <option value="farmakologiya" ${t.subject_id === 'farmakologiya' ? 'selected' : ''}>Фармакология</option>
-              <option value="oziz" ${t.subject_id === 'oziz' ? 'selected' : ''}>ОЗ и Здравоохранение</option>
-              <option value="default" ${t.subject_id === 'default' ? 'selected' : ''}>Отвязать (Непривязанный)</option>
-            </select>
-            <button onclick="reassignTest('${t.id}')" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">
-              Сохранить
-            </button>
-          </div>
-          <div class="flex items-center justify-between pt-0.5 text-[11px]">
-            <button onclick="renameTestPrompt('${t.id}', '${t.title}')" class="text-brand-300 hover:underline">✏️ Переименовать</button>
-            <button onclick="deleteTestConfirm('${t.id}')" class="text-rose-400 hover:underline">🗑 Удалить</button>
-          </div>
-        `;
-        list.appendChild(el);
-      });
-    } else if (type === 'unassigned') {
-      title.innerHTML = '<span>🧷</span> Непривязанные тесты';
-      const unassignedList = adminStore.testsMeta.filter(t => t.subject_id === 'default' || !t.subject_id);
-      if (unassignedList.length === 0) {
-        body.innerHTML = '<div class="p-8 text-center text-xs text-slate-400">Все тесты уже распределены по дисциплинам!</div>';
-        return;
-      }
-      body.innerHTML = '<div class="space-y-2.5" id="adm-unassigned-list"></div>';
-      const list = document.getElementById('adm-unassigned-list');
-      unassignedList.forEach(t => {
-        const el = document.createElement('div');
-        el.className = "p-3 rounded-2xl bg-app-surface border border-app-border space-y-2";
-        el.innerHTML = `
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-white">${t.title}</span>
-            <span class="font-mono text-[10px] text-amber-400 font-bold">${t.questions_count} вопр.</span>
-          </div>
-          <div class="flex items-center gap-2 pt-1 border-t border-app-border/80">
-            <select id="u-assign-${t.id}" class="flex-1 px-2 py-1.5 rounded-xl bg-app-card border border-app-border text-xs text-white">
-              <option value="luchevaya_diagnostika">Основы лучевой диагностики</option>
-              <option value="farmakologiya">Фармакология</option>
-              <option value="oziz">ОЗ и Здравоохранение</option>
-            </select>
-            <button onclick="assignUnassignedTest('${t.id}')" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">
-              Привязать
-            </button>
-          </div>
-        `;
-        list.appendChild(el);
-      });
     } else if (type === 'upload') {
       title.innerHTML = '<span>📥</span> Загрузить JSON-тест';
       body.innerHTML = `
@@ -3263,17 +3848,56 @@
     }
   }
 
+  async function unlinkTest(testId) {
+    if (!confirm('Отвязать этот тест от предмета? Тест переместится в список непривязанных (файл не удаляется).')) return;
+    triggerHaptic('light');
+    const t = adminStore.testsMeta.find(x => x.id === testId);
+    if (t) {
+      t.subject_id = 'default';
+      fetch('/api/admin/unlink_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: state.userId, test_id: testId })
+      }).catch(() => {});
+      updateAdminStats();
+      renderHomeSubjects();
+      openAdminModal('subjects_and_tests');
+    }
+  }
+
+  async function editSubjectPrompt(subId, oldTitle, oldEmoji) {
+    const newTitle = prompt('Новое название предмета:', oldTitle);
+    if (!newTitle || !newTitle.trim()) return;
+    const newEmoji = prompt('Эмодзи предмета:', oldEmoji || '📚') || oldEmoji || '📚';
+    triggerHaptic('light');
+
+    const s = adminStore.subjects.find(x => x.id === subId);
+    if (s) {
+      s.title = newTitle.trim();
+      s.emoji = newEmoji.trim();
+      fetch('/api/admin/edit_subject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: state.userId, id: subId, title: newTitle.trim(), emoji: newEmoji.trim() })
+      }).catch(() => {});
+      renderHomeSubjects();
+      openAdminModal('subjects_and_tests');
+    }
+  }
+
   function renameTestPrompt(testId, oldTitle) {
     const newTitle = prompt('Введите новое название теста:', oldTitle);
     if (newTitle && newTitle.trim()) {
+      triggerHaptic('light');
       const t = adminStore.testsMeta.find(x => x.id === testId);
       if (t) t.title = newTitle.trim();
+      if (BUNDLED_TESTS[testId]) BUNDLED_TESTS[testId].title = newTitle.trim();
       fetch('/api/admin/rename_test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: state.userId, test_id: testId, title: newTitle.trim() })
       }).catch(() => {});
-      openAdminModal('tests');
+      openAdminModal('subjects_and_tests');
       renderHomeSubjects();
     }
   }
