@@ -73,6 +73,17 @@
       scrollbar-width: none;
     }
     /* Liquid Mesh and Glass styles */
+    .app-wrapper {
+      background: rgba(4, 10, 7, 0.52);
+      border-left: 1.5px solid rgba(52, 211, 153, 0.16);
+      border-right: 1.5px solid rgba(52, 211, 153, 0.16);
+      box-shadow: 0 0 50px -10px rgba(16, 185, 129, 0.15);
+    }
+    body.light-theme .app-wrapper {
+      background: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+      box-shadow: none !important;
+    }
     .liquid-mesh {
       position: fixed;
       inset: 0;
@@ -82,30 +93,48 @@
     }
     .liquid-orb-1 {
       position: absolute;
-      width: 450px;
-      height: 450px;
+      width: 480px;
+      height: 480px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
-      filter: blur(85px);
-      top: -100px;
-      left: 15%;
-      animation: floatLiquid 18s infinite ease-in-out alternate;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(5, 150, 105, 0) 70%);
+      filter: blur(80px);
+      top: -80px;
+      left: 10%;
+      animation: floatLiquid 16s infinite ease-in-out alternate;
     }
     .liquid-orb-2 {
       position: absolute;
-      width: 500px;
-      height: 500px;
+      width: 520px;
+      height: 520px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(5, 150, 105, 0.18) 0%, transparent 70%);
-      filter: blur(95px);
-      bottom: 10%;
-      right: -80px;
-      animation: floatLiquid 24s infinite ease-in-out alternate-reverse;
+      background: radial-gradient(circle, rgba(5, 150, 105, 0.3) 0%, rgba(4, 120, 87, 0) 70%);
+      filter: blur(90px);
+      top: 35%;
+      right: -100px;
+      animation: floatLiquid 22s infinite ease-in-out alternate-reverse;
+    }
+    .liquid-orb-3 {
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, rgba(16, 185, 129, 0) 70%);
+      filter: blur(85px);
+      bottom: -60px;
+      left: -60px;
+      animation: floatLiquid 18s infinite ease-in-out alternate;
     }
     @keyframes floatLiquid {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(30px, 40px) scale(1.1); }
-      100% { transform: translate(-25px, -30px) scale(0.95); }
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { transform: translate(35px, 45px) scale(1.12) rotate(30deg); }
+      100% { transform: translate(-25px, -35px) scale(0.94) rotate(-20deg); }
+    }
+    header.glass {
+      background: rgba(8, 20, 14, 0.82) !important;
+      backdrop-filter: blur(32px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(190%) !important;
+      border-bottom: 1.5px solid rgba(52, 211, 153, 0.22) !important;
+      box-shadow: inset 0 -1px 1px 0 rgba(16, 185, 129, 0.12), 0 10px 30px rgba(0, 0, 0, 0.65) !important;
     }
     .glass {
       background: rgba(10, 22, 16, 0.75) !important;
@@ -115,39 +144,96 @@
       box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.18), 0 16px 40px -12px rgba(0, 0, 0, 0.7) !important;
     }
     .bg-app-card {
-      background-color: rgba(12, 26, 18, 0.6) !important;
-      backdrop-filter: blur(20px) saturate(170%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(170%) !important;
-      border-color: rgba(52, 211, 153, 0.18) !important;
-      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12), 0 8px 24px -6px rgba(0, 0, 0, 0.5) !important;
+      background: rgba(14, 30, 22, 0.58) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.22) !important;
+      box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 1px 0 rgba(16, 185, 129, 0.08), 0 10px 30px -6px rgba(0, 0, 0, 0.65) !important;
+      border-radius: 22px !important;
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
     }
     .bg-app-card:hover {
-      background-color: rgba(16, 36, 26, 0.75) !important;
-      border-color: rgba(52, 211, 153, 0.35) !important;
-      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 12px 32px -6px rgba(0, 0, 0, 0.6), 0 0 20px -2px rgba(16, 185, 129, 0.2) !important;
+      background: rgba(18, 42, 30, 0.75) !important;
+      border-color: rgba(52, 211, 153, 0.45) !important;
+      box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.28), 0 14px 36px -6px rgba(0, 0, 0, 0.7), 0 0 25px rgba(16, 185, 129, 0.25) !important;
+      transform: translateY(-2px);
     }
     .border-app-border {
-      border-color: rgba(52, 211, 153, 0.2) !important;
+      border-color: rgba(52, 211, 153, 0.22) !important;
     }
     .bg-app-surface {
       background-color: rgba(14, 32, 23, 0.65) !important;
       backdrop-filter: blur(16px) !important;
       -webkit-backdrop-filter: blur(16px) !important;
+      border: 1px solid rgba(52, 211, 153, 0.18) !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.12) !important;
+      border-radius: 16px !important;
     }
     nav.glass {
-      background: rgba(8, 18, 13, 0.85) !important;
-      backdrop-filter: blur(32px) saturate(200%) !important;
-      -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
-      border-top: 1px solid rgba(52, 211, 153, 0.25) !important;
-      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 -10px 32px rgba(0, 0, 0, 0.6), 0 0 25px rgba(16, 185, 129, 0.15) !important;
+      position: fixed !important;
+      bottom: max(env(safe-area-inset-bottom), 14px) !important;
+      left: 14px !important;
+      right: 14px !important;
+      max-width: 420px !important;
+      margin: 0 auto !important;
+      border-radius: 26px !important;
+      background: rgba(8, 20, 14, 0.88) !important;
+      backdrop-filter: blur(35px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.28) !important;
+      box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.25), 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.25) !important;
+      padding: 10px 20px !important;
+      z-index: 50 !important;
+    }
+    nav.glass button.text-brand-400 svg {
+      filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.85));
+    }
+    nav.glass button.text-brand-400 span {
+      text-shadow: 0 0 10px rgba(52, 211, 153, 0.7);
+    }
+    .hero-glass-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(6, 36, 22, 0.55) 100%) !important;
+      backdrop-filter: blur(28px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+      box-shadow: inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.25), 0 14px 36px -6px rgba(0, 0, 0, 0.65), 0 0 25px rgba(16, 185, 129, 0.2) !important;
+      border-radius: 26px !important;
+    }
+    .active-attempt-glass {
+      background: linear-gradient(135deg, rgba(6, 40, 24, 0.8) 0%, rgba(14, 30, 22, 0.7) 100%) !important;
+      backdrop-filter: blur(25px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.5) !important;
+      box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.25), 0 0 25px rgba(16, 185, 129, 0.3) !important;
+      border-radius: 24px !important;
+    }
+    .modal-glass-card {
+      background: rgba(10, 24, 17, 0.92) !important;
+      backdrop-filter: blur(36px) saturate(200%) !important;
+      -webkit-backdrop-filter: blur(36px) saturate(200%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.35) !important;
+      box-shadow: inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.28), 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.25) !important;
+      border-radius: 28px !important;
+    }
+    #fc-card > div:first-child {
+      background: linear-gradient(135deg, rgba(14, 34, 24, 0.78) 0%, rgba(6, 18, 12, 0.88) 100%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.32) !important;
+      box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22), 0 14px 32px rgba(0, 0, 0, 0.55) !important;
+    }
+    #fc-card > div:last-child {
+      background: linear-gradient(135deg, rgba(6, 44, 28, 0.88) 0%, rgba(2, 24, 15, 0.96) 100%) !important;
+      border: 1.5px solid #34d399 !important;
+      box-shadow: inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.3), 0 0 30px rgba(16, 185, 129, 0.4) !important;
     }
     .btn-brand, .bg-brand-600 {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-      border: 1px solid rgba(167, 243, 208, 0.35) !important;
-      box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.35), 0 6px 20px -3px rgba(16, 185, 129, 0.45) !important;
+      border: 1px solid rgba(255, 255, 255, 0.35) !important;
+      box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.4), 0 6px 22px rgba(16, 185, 129, 0.5) !important;
+      border-radius: 16px !important;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
     }
     .bg-brand-600:active {
-      transform: scale(0.97);
+      transform: scale(0.97) !important;
       box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.3), 0 2px 10px rgba(16, 185, 129, 0.3) !important;
     }
     .perspective-1000 {
@@ -311,42 +397,75 @@
     body.light-theme #fc-back-answer {
       color: #065f46 !important;
     }
+    body.light-theme .hero-glass-banner {
+      background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%) !important;
+      border-color: #86efac !important;
+      box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1) !important;
+    }
+    body.light-theme .active-attempt-glass {
+      background: #ecfdf5 !important;
+      border-color: #10b981 !important;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15) !important;
+    }
+    body.light-theme nav.glass {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border: 1.5px solid #e2e8f0 !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+    }
+    body.light-theme nav.glass button.text-brand-400 svg {
+      filter: none !important;
+    }
+    body.light-theme nav.glass button.text-brand-400 span {
+      text-shadow: none !important;
+    }
+    body.light-theme .modal-glass-card {
+      background: #ffffff !important;
+      border: 1.5px solid #e2e8f0 !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15) !important;
+    }
 
     /* Option button visual feedback on answer (Liquid Glass in Dark & High Contrast in Light) */
     .option-btn-unanswered {
-      background-color: rgba(14, 28, 20, 0.55);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-color: rgba(52, 211, 153, 0.18);
-      color: #f0fdf4;
-      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+      background: rgba(12, 28, 20, 0.58) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+      border: 1.5px solid rgba(52, 211, 153, 0.2) !important;
+      color: #f0fdf4 !important;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.14), 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+      border-radius: 18px !important;
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
     }
     .option-btn-unanswered:hover {
-      border-color: #10b981;
-      background-color: rgba(16, 36, 26, 0.7);
-      box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+      border-color: rgba(52, 211, 153, 0.45) !important;
+      background: rgba(18, 42, 30, 0.75) !important;
+      box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(16, 185, 129, 0.3) !important;
+      transform: translateY(-1px);
     }
     body.light-theme .option-btn-unanswered {
-      background-color: #ffffff !important;
-      border-color: #e2e8f0 !important;
+      background: #ffffff !important;
+      border: 1.5px solid #e2e8f0 !important;
       color: #1e293b !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
     }
     body.light-theme .option-btn-unanswered:hover {
-      border-color: #6366f1 !important;
-      background-color: #f8fafc !important;
+      border-color: #10b981 !important;
+      background: #f8fafc !important;
+      transform: none !important;
     }
 
     .option-btn-correct {
-      background-color: rgba(16, 185, 129, 0.22) !important;
-      border-color: #10b981 !important;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.32) 0%, rgba(5, 150, 105, 0.45) 100%) !important;
+      border: 1.5px solid #34d399 !important;
       color: #ecfdf5 !important;
-      box-shadow: 0 0 16px rgba(16, 185, 129, 0.3) !important;
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.45), inset 0 1px 1.5px rgba(255, 255, 255, 0.3) !important;
+      border-radius: 18px !important;
     }
     .option-btn-wrong {
-      background-color: rgba(244, 63, 94, 0.22) !important;
-      border-color: #f43f5e !important;
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.28) 0%, rgba(190, 18, 60, 0.38) 100%) !important;
+      border: 1.5px solid #f43f5e !important;
       color: #fff1f2 !important;
-      box-shadow: 0 0 16px rgba(244, 63, 94, 0.3) !important;
+      box-shadow: 0 0 22px rgba(244, 63, 94, 0.4), inset 0 1px 1.5px rgba(255, 255, 255, 0.3) !important;
+      border-radius: 18px !important;
     }
     .option-btn-muted {
       background-color: rgba(17, 21, 34, 0.4) !important;
@@ -402,15 +521,16 @@
   
   </style>
 </head>
-<body class="bg-app-bg text-slate-100 min-h-screen flex flex-col select-none antialiased">
+<body class="text-slate-100 min-h-screen flex flex-col select-none antialiased">
   <!-- Ambient Liquid Glow Mesh -->
   <div class="liquid-mesh">
     <div class="liquid-orb-1"></div>
     <div class="liquid-orb-2"></div>
+    <div class="liquid-orb-3"></div>
   </div>
 
   <!-- Mobile App Wrapper -->
-  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-app-bg relative shadow-2xl border-x border-app-border/40 overflow-hidden">
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col app-wrapper relative shadow-2xl overflow-hidden">
 
     <!-- Top App Bar / Header -->
     <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3.5 py-2.5 flex items-center justify-between safe-top">
@@ -447,7 +567,7 @@
     </header>
 
     <!-- Scrollable Content Body -->
-    <main id="app-body" class="flex-1 overflow-y-auto hide-scrollbar p-4 space-y-4 pb-24">
+    <main id="app-body" class="flex-1 overflow-y-auto hide-scrollbar p-4 space-y-4 pb-28">
 
       <!-- ========================================== -->
       <!-- VIEW 1: HOME CATALOG (Выбор раздела / предмета) -->
@@ -455,7 +575,7 @@
       <section id="view-home" class="space-y-4">
         
         <!-- PROMINENT ACTIVE ATTEMPT BANNER -->
-        <div id="home-active-attempt-card" class="hidden p-4 rounded-3xl bg-gradient-to-r from-brand-950 via-app-card to-app-card border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
+        <div id="home-active-attempt-card" class="hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
           <div class="flex items-center justify-between">
             <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
@@ -478,16 +598,16 @@
         </div>
 
         <!-- Hero Banner -->
-        <div class="relative overflow-hidden p-5 rounded-3xl bg-gradient-to-br from-brand-950/70 via-app-card to-app-card border border-brand-500/30 shadow-xl">
+        <div class="relative overflow-hidden p-5 rounded-3xl hero-glass-banner shadow-xl">
           <div class="relative z-10 space-y-1.5">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 text-[11px] font-semibold">
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 text-[11px] font-semibold border border-brand-500/30">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
               Готово к обучению
             </div>
             <h2 class="text-lg font-bold text-white tracking-tight">Каталог дисциплин</h2>
-            <p class="text-xs text-slate-400">Выберите предмет для перехода к реальным тестам</p>
+            <p class="text-xs text-brand-200/80">Выберите предмет для перехода к реальным тестам</p>
           </div>
-          <div class="absolute -right-6 -bottom-8 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="absolute -right-6 -bottom-8 w-32 h-32 bg-brand-400/20 rounded-full blur-2xl pointer-events-none"></div>
         </div>
 
         <!-- Subjects Container (Populated dynamically) -->
@@ -525,7 +645,7 @@
       <section id="view-hub" class="hidden space-y-4">
         
         <!-- Test Info Card -->
-        <div class="p-5 rounded-3xl bg-app-card border border-brand-500/30 shadow-xl space-y-3">
+        <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-[11px] font-bold text-brand-400 uppercase tracking-wider">Карточка теста</span>
             <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Доступен</span>
@@ -733,7 +853,7 @@
       <!-- VIEW 5: RESULT VIEW (УМНЫЙ ЭКРАН РЕЗУЛЬТАТОВ) -->
       <!-- ========================================== -->
       <section id="view-result" class="hidden space-y-4">
-        <div class="p-6 rounded-3xl bg-app-card border border-brand-500/30 shadow-2xl text-center space-y-4">
+        <div class="p-6 rounded-3xl hero-glass-banner shadow-2xl text-center space-y-4">
           <div id="result-icon-box" class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-3xl shadow-lg shadow-brand-600/40">
             🏆
           </div>
@@ -893,7 +1013,7 @@
       <!-- ========================================== -->
       <section id="view-tab-profile" class="hidden space-y-4">
         <!-- User Identity Card with Rank & Level -->
-        <div class="p-5 rounded-3xl bg-gradient-to-br from-brand-950/70 via-app-card to-app-card border border-brand-500/30 shadow-xl space-y-4">
+        <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-4">
           <div class="flex items-center space-x-3.5">
             <div id="profile-avatar" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 flex items-center justify-center font-black text-white text-xl shadow-lg shadow-brand-500/30 ring-2 ring-brand-400/30">
               С
@@ -1503,7 +1623,7 @@
     </div>
 
     <!-- Bottom Navigation Bar (3 Buttons: Главная, Профиль, Настройки) -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass border-t border-app-border safe-bottom px-6 py-2.5 flex items-center justify-around">
+    <nav class="glass flex items-center justify-around">
       <button id="tab-home" onclick="switchTab('home')" class="flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         <span class="text-[11px] font-bold">Главная</span>
