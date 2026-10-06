@@ -77,13 +77,25 @@
       --text-sub: #94a3b8;
       --text-dim: #64748b;
 
-      /* Accent: Base (Neutral Monochrome) */
+      /* Default Accent: Green (Изумруд) */
+      --accent-color: #10b981;
+      --accent-color-hover: #34d399;
+      --accent-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --accent-bg-subtle: rgba(16, 185, 129, 0.08);
+      --accent-border-subtle: rgba(16, 185, 129, 0.22);
+      --accent-btn-text: #ffffff;
+      --orb-1: rgba(16, 185, 129, 0.07);
+      --orb-2: rgba(5, 150, 105, 0.05);
+      --orb-3: rgba(4, 120, 87, 0.03);
+    }
+
+    /* ACCENT: BASE (Neutral Monochrome) */
+    body.theme-base {
       --accent-color: #cbd5e1;
       --accent-color-hover: #e2e8f0;
       --accent-gradient: linear-gradient(135deg, #475569 0%, #334155 100%);
       --accent-bg-subtle: rgba(255, 255, 255, 0.06);
       --accent-border-subtle: rgba(255, 255, 255, 0.14);
-      --accent-btn-text: #ffffff;
       --orb-1: rgba(148, 163, 184, 0.04);
       --orb-2: rgba(100, 116, 139, 0.03);
       --orb-3: rgba(71, 85, 105, 0.02);
@@ -613,7 +625,7 @@
     }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen flex flex-col select-none antialiased">
+<body class="theme-green text-slate-100 min-h-screen flex flex-col select-none antialiased">
   <!-- Ambient Liquid Glow Mesh -->
   <div class="liquid-mesh">
     <div class="liquid-orb-1"></div>
@@ -1834,14 +1846,16 @@
 
   <!-- APPLICATION JAVASCRIPT ENGINE -->
   <script>
-    // Early Theme & Accent Restore (defaults to standard Dark Clear Glass)
+    // Early Theme & Accent Restore (defaults to Dark Green Clear Glass)
   try {
-    // Default to clean standard dark theme
     document.body.classList.remove('light-theme');
-    const _earlyAccent = localStorage.getItem('ohtest_accent');
-    if (_earlyAccent && _earlyAccent !== 'base' && ['green', 'blue', 'purple', 'red'].includes(_earlyAccent)) {
-      document.body.classList.add(`theme-${_earlyAccent}`);
-    }
+    let _earlyAccent = localStorage.getItem('ohtest_accent') || 'green';
+    if (_earlyAccent === 'emerald') _earlyAccent = 'green';
+    else if (_earlyAccent === 'amber') _earlyAccent = 'base';
+    else if (_earlyAccent === 'cyan') _earlyAccent = 'blue';
+    else if (_earlyAccent === 'rose') _earlyAccent = 'red';
+    document.body.classList.remove('theme-base', 'theme-blue', 'theme-purple', 'theme-red');
+    document.body.classList.add(`theme-${_earlyAccent}`);
   } catch(e) {}
 
   // Helper: Normalize correct answer index across all formats (number, string, letter)
@@ -2028,9 +2042,13 @@
 
   // Telegram WebApp Initialization
   window.addEventListener('DOMContentLoaded', async () => {
-    // Apply Theme (standard Dark Clear Glass mode, functions preserved)
+    // Apply Theme (standard Dark Green Clear Glass mode, functions preserved)
     setThemeMode('dark', true);
-    const savedAccent = localStorage.getItem('ohtest_accent') || 'base';
+    let savedAccent = localStorage.getItem('ohtest_accent') || 'green';
+    if (savedAccent === 'emerald') savedAccent = 'green';
+    else if (savedAccent === 'amber') savedAccent = 'base';
+    else if (savedAccent === 'cyan') savedAccent = 'blue';
+    else if (savedAccent === 'rose') savedAccent = 'red';
     setAccentColor(savedAccent, true);
 
     const tg = window.Telegram?.WebApp;
@@ -2143,15 +2161,13 @@
     else if (color === 'rose') color = 'red';
 
     const validAccents = ['base', 'green', 'blue', 'purple', 'red'];
-    if (!validAccents.includes(color)) color = 'base';
+    if (!validAccents.includes(color)) color = 'green';
 
     // Remove any previous accent class
     validAccents.forEach(a => document.body.classList.remove(`theme-${a}`));
 
-    // Add selected accent class if not base
-    if (color !== 'base') {
-      document.body.classList.add(`theme-${color}`);
-    }
+    // Add selected accent class
+    document.body.classList.add(`theme-${color}`);
 
     if (!skipSave) {
       triggerHaptic('light');
@@ -3054,6 +3070,8 @@
           score: `${correct}/${total} (${pct}%)`,
           total: total,
           correct: correct,
+          errors: errorsCount,
+          skipped: skippedCount,
           pct: pct,
           mode: state.currentMode,
           duration: state.timerSeconds,
@@ -4408,7 +4426,33 @@
 
     titleEl.innerText = attempt.title || 'Попытка';
     const modeBadge = getModeNameRu(attempt.mode);
-    subtitleEl.innerText = `${attempt.date || ''} • ${modeBadge} • Результат: ${attempt.score || ''}`;
+
+    // Compute detailed stats accurately
+    let correctCount = 0;
+    let errorsCount = 0;
+    let skippedCount = 0;
+
+    if (attempt.questionsSnapshot && attempt.questionsSnapshot.length > 0) {
+      attempt.questionsSnapshot.forEach(q => {
+        if (q.userAnswer === undefined || q.userAnswer === null) {
+          skippedCount++;
+        } else if (Number(q.userAnswer) === Number(q.correct)) {
+          correctCount++;
+        } else {
+          errorsCount++;
+        }
+      });
+    } else {
+      correctCount = attempt.correct || 0;
+      skippedCount = (attempt.skipped !== undefined) ? attempt.skipped : 0;
+      errorsCount = (attempt.errors !== undefined) ? attempt.errors : Math.max(0, (attempt.total || 0) - correctCount - skippedCount);
+    }
+
+    const totalQuestions = attempt.total || (correctCount + errorsCount + skippedCount);
+    let statsSubtitle = `${attempt.date || ''} • ${modeBadge} • Верно: ${correctCount}/${totalQuestions}`;
+    if (errorsCount > 0) statsSubtitle += ` • Ошибок: ${errorsCount}`;
+    if (skippedCount > 0) statsSubtitle += ` • Пропущено: ${skippedCount}`;
+    subtitleEl.innerText = statsSubtitle;
 
     if (!attempt.questionsSnapshot || attempt.questionsSnapshot.length === 0) {
       bodyEl.innerHTML = `
@@ -4421,25 +4465,48 @@
     } else {
       let qListHtml = attempt.questionsSnapshot.map((q, qIndex) => {
         const userChoice = q.userAnswer;
-        const isCorrect = (userChoice === q.correct);
-        const userOptText = (userChoice !== undefined && q.options[userChoice]) ? q.options[userChoice] : 'Без ответа (пропуск)';
-        const correctOptText = (q.options && q.options[q.correct]) ? q.options[q.correct] : '—';
+        const isSkipped = (userChoice === undefined || userChoice === null);
+        const isCorrect = (!isSkipped && Number(userChoice) === Number(q.correct));
+        const isWrong = (!isSkipped && !isCorrect);
+
+        const userOptText = (!isSkipped && q.options && q.options[userChoice] !== undefined)
+          ? q.options[userChoice]
+          : 'Вопрос был пропущен';
+        const correctOptText = (q.options && q.options[q.correct] !== undefined) ? q.options[q.correct] : '—';
+
+        let cardBorderClass = 'border-rose-500/30';
+        let badgeHtml = '';
+        let answerContainerClass = 'bg-rose-950/40 text-rose-300';
+        let answerLabel = `Ваш ответ: <span class="font-semibold">${userOptText}</span>`;
+
+        if (isCorrect) {
+          cardBorderClass = 'border-emerald-500/40';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono">✓ Верно</span>';
+          answerContainerClass = 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/20';
+        } else if (isSkipped) {
+          cardBorderClass = 'border-amber-500/40';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 font-mono">⊘ Пропущен</span>';
+          answerContainerClass = 'bg-amber-950/30 text-amber-300 border border-amber-500/20';
+          answerLabel = '<span class="font-semibold text-amber-300">⊘ Вопрос был пропущен (без ответа)</span>';
+        } else {
+          cardBorderClass = 'border-rose-500/40';
+          badgeHtml = '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 font-mono">✕ Ошибка</span>';
+          answerContainerClass = 'bg-rose-950/40 text-rose-300 border border-rose-500/20';
+        }
 
         return `
-          <div class="p-3.5 rounded-2xl bg-app-surface border ${isCorrect ? 'border-emerald-500/30' : 'border-rose-500/30'} text-xs space-y-2">
+          <div class="p-3.5 rounded-2xl bg-app-surface border ${cardBorderClass} text-xs space-y-2">
             <div class="flex items-center justify-between font-bold">
-              <span class="text-slate-300">Вопрос #${q.id}</span>
-              <span class="${isCorrect ? 'badge-correct text-emerald-400' : 'badge-wrong text-rose-400'} font-semibold font-mono">
-                ${isCorrect ? '✓ Верно' : '✕ Ошибка'}
-              </span>
+              <span class="text-slate-300">Вопрос #${q.id || (qIndex + 1)}</span>
+              ${badgeHtml}
             </div>
             <p class="text-white font-medium leading-relaxed">${q.question}</p>
-            <div class="space-y-1 pt-1 text-[11px]">
-              <div class="p-2 rounded-xl ${isCorrect ? 'bg-emerald-950/40 text-emerald-300' : 'bg-rose-950/40 text-rose-300'}">
-                Ваш ответ: <span class="font-semibold">${userOptText}</span>
+            <div class="space-y-1.5 pt-1 text-[11px]">
+              <div class="p-2.5 rounded-xl ${answerContainerClass}">
+                ${answerLabel}
               </div>
               ${!isCorrect ? `
-                <div class="p-2 rounded-xl bg-emerald-950/40 text-emerald-300">
+                <div class="p-2.5 rounded-xl bg-emerald-950/30 text-emerald-300 border border-emerald-500/20">
                   Правильный ответ: <span class="font-semibold">${correctOptText}</span>
                 </div>
               ` : ''}
@@ -4481,6 +4548,17 @@
       const timeStr = (mins && secs) ? `${mins}:${secs}` : '';
       const modeLabel = getModeNameRu(h.mode);
 
+      // Compute skipped & errors accurately
+      let skipped = 0;
+      let errors = 0;
+      if (h.questionsSnapshot && h.questionsSnapshot.length > 0) {
+        skipped = h.questionsSnapshot.filter(q => q.userAnswer === undefined || q.userAnswer === null).length;
+        errors = h.questionsSnapshot.filter(q => q.userAnswer !== undefined && q.userAnswer !== null && Number(q.userAnswer) !== Number(q.correct)).length;
+      } else {
+        skipped = (h.skipped !== undefined) ? h.skipped : 0;
+        errors = (h.errors !== undefined) ? h.errors : Math.max(0, (h.total || 0) - (h.correct || 0) - skipped);
+      }
+
       return `
         <div class="p-3.5 rounded-2xl bg-app-card border border-app-border space-y-2.5">
           <div class="flex justify-between items-start">
@@ -4490,6 +4568,7 @@
                 <span class="px-2 py-0.5 rounded-md bg-app-surface text-brand-300 font-semibold">${modeLabel}</span>
                 <span>• ${h.date || 'Недавно'}</span>
                 ${timeStr ? `<span>• ⏱ ${timeStr}</span>` : ''}
+                ${skipped > 0 ? `<span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-semibold">⊘ Пропущено: ${skipped}</span>` : ''}
               </div>
             </div>
             <div class="text-right shrink-0 ml-2">
