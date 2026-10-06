@@ -920,8 +920,10 @@
         <div class="p-5 rounded-3xl bg-app-card border border-app-border space-y-4 shadow-xl">
           <div class="flex items-center justify-between">
             <span id="solver-q-num-pill" class="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">ВОПРОС #1</span>
-            <button onclick="toggleCurrentFavorite()" class="text-slate-400 hover:text-amber-400 active:scale-90 transition text-sm">
-              <span id="solver-fav-icon">☆</span>
+            <button id="solver-fav-btn" type="button" onclick="toggleCurrentFavorite()" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-amber-400 active:scale-90 transition" title="В избранное">
+              <svg id="solver-fav-icon" class="w-4 h-4 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+              </svg>
             </button>
           </div>
 
@@ -2967,7 +2969,7 @@
       nextBtn.className = "px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-bold text-white active:scale-95 transition shadow-lg shadow-brand-600/30";
     }
 
-    updateFavUI(state.favorites.has(q.id));
+    updateFavUI(isQuestionFavorited(q.id));
 
     const ans = state.userAnswers[q.id];
     const isRevealed = state.revealedAnswers.has(q.id);
@@ -3448,32 +3450,74 @@
   }
 
   // Favorites
+  function isQuestionFavorited(qid) {
+    if (qid === undefined || qid === null) return false;
+    if (!state.favorites) return false;
+    return state.favorites.has(qid) || state.favorites.has(Number(qid)) || state.favorites.has(String(qid));
+  }
+
   function toggleCurrentFavorite() {
     const q = state.activeQuestions[state.currentQIndex];
-    if (state.favorites.has(q.id)) {
-      state.favorites.delete(q.id);
-      triggerHaptic('light');
+    if (!q) return;
+    triggerHaptic('light');
+
+    const qid = q.id;
+    const hasFav = isQuestionFavorited(qid);
+
+    if (hasFav) {
+      state.favorites.delete(qid);
+      state.favorites.delete(Number(qid));
+      state.favorites.delete(String(qid));
+      showToast('Удалено из избранного');
     } else {
-      state.favorites.add(q.id);
-      triggerHaptic('success');
+      state.favorites.add(qid);
+      showToast('★ Добавлено в избранное');
     }
+
     try {
       localStorage.setItem(`ohtest_favs_${state.activeTestId}`, JSON.stringify([...state.favorites]));
     } catch(e) {}
-    updateFavUI(state.favorites.has(q.id));
-    document.getElementById('hub-q-favs').innerText = state.favorites.size;
-    document.getElementById('profile-fav-count').innerText = state.favorites.size;
+
+    const currentlyFav = isQuestionFavorited(qid);
+    updateFavUI(currentlyFav);
+
+    const hubFavsEl = document.getElementById('hub-q-favs');
+    if (hubFavsEl) {
+      hubFavsEl.innerText = state.favorites.size;
+      hubFavElClass(hubFavsEl, state.favorites.size);
+    }
+    const profFavCountEl = document.getElementById('profile-fav-count');
+    if (profFavCountEl) {
+      profFavCountEl.innerText = getAllSavedFavorites().length;
+    }
+  }
+
+  function hubFavElClass(el, count) {
+    if (!el) return;
+    el.className = `text-xs font-bold font-mono ${count > 0 ? 'text-amber-400' : 'text-slate-300'}`;
   }
 
   function updateFavUI(isFav) {
+    const btn = document.getElementById('solver-fav-btn');
     const icon = document.getElementById('solver-fav-icon');
     if (icon) {
       if (isFav) {
-        icon.innerText = '★';
-        icon.className = 'text-amber-400 font-bold text-lg';
+        icon.setAttribute('fill', '#fbbf24'); // amber-400
+        icon.setAttribute('stroke', '#fbbf24');
+        icon.classList.remove('text-slate-400');
+        icon.classList.add('text-amber-400');
       } else {
-        icon.innerText = '☆';
-        icon.className = 'text-slate-400 text-lg';
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', 'currentColor');
+        icon.classList.remove('text-amber-400');
+        icon.classList.add('text-slate-400');
+      }
+    }
+    if (btn) {
+      if (isFav) {
+        btn.className = 'w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 active:scale-90 transition';
+      } else {
+        btn.className = 'w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-amber-400 active:scale-90 transition';
       }
     }
     const headerIcon = document.getElementById('header-fav-icon');
@@ -3582,7 +3626,7 @@
   function setupFlashcardsDeck(keepShuffle = false) {
     let pool = [...state.currentTestOriginalQuestions];
     if (fcStarredOnlyEnabled) {
-      pool = pool.filter(q => state.favorites.has(q.id));
+      pool = pool.filter(q => isQuestionFavorited(q.id));
       if (pool.length === 0) {
         showToast('☆ В избранном нет вопросов. Показаны все карточки.');
         fcStarredOnlyEnabled = false;
@@ -3630,7 +3674,7 @@
 
     // Update Star buttons (both front and back)
     const qid = q.id;
-    const isFav = state.favorites.has(qid) || state.favorites.has(Number(qid)) || state.favorites.has(String(qid));
+    const isFav = isQuestionFavorited(qid);
     const starBtn = document.getElementById('fc-star-btn');
     if (starBtn) {
       starBtn.innerText = isFav ? '★' : '☆';
@@ -3655,7 +3699,7 @@
     triggerHaptic('light');
 
     const qid = q.id;
-    const hasFav = state.favorites.has(qid) || state.favorites.has(Number(qid)) || state.favorites.has(String(qid));
+    const hasFav = isQuestionFavorited(qid);
 
     if (hasFav) {
       state.favorites.delete(qid);
@@ -3677,10 +3721,13 @@
 
     // Update global counters and badges
     const hubFavsEl = document.getElementById('hub-q-favs');
-    if (hubFavsEl) hubFavsEl.innerText = state.favorites.size;
+    if (hubFavsEl) {
+      hubFavsEl.innerText = state.favorites.size;
+      hubFavElClass(hubFavsEl, state.favorites.size);
+    }
     const profFavsEl = document.getElementById('profile-fav-count');
-    if (profFavsEl) profFavsEl.innerText = state.favorites.size;
-    updateFavUI(state.favorites.has(qid));
+    if (profFavsEl) profFavsEl.innerText = getAllSavedFavorites().length;
+    updateFavUI(isQuestionFavorited(qid));
 
     renderFCCard();
   }
@@ -4920,6 +4967,16 @@
       localStorage.setItem(k, JSON.stringify(filtered));
       if (state.activeTestId === testId) {
         state.favorites.delete(qid);
+        state.favorites.delete(Number(qid));
+        state.favorites.delete(String(qid));
+        const hubFavsEl = document.getElementById('hub-q-favs');
+        if (hubFavsEl) {
+          hubFavsEl.innerText = state.favorites.size;
+          hubFavElClass(hubFavsEl, state.favorites.size);
+        }
+        if (state.activeQuestions && state.activeQuestions[state.currentQIndex]) {
+          updateFavUI(isQuestionFavorited(state.activeQuestions[state.currentQIndex].id));
+        }
       }
     } catch(e) {}
     renderFavsSubtab();
@@ -6408,14 +6465,16 @@
 
   function isModalQInFavorites() {
     if (!modalActiveQ || !modalActiveTestId) return false;
+    const qid = modalActiveQ.id;
     if (modalActiveTestId === state.activeTestId) {
-      return state.favorites.has(modalActiveQ.id);
+      return isQuestionFavorited(qid);
     }
     const raw = localStorage.getItem(`ohtest_favs_${modalActiveTestId}`);
     if (!raw) return false;
     try {
       const favList = JSON.parse(raw);
-      return favList.includes(modalActiveQ.id);
+      if (!Array.isArray(favList)) return false;
+      return favList.some(id => id == qid);
     } catch(e) { return false; }
   }
 
@@ -6443,26 +6502,38 @@
     const tId = modalActiveTestId;
     const qid = modalActiveQ.id;
 
-    let favSet = new Set();
+    let favArr = [];
     if (tId === state.activeTestId) {
-      favSet = state.favorites;
+      const hasFav = isQuestionFavorited(qid);
+      if (hasFav) {
+        state.favorites.delete(qid);
+        state.favorites.delete(Number(qid));
+        state.favorites.delete(String(qid));
+      } else {
+        state.favorites.add(qid);
+      }
+      favArr = [...state.favorites];
     } else {
       const raw = localStorage.getItem(`ohtest_favs_${tId}`);
       if (raw) {
-        try { favSet = new Set(JSON.parse(raw)); } catch(e) {}
+        try { favArr = JSON.parse(raw); } catch(e) { favArr = []; }
+      }
+      const existingIdx = favArr.findIndex(id => id == qid);
+      if (existingIdx !== -1) {
+        favArr.splice(existingIdx, 1);
+      } else {
+        favArr.push(qid);
       }
     }
 
-    if (favSet.has(qid)) {
-      favSet.delete(qid);
-    } else {
-      favSet.add(qid);
-    }
-
-    localStorage.setItem(`ohtest_favs_${tId}`, JSON.stringify([...favSet]));
+    localStorage.setItem(`ohtest_favs_${tId}`, JSON.stringify(favArr));
     if (tId === state.activeTestId) {
-      state.favorites = favSet;
-      updateFavUI(state.favorites.has(qid));
+      updateFavUI(isQuestionFavorited(qid));
+      const hubFavsEl = document.getElementById('hub-q-favs');
+      if (hubFavsEl) {
+        hubFavsEl.innerText = state.favorites.size;
+        hubFavElClass(hubFavsEl, state.favorites.size);
+      }
     }
 
     updateModalFavUI();
