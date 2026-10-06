@@ -1202,29 +1202,6 @@
       <!-- TAB 2: PROFILE (КАБИНЕТ СТУДЕНТА, РЕЙТИНГ ПО ДИСЦИПЛИНАМ, ОШИБКИ, ИЗБРАННОЕ, ИСТОРИЯ) -->
       <!-- ========================================== -->
       <section id="view-tab-profile" class="hidden space-y-4">
-        <!-- PROMINENT ACTIVE ATTEMPT BANNER IN PROFILE -->
-        <div id="profile-active-attempt-card" class="active-attempt-card hidden p-4 rounded-3xl active-attempt-glass border border-brand-500/60 shadow-xl space-y-2.5 pulse-soft">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-mono flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-ping"></span>
-              АКТУАЛЬНАЯ ПОПЫТКА
-            </span>
-            <span class="attempt-counter text-xs font-mono text-slate-300">Вопрос X из Y</span>
-          </div>
-          <div>
-            <h3 class="attempt-title text-sm font-extrabold text-white">Название теста</h3>
-            <p class="attempt-mode text-[11px] text-brand-300">Режим: По порядку</p>
-          </div>
-          <div class="flex items-center gap-2 pt-1">
-            <button onclick="resumeActiveAttempt()" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-1.5">
-              <span>▶️</span> Продолжить решение
-            </button>
-            <button onclick="discardActiveAttempt()" class="px-3.5 py-2.5 rounded-xl bg-app-surface border border-app-border text-slate-400 hover:text-rose-400 font-medium text-xs active:scale-95 transition">
-              Сброс
-            </button>
-          </div>
-        </div>
-
         <!-- User Identity Card with Rank & Level -->
         <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-4">
           <div class="flex items-center space-x-3.5">
