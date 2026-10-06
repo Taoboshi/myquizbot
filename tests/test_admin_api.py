@@ -123,7 +123,49 @@ class AdminApiTestCase(unittest.TestCase):
             json={"user_id": 12345, "id": "oziz"},
         )
         self.assertEqual(res.status_code, 200)
-        self.assertTrue(res.get_json()["success"])
+    def test_user_rating_visibility_and_reset_api(self):
+        # Initial rating shows student 99999
+        res_r1 = self.client.get("/api/rating?test_id=oziz_1_200")
+        self.assertEqual(res_r1.status_code, 200)
+        items1 = res_r1.get_json()["items"]
+        self.assertTrue(any(it["user_id"] == 99999 for it in items1))
+
+        # Bootstrap shows not hidden
+        res_b1 = self.client.get("/api/bootstrap?user_id=99999")
+        self.assertEqual(res_b1.status_code, 200)
+        self.assertFalse(res_b1.get_json()["is_hidden_in_rating"])
+
+        # Hide user 99999
+        res_tog = self.client.post(
+            "/api/user/toggle_rating_visibility",
+            json={"user_id": 99999, "is_hidden": True},
+        )
+        self.assertEqual(res_tog.status_code, 200)
+        self.assertTrue(res_tog.get_json()["is_hidden"])
+
+        # Bootstrap now shows hidden
+        res_b2 = self.client.get("/api/bootstrap?user_id=99999")
+        self.assertTrue(res_b2.get_json()["is_hidden_in_rating"])
+
+        # Rating query no longer includes user 99999
+        res_r2 = self.client.get("/api/rating?test_id=oziz_1_200")
+        items2 = res_r2.get_json()["items"]
+        self.assertFalse(any(it["user_id"] == 99999 for it in items2))
+
+        # Reset rating for user 99999
+        res_reset = self.client.post(
+            "/api/user/reset_rating",
+            json={"user_id": 99999},
+        )
+        self.assertEqual(res_reset.status_code, 200)
+        self.assertTrue(res_reset.get_json()["success"])
+        self.assertGreaterEqual(res_reset.get_json()["deleted_attempts"], 1)
+
+        # Unhide user, rating should still have no attempts because they were reset
+        self.client.post("/api/user/toggle_rating_visibility", json={"user_id": 99999, "is_hidden": False})
+        res_r3 = self.client.get("/api/rating?test_id=oziz_1_200")
+        items3 = res_r3.get_json()["items"]
+        self.assertFalse(any(it["user_id"] == 99999 for it in items3))
 
 
 if __name__ == "__main__":

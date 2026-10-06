@@ -1306,11 +1306,31 @@
               <input type="checkbox" id="set-haptic" checked class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
             </div>
 
+            <!-- Hide from Rating Switch -->
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
+              <div>
+                <div class="font-bold text-white">Скрыть меня из рейтинга</div>
+                <div class="text-[10px] text-slate-400">Не показывать мои результаты и имя в общей таблице лидеров</div>
+              </div>
+              <input type="checkbox" id="set-hide-rating" onchange="toggleHideInRating(this.checked)" class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
+            </div>
+
+            <!-- Reset Rating Records Button -->
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
+              <div>
+                <div class="font-bold text-white">Сбросить мой рейтинг</div>
+                <div class="text-[10px] text-slate-400">Удалить все мои попытки и рекорды из таблицы лидеров на сервере</div>
+              </div>
+              <button onclick="resetMyRatingProgress()" class="px-3 py-1.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-[11px] font-bold text-amber-300 hover:bg-amber-900/50 active:scale-95 transition">
+                Сбросить 🔄
+              </button>
+            </div>
+
             <!-- Clear Cache Button -->
             <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
               <div>
                 <div class="font-bold text-white">Очистить кэш попыток</div>
-                <div class="text-[10px] text-slate-400">Сбросить сохранённые попытки, ошибки и историю</div>
+                <div class="text-[10px] text-slate-400">Сбросить сохранённые на устройстве попытки, ошибки и кэш</div>
               </div>
               <button onclick="clearLocalAppCache()" class="px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] font-bold text-rose-300 hover:bg-rose-900/50 active:scale-95 transition">
                 Очистить 🗑
@@ -2077,6 +2097,7 @@
     userUsername: '',
     userAvatar: '',
     historyAttempts: [],
+    isHiddenInRating: localStorage.getItem('ohtest_hide_rating') === 'true',
     logoTaps: 0
   };
 
@@ -2217,6 +2238,13 @@
       if (customName) state.userName = customName;
       const customAvatar = localStorage.getItem('ohtest_custom_avatar');
       if (customAvatar) state.userAvatar = customAvatar;
+
+      const savedHideRating = localStorage.getItem('ohtest_hide_rating');
+      if (savedHideRating !== null) {
+        state.isHiddenInRating = (savedHideRating === 'true');
+        const hideEl = document.getElementById('set-hide-rating');
+        if (hideEl) hideEl.checked = state.isHiddenInRating;
+      }
     } catch(e) {}
 
     // Update Profile UI
@@ -2392,6 +2420,12 @@
           /* header-admin-pill hidden */
           document.getElementById('settings-admin-block').classList.remove('hidden');
           document.getElementById('settings-admin-login-block').classList.add('hidden');
+        }
+        if (data.is_hidden_in_rating !== undefined) {
+          state.isHiddenInRating = Boolean(data.is_hidden_in_rating);
+          localStorage.setItem('ohtest_hide_rating', state.isHiddenInRating ? 'true' : 'false');
+          const hideEl = document.getElementById('set-hide-rating');
+          if (hideEl) hideEl.checked = state.isHiddenInRating;
         }
         if (data.subjects && data.subjects.length > 0) {
           const delSet = new Set(JSON.parse(localStorage.getItem('ohtest_deleted_subjects') || '[]'));
@@ -6384,6 +6418,74 @@
       st.className = 'p-2.5 rounded-xl text-center text-xs bg-brand-950/40 text-brand-300 border border-brand-500/30';
       st.innerText = '✓ Сообщение отправлено!';
     });
+  }
+
+  // PRIVACY: TOGGLE HIDE IN LEADERBOARD
+  async function toggleHideInRating(checked) {
+    triggerHaptic('light');
+    state.isHiddenInRating = checked;
+    localStorage.setItem('ohtest_hide_rating', checked ? 'true' : 'false');
+    if (!state.userId) {
+      showToast(checked ? '🔒 Вы скрыты из рейтинга' : '👁️ Вы отображаетесь в рейтинге');
+      return;
+    }
+    try {
+      const res = await fetch('/api/user/toggle_rating_visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: state.userId, is_hidden: checked })
+      });
+      if (res.ok) {
+        showToast(checked ? '🔒 Вы скрыты из таблицы лидеров' : '👁️ Вы отображаетесь в таблице лидеров');
+        if (state.activeProfileSubTab === 'rating') {
+          renderRatingSubtab();
+        }
+      } else {
+        showToast('Не удалось обновить статус на сервере');
+      }
+    } catch (e) {
+      console.error('Error toggling rating visibility:', e);
+      showToast(checked ? 'Скрыто локально' : 'Включено локально');
+    }
+  }
+
+  // RESET RATING PROGRESS ON SERVER & LOCAL ATTEMPTS
+  async function resetMyRatingProgress() {
+    triggerHaptic('warning');
+    if (!confirm('Вы уверены, что хотите сбросить свои результаты и рекорды в таблице лидеров на сервере?\n\nВаши сохранённые вопросы в «Избранном» останутся целы.')) {
+      return;
+    }
+    triggerHaptic('heavy');
+    try {
+      if (state.userId) {
+        const res = await fetch('/api/user/reset_rating', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: state.userId })
+        });
+        if (!res.ok) {
+          showToast('Не удалось сбросить рейтинг на сервере');
+          return;
+        }
+      }
+      state.historyAttempts = [];
+      state.activeAttempt = null;
+      localStorage.removeItem('ohtest_history');
+      localStorage.removeItem('ohtest_active_attempt');
+      const attEl = document.getElementById('profile-attempts-count');
+      if (attEl) attEl.innerText = '0';
+      renderActiveAttemptBanner();
+      updateHubResumeButton();
+      if (state.activeProfileSubTab === 'rating') {
+        renderRatingSubtab();
+      } else if (state.activeProfileSubTab === 'history') {
+        renderProfileSubtab('history');
+      }
+      showToast('✓ Ваши результаты в рейтинге сброшены!');
+    } catch (e) {
+      console.error('Error resetting rating:', e);
+      showToast('Ошибка при сбросе рейтинга');
+    }
   }
 
   // WORKING CLEAR CACHE FUNCTION (CLEARS LOCALSTORAGE + IN-MEMORY STATE + RESETS UI COUNTERS)

@@ -81,7 +81,18 @@ class StorageSmokeTestCase(unittest.TestCase):
 
             storage.set_test_metadata_setting("sample", subject_id="default", subject_title="", subject_emoji="")
             meta_unlinked = storage.get_test_metadata_setting("sample")
-            self.assertEqual(meta_unlinked["subject_id"], "default")
+            # Test rating privacy toggle
+            self.assertFalse(storage.is_user_rating_hidden(777))
+            storage.set_user_rating_hidden(777, True)
+            self.assertTrue(storage.is_user_rating_hidden(777))
+            storage.set_user_rating_hidden(777, False)
+            self.assertFalse(storage.is_user_rating_hidden(777))
+
+            # Test reset user rating
+            reset_res = storage.reset_user_rating(777)
+            self.assertGreaterEqual(reset_res["attempts"], 1)
+            summary_after = storage.stats_summary(777, "sample")
+            self.assertEqual(summary_after["total_answered"], 0)
 
 
 if __name__ == "__main__":

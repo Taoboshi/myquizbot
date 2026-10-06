@@ -372,6 +372,7 @@ def _init_postgres_db() -> None:
                 username TEXT,
                 first_name TEXT,
                 last_name TEXT,
+                is_hidden_in_rating INTEGER NOT NULL DEFAULT 0,
                 first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
@@ -527,6 +528,7 @@ def _init_postgres_db() -> None:
         )
 
         for stmt in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_hidden_in_rating INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS last_wrong_answer_index INTEGER",
             "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS finished_by_user INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE active_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
@@ -552,6 +554,7 @@ def _init_sqlite_db() -> None:
                 username TEXT,
                 first_name TEXT,
                 last_name TEXT,
+                is_hidden_in_rating INTEGER NOT NULL DEFAULT 0,
                 first_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -674,6 +677,7 @@ def _init_sqlite_db() -> None:
         )
 
         for stmt in [
+            "ALTER TABLE users ADD COLUMN is_hidden_in_rating INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE all_time_errors ADD COLUMN last_wrong_answer_index INTEGER",
             "ALTER TABLE attempts ADD COLUMN finished_by_user INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE active_sessions ADD COLUMN updated_at TEXT",
@@ -1197,6 +1201,63 @@ def upsert_user(user) -> None:
         conn.commit()
 
     _USER_UPSERT_CACHE[user.id] = now
+
+
+def set_user_rating_hidden(user_id: int, is_hidden: bool) -> None:
+    val = 1 if is_hidden else 0
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO users (user_id, is_hidden_in_rating, first_seen_at, last_seen_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id)
+            DO UPDATE SET is_hidden_in_rating = excluded.is_hidden_in_rating
+            """,
+            (user_id, val),
+        )
+        conn.commit()
+
+
+def is_user_rating_hidden(user_id: int) -> bool:
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT is_hidden_in_rating FROM users WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return False
+        return bool(_row_get(row, "is_hidden_in_rating", 0))
+
+
+def reset_user_rating(user_id: int) -> dict[str, int]:
+    with db_connect() as conn:
+        attempt_row = conn.execute(
+            "SELECT COUNT(*) AS c FROM attempts WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        attempts_count = int(_row_get(attempt_row, "c", 0) or 0)
+
+        conn.execute(
+            """
+            DELETE FROM attempt_wrong_answers
+            WHERE user_id = ?
+               OR attempt_id IN (
+                    SELECT attempt_id FROM attempts WHERE user_id = ?
+               )
+            """,
+            (user_id, user_id),
+        )
+        conn.execute("DELETE FROM attempts WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM user_stats WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM user_answered_questions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM active_sessions WHERE user_id = ?", (user_id,))
+        try:
+            conn.execute("DELETE FROM runtime_sessions WHERE user_id = ?", (user_id,))
+        except Exception:
+            pass
+        conn.commit()
+
+    return {"attempts": attempts_count}
 
 
 def ensure_user_stats(user_id: int, test_id: str) -> None:

@@ -24,10 +24,13 @@ from .storage import (
     delete_subject_setting,
     ensure_user_stats,
     get_all_time_error_indices,
+    is_user_rating_hidden,
     mark_all_time_error_resolved,
     record_attempt_finish,
+    reset_user_rating,
     set_subject_setting,
     set_test_metadata_setting,
+    set_user_rating_hidden,
     toggle_favorite,
     upsert_user,
 )
@@ -138,8 +141,16 @@ def register_webapp_routes(app: Any) -> None:
                 "access_code": acc_code if is_admin else "",
             })
 
+        is_hidden_in_rating = False
+        if user_id:
+            try:
+                is_hidden_in_rating = is_user_rating_hidden(int(user_id))
+            except Exception:
+                pass
+
         return jsonify({
             "is_admin": is_admin,
+            "is_hidden_in_rating": is_hidden_in_rating,
             "subjects": subjects_data,
             "unassigned_tests": unassigned_data,
             "total_loaded_tests": len(LOADED_TESTS),
@@ -219,6 +230,9 @@ def register_webapp_routes(app: Any) -> None:
                         WHERE a.test_id IN ({placeholders})
                           AND a.finished_at IS NOT NULL
                           AND a.answered > 0
+                          AND a.user_id NOT IN (
+                              SELECT user_id FROM users WHERE is_hidden_in_rating = 1
+                          )
                     )
                     SELECT r.*, u.user_id, u.username, u.first_name, u.last_name
                     FROM ranked_attempts r
@@ -243,7 +257,11 @@ def register_webapp_routes(app: Any) -> None:
                             SUM(answered) as total_answered,
                             AVG(CAST(correct AS REAL) / NULLIF(answered, 0)) * 100 as avg_pct
                         FROM attempts
-                        WHERE finished_at IS NOT NULL AND answered > 0
+                        WHERE finished_at IS NOT NULL
+                          AND answered > 0
+                          AND user_id NOT IN (
+                              SELECT user_id FROM users WHERE is_hidden_in_rating = 1
+                          )
                         GROUP BY user_id
                     )
                     SELECT s.*, u.username, u.first_name, u.last_name
@@ -441,6 +459,35 @@ def register_webapp_routes(app: Any) -> None:
             return jsonify({"test_id": test_id, "errors": error_ids, "favorites": favorite_ids})
         except Exception as e:
             return jsonify({"errors": [], "favorites": []})
+
+    @app.route("/api/user/toggle_rating_visibility", methods=["POST"])
+    def api_toggle_rating_visibility():
+        payload = request.get_json(silent=True) or {}
+        user_id = payload.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not user_id:
+            return jsonify({"error": "user_id required"}), 400
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "invalid user_id"}), 400
+
+        is_hidden = bool(payload.get("is_hidden", False))
+        set_user_rating_hidden(uid, is_hidden)
+        return jsonify({"success": True, "is_hidden": is_hidden})
+
+    @app.route("/api/user/reset_rating", methods=["POST"])
+    def api_reset_rating():
+        payload = request.get_json(silent=True) or {}
+        user_id = payload.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not user_id:
+            return jsonify({"error": "user_id required"}), 400
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "invalid user_id"}), 400
+
+        res = reset_user_rating(uid)
+        return jsonify({"success": True, "deleted_attempts": res.get("attempts", 0)})
 
     # ==========================================
     # ADMIN API ENDPOINTS
