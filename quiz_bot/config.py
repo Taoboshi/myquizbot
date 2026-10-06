@@ -42,15 +42,10 @@ SUBJECTS = {
         "emoji": "🩻",
         "order": 1,
     },
-    "farmakologiya": {
-        "title": "Фармакология",
-        "emoji": "💊",
-        "order": 2,
-    },
     "oziz": {
         "title": "ОЗиЗ и здравоохранение",
         "emoji": "🏥",
-        "order": 3,
+        "order": 2,
     },
 }
 

@@ -49,6 +49,14 @@ def is_admin_user(user_id: Any) -> bool:
     return uid in admin_ids
 
 
+def create_webapp() -> Any:
+    """Create and return a configured Flask application instance."""
+    from flask import Flask
+    app = Flask(__name__)
+    register_webapp_routes(app)
+    return app
+
+
 def register_webapp_routes(app: Any) -> None:
     """Register all Mini App frontend and API routes on the Flask app."""
     if not hasattr(app, "route"):
@@ -486,7 +494,18 @@ def register_webapp_routes(app: Any) -> None:
         if not test_id or not subject_id:
             return jsonify({"error": "test_id and subject_id required"}), 400
 
-        set_test_metadata_setting(test_id, subject_id=subject_id, updated_by=int(user_id or 0))
+        from .config import SUBJECTS
+        from .storage import clear_cache, get_subject_setting
+        subj_info = (get_subject_setting(subject_id) if get_subject_setting else None) or SUBJECTS.get(subject_id) or {}
+        subj_title = subj_info.get("title", "")
+        subj_emoji = subj_info.get("emoji", "")
+
+        set_test_metadata_setting(test_id, subject_id=subject_id, subject_title=subj_title, subject_emoji=subj_emoji, updated_by=int(user_id or 0))
+        if test_id in TESTS:
+            TESTS[test_id]["subject_id"] = subject_id
+            TESTS[test_id]["subject_title"] = subj_title
+            TESTS[test_id]["subject_emoji"] = subj_emoji
+        clear_cache()
         return jsonify({"success": True, "test_id": test_id, "subject_id": subject_id})
 
     @app.route("/api/admin/unlink_test", methods=["POST"])
@@ -501,6 +520,12 @@ def register_webapp_routes(app: Any) -> None:
             return jsonify({"error": "test_id required"}), 400
 
         set_test_metadata_setting(test_id, subject_id="default", updated_by=int(user_id or 0))
+        if test_id in TESTS:
+            TESTS[test_id]["subject_id"] = "default"
+            TESTS[test_id]["subject_title"] = ""
+            TESTS[test_id]["subject_emoji"] = ""
+        from .storage import clear_cache
+        clear_cache()
         return jsonify({"success": True, "unlinked_id": test_id})
 
     @app.route("/api/admin/add_subject", methods=["POST"])
@@ -548,7 +573,17 @@ def register_webapp_routes(app: Any) -> None:
         if not sub_id:
             return jsonify({"error": "id required"}), 400
 
+        for t_id in list(TESTS.keys()):
+            info = effective_test_info(t_id)
+            if info.get("subject_id") == sub_id:
+                set_test_metadata_setting(t_id, subject_id="default", updated_by=int(user_id or 0))
+                TESTS[t_id]["subject_id"] = "default"
+                TESTS[t_id]["subject_title"] = ""
+                TESTS[t_id]["subject_emoji"] = ""
+
         delete_subject_setting(sub_id)
+        from .storage import clear_cache
+        clear_cache()
         return jsonify({"success": True, "deleted_id": sub_id})
 
     @app.route("/api/admin/frequent_errors", methods=["GET"])
@@ -591,30 +626,286 @@ def register_webapp_routes(app: Any) -> None:
         if not is_admin_user(user_id):
             return jsonify({"error": "Forbidden"}), 403
 
+        from .admin_users import ensure_admin_tables
+        ensure_admin_tables()
+
+        tab = request.args.get("tab", "all").strip().lower()
+        search = request.args.get("search", "").strip().lower()
+        sort = request.args.get("sort", "recent").strip().lower()
+
+        sql = """
+            SELECT
+                u.user_id,
+                u.username,
+                u.first_name,
+                u.last_name,
+                u.first_seen_at AS created_at,
+                u.last_seen_at,
+                COUNT(DISTINCT a.attempt_id) AS attempts_total,
+                SUM(CASE WHEN a.finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished_attempts,
+                COALESCE(SUM(a.answered), 0) AS answered,
+                COALESCE(SUM(a.correct), 0) AS correct,
+                CASE
+                    WHEN COALESCE(SUM(a.answered), 0) > 0
+                    THEN ROUND(COALESCE(SUM(a.correct), 0) * 100.0 / COALESCE(SUM(a.answered), 0), 1)
+                    ELSE 0
+                END AS percent,
+                COUNT(DISTINCT e.question_index) AS active_errors,
+                COUNT(DISTINCT f.question_index) AS favorites,
+                CASE WHEN b.user_id IS NULL THEN 0 ELSE 1 END AS is_blocked,
+                b.blocked_at,
+                b.reason AS blocked_reason
+            FROM users u
+            LEFT JOIN attempts a ON a.user_id = u.user_id
+            LEFT JOIN all_time_errors e
+                ON e.user_id = u.user_id AND COALESCE(e.is_resolved, 0) = 0
+            LEFT JOIN favorites f ON f.user_id = u.user_id
+            LEFT JOIN blocked_users b ON b.user_id = u.user_id
+            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.first_seen_at, u.last_seen_at, b.user_id, b.blocked_at, b.reason
+        """
+
         with db_connect() as conn:
-            rows = conn.execute(
-                """
-                SELECT u.user_id, u.username, u.first_name, u.last_name, u.first_seen_at as created_at,
-                       COUNT(a.attempt_id) as attempts_count
-                FROM users u
-                LEFT JOIN attempts a ON a.user_id = u.user_id
-                GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.first_seen_at
-                ORDER BY u.first_seen_at DESC
-                LIMIT 100
-                """
-            ).fetchall()
+            raw_rows = conn.execute(sql).fetchall()
 
         items = []
-        for r in rows:
+        for r in raw_rows:
             d = dict(r)
-            items.append({
+            name = f"{d.get('first_name') or ''} {d.get('last_name') or ''}".strip() or d.get('username') or f"ID {d['user_id']}"
+            item = {
                 "user_id": d["user_id"],
-                "name": f"{d.get('first_name') or ''} {d.get('last_name') or ''}".strip() or d.get('username') or f"ID {d['user_id']}",
+                "name": name,
                 "username": d.get("username") or "",
+                "first_name": d.get("first_name") or "",
+                "last_name": d.get("last_name") or "",
                 "created_at": d.get("created_at") or "",
-                "attempts_count": d.get("attempts_count") or 0,
+                "last_seen_at": d.get("last_seen_at") or d.get("created_at") or "",
+                "attempts_count": int(d.get("attempts_total") or 0),
+                "finished_count": int(d.get("finished_attempts") or 0),
+                "answered_count": int(d.get("answered") or 0),
+                "correct_count": int(d.get("correct") or 0),
+                "accuracy": float(d.get("percent") or 0),
+                "active_errors": int(d.get("active_errors") or 0),
+                "favorites_count": int(d.get("favorites") or 0),
+                "is_blocked": bool(d.get("is_blocked")),
+                "blocked_at": d.get("blocked_at") or "",
+                "blocked_reason": d.get("blocked_reason") or "",
+            }
+
+            if search:
+                target_str = f"{item['name']} {item['username']} {item['user_id']}".lower()
+                if search not in target_str:
+                    continue
+
+            if tab == "blocked" and not item["is_blocked"]:
+                continue
+            if tab == "active" and item["attempts_count"] == 0 and not item["last_seen_at"]:
+                continue
+            if tab == "with_attempts" and item["attempts_count"] == 0:
+                continue
+
+            items.append(item)
+
+        if sort == "accuracy":
+            items.sort(key=lambda x: (x["accuracy"], x["correct_count"]), reverse=True)
+        elif sort == "attempts":
+            items.sort(key=lambda x: (x["attempts_count"], x["finished_count"]), reverse=True)
+        elif sort == "errors":
+            items.sort(key=lambda x: x["active_errors"], reverse=True)
+        else:
+            items.sort(key=lambda x: str(x.get("last_seen_at") or x.get("created_at") or ""), reverse=True)
+
+        return jsonify({"success": True, "users": items, "items": items, "total_count": len(items)})
+
+    @app.route("/api/admin/user/detail", methods=["GET"])
+    def api_admin_user_detail():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        target_uid = request.args.get("target_user_id")
+        if not target_uid:
+            return jsonify({"error": "target_user_id required"}), 400
+
+        try:
+            target_uid_int = int(target_uid)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid target_user_id"}), 400
+
+        from .admin_users import ensure_admin_tables
+        ensure_admin_tables()
+
+        with db_connect() as conn:
+            u_row = conn.execute("SELECT * FROM users WHERE user_id = ?", (target_uid_int,)).fetchone()
+            b_row = conn.execute("SELECT * FROM blocked_users WHERE user_id = ?", (target_uid_int,)).fetchone()
+
+            totals = conn.execute(
+                """
+                SELECT COUNT(*) AS attempts_total,
+                       SUM(CASE WHEN finished_at IS NOT NULL THEN 1 ELSE 0 END) AS attempts_finished,
+                       COALESCE(SUM(answered), 0) AS answered,
+                       COALESCE(SUM(correct), 0) AS correct,
+                       MAX(started_at) AS last_attempt_at
+                FROM attempts
+                WHERE user_id = ?
+                """,
+                (target_uid_int,),
+            ).fetchone()
+
+            attempts_rows = conn.execute(
+                """
+                SELECT attempt_id, test_id, mode, started_at, finished_at, duration_seconds, answered, correct
+                FROM attempts
+                WHERE user_id = ?
+                ORDER BY started_at DESC
+                LIMIT 30
+                """,
+                (target_uid_int,),
+            ).fetchall()
+
+            errors_rows = conn.execute(
+                """
+                SELECT test_id, question_index, wrong_count, last_wrong_at
+                FROM all_time_errors
+                WHERE user_id = ? AND COALESCE(is_resolved, 0) = 0
+                ORDER BY wrong_count DESC, last_wrong_at DESC
+                LIMIT 30
+                """,
+                (target_uid_int,),
+            ).fetchall()
+
+            fav_count = conn.execute("SELECT COUNT(*) FROM favorites WHERE user_id = ?", (target_uid_int,)).fetchone()[0]
+
+        user_info = {
+            "user_id": target_uid_int,
+            "name": f"{u_row['first_name'] or ''} {u_row['last_name'] or ''}".strip() if u_row else f"ID {target_uid_int}",
+            "username": u_row["username"] if u_row and u_row["username"] else "",
+            "first_name": u_row["first_name"] if u_row and u_row["first_name"] else "",
+            "last_name": u_row["last_name"] if u_row and u_row["last_name"] else "",
+            "created_at": u_row["first_seen_at"] if u_row and u_row["first_seen_at"] else "",
+            "last_seen_at": u_row["last_seen_at"] if u_row and u_row["last_seen_at"] else "",
+            "is_blocked": b_row is not None,
+            "blocked_at": b_row["blocked_at"] if b_row and b_row["blocked_at"] else "",
+            "blocked_reason": b_row["reason"] if b_row and b_row["reason"] else "",
+        }
+
+        ans_tot = int(totals["answered"] or 0) if totals else 0
+        cor_tot = int(totals["correct"] or 0) if totals else 0
+        acc = round((cor_tot * 100.0 / ans_tot), 1) if ans_tot > 0 else 0.0
+
+        stats_info = {
+            "attempts_total": int(totals["attempts_total"] or 0) if totals else 0,
+            "attempts_finished": int(totals["attempts_finished"] or 0) if totals else 0,
+            "answered": ans_tot,
+            "correct": cor_tot,
+            "percent": acc,
+            "active_errors": len(errors_rows),
+            "favorites": fav_count,
+        }
+
+        attempts_list = []
+        for a in attempts_rows:
+            t_id = a["test_id"]
+            ans = int(a["answered"] or 0)
+            cor = int(a["correct"] or 0)
+            attempts_list.append({
+                "attempt_id": a["attempt_id"],
+                "test_id": t_id,
+                "test_title": effective_test_info(t_id).get("title", t_id),
+                "mode": a["mode"] or "exam",
+                "started_at": a["started_at"] or "",
+                "finished_at": a["finished_at"] or "",
+                "duration_seconds": int(a["duration_seconds"] or 0),
+                "answered": ans,
+                "correct": cor,
+                "percent": round((cor * 100.0 / ans), 1) if ans > 0 else 0,
             })
-        return jsonify({"items": items})
+
+        errors_list = []
+        for e in errors_rows:
+            t_id = e["test_id"]
+            q_idx = int(e["question_index"] or 0)
+            t_qs = LOADED_TESTS.get(t_id, [])
+            q_text = t_qs[q_idx]["question"] if q_idx < len(t_qs) else f"Вопрос #{q_idx+1}"
+            errors_list.append({
+                "test_id": t_id,
+                "test_title": effective_test_info(t_id).get("title", t_id),
+                "question_index": q_idx + 1,
+                "question_text": q_text,
+                "wrong_count": int(e["wrong_count"] or 1),
+            })
+
+        return jsonify({
+            "success": True,
+            "user": user_info,
+            "stats": stats_info,
+            "attempts": attempts_list,
+            "errors": errors_list,
+        })
+
+    @app.route("/api/admin/user/block", methods=["POST"])
+    def api_admin_user_block():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        target_uid = data.get("target_user_id")
+        reason = data.get("reason", "").strip() or "Ограничение доступа администратором"
+        if not target_uid:
+            return jsonify({"error": "target_user_id required"}), 400
+
+        from .admin_users import block_user
+        block_user(int(target_uid), int(user_id or 0), reason)
+        return jsonify({"success": True, "target_user_id": target_uid, "is_blocked": True})
+
+    @app.route("/api/admin/user/unblock", methods=["POST"])
+    def api_admin_user_unblock():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        target_uid = data.get("target_user_id")
+        if not target_uid:
+            return jsonify({"error": "target_user_id required"}), 400
+
+        from .admin_users import unblock_user
+        unblock_user(int(target_uid))
+        return jsonify({"success": True, "target_user_id": target_uid, "is_blocked": False})
+
+    @app.route("/api/admin/user/send_message", methods=["POST"])
+    def api_admin_user_send_message():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        target_uid = data.get("target_user_id")
+        text = data.get("text", "").strip()
+        if not target_uid or not text:
+            return jsonify({"error": "target_user_id and text required"}), 400
+
+        bot_token = get_bot_token()
+        if not bot_token:
+            return jsonify({
+                "success": True,
+                "simulation": True,
+                "message": "Локальный режим: бот-токен не настроен, сообщение сымитировано.",
+            })
+
+        import asyncio
+        from telegram import Bot
+
+        async def _send_direct():
+            bot = Bot(bot_token)
+            await bot.send_message(chat_id=int(target_uid), text=text, parse_mode="HTML")
+
+        try:
+            asyncio.run(_send_direct())
+            return jsonify({"success": True, "sent": True})
+        except Exception as e:
+            logger.warning("Failed to send message to user %s: %s", target_uid, e)
+            return jsonify({"error": f"Ошибка отправки: {str(e)}"}), 500
 
     @app.route("/api/admin/broadcast", methods=["POST"])
     def api_admin_broadcast():
@@ -841,7 +1132,7 @@ def register_webapp_routes(app: Any) -> None:
         if not target_uid:
             return jsonify({"error": "target_user_id required"}), 400
 
-        from .storage import reset_user_progress
+        from .admin_users import reset_user_progress
         reset_user_progress(int(target_uid))
         return jsonify({"success": True, "target_user_id": target_uid})
 

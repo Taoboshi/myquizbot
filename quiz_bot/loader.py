@@ -6,10 +6,16 @@ from typing import Any
 from .config import BASE_DIR, LETTERS, SUBJECTS, TESTS
 
 try:
-    from .storage import get_subject_setting, get_test_metadata_setting, list_subject_settings
+    from .storage import (
+        get_subject_setting,
+        get_test_metadata_setting,
+        is_subject_deleted,
+        list_subject_settings,
+    )
 except Exception:
     get_subject_setting = None
     get_test_metadata_setting = None
+    is_subject_deleted = None
     list_subject_settings = None
 
 
@@ -42,6 +48,13 @@ def _clean_title(value: str) -> str:
     return str(value or "").replace("_", " ").strip().title() or "Тесты"
 
 
+UNASSIGNED_SUBJECT_IDS = {"", "default", "unassigned", "none", "no_subject"}
+
+
+def is_unassigned_subject_id(subject_id: str | None) -> bool:
+    return str(subject_id or "").strip().lower() in UNASSIGNED_SUBJECT_IDS
+
+
 def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]:
     if isinstance(subject, dict):
         subject_id = _slug(subject.get("id") or subject.get("slug") or subject.get("title") or "default")
@@ -58,11 +71,7 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
 
     if path is not None and (not subject_id or subject_id == "default"):
         stem = path.stem.lower()
-        if stem.startswith("farm_"):
-            subject_id = "farmakologiya"
-            title = "Фармакология"
-            emoji = "💊"
-        elif stem.startswith("oziz_") or stem.startswith("voprosi"):
+        if stem.startswith("oziz_") or stem.startswith("voprosi"):
             subject_id = "oziz"
             title = "ОЗиЗ и здравоохранение"
             emoji = "🏥"
@@ -100,6 +109,10 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
 
 def _register_subject(subject: dict[str, Any]) -> None:
     subject_id = subject["id"]
+    if is_unassigned_subject_id(subject_id):
+        return
+    if is_subject_deleted is not None and is_subject_deleted(subject_id):
+        return
     existing = SUBJECTS.get(subject_id, {})
     SUBJECTS[subject_id] = {
         "title": existing.get("title") or subject.get("title") or _clean_title(subject_id),
@@ -334,9 +347,13 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
         info["title"] = setting["title"]
     if setting.get("subject_id"):
         info["subject_id"] = setting["subject_id"]
-    if setting.get("subject_title"):
+        if is_unassigned_subject_id(setting["subject_id"]):
+            info["subject_id"] = "default"
+            info["subject_title"] = ""
+            info["subject_emoji"] = ""
+    if setting.get("subject_title") and not is_unassigned_subject_id(info.get("subject_id")):
         info["subject_title"] = setting["subject_title"]
-    if setting.get("subject_emoji"):
+    if setting.get("subject_emoji") and not is_unassigned_subject_id(info.get("subject_id")):
         info["subject_emoji"] = setting["subject_emoji"]
 
     subject_id = info.get("subject_id")
@@ -394,13 +411,6 @@ def apply_all_test_metadata_overrides() -> None:
         )
 
 
-UNASSIGNED_SUBJECT_IDS = {"", "default", "unassigned", "none", "no_subject"}
-
-
-def is_unassigned_subject_id(subject_id: str | None) -> bool:
-    return str(subject_id or "").strip().lower() in UNASSIGNED_SUBJECT_IDS
-
-
 def add_subject_override(subject_id: str, title: str, emoji: str = "") -> None:
     subject_id = _slug(subject_id)
     SUBJECTS[subject_id] = {
@@ -422,6 +432,8 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
         subject_id = info.get("subject_id") or "default"
         if is_unassigned_subject_id(subject_id):
             continue
+        if is_subject_deleted is not None and is_subject_deleted(subject_id):
+            continue
         subjects[subject_id] = {
             "title": info.get("subject_title") or SUBJECTS.get(subject_id, {}).get("title") or _clean_title(subject_id),
             "emoji": info.get("subject_emoji") or SUBJECTS.get(subject_id, {}).get("emoji") or "",
@@ -431,13 +443,24 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
     for subject_id, info in SUBJECTS.items():
         if is_unassigned_subject_id(subject_id):
             continue
-        subjects.setdefault(subject_id, info)
+        if is_subject_deleted is not None and is_subject_deleted(subject_id):
+            continue
+        # Only keep default config subject if it actually has at least 1 test assigned
+        tests_in_s = [
+            t_id for t_id in TESTS
+            if (effective_test_info(t_id).get("subject_id") or "default") == subject_id
+        ]
+        if len(tests_in_s) > 0:
+            subjects.setdefault(subject_id, info)
 
     if list_subject_settings is not None:
         try:
             for subject in list_subject_settings():
-                subjects[subject["id"]] = {
-                    "title": subject.get("title") or _clean_title(subject["id"]),
+                s_id = subject["id"]
+                if is_subject_deleted is not None and is_subject_deleted(s_id):
+                    continue
+                subjects[s_id] = {
+                    "title": subject.get("title") or _clean_title(s_id),
                     "emoji": subject.get("emoji") or "",
                     "order": 100,
                 }

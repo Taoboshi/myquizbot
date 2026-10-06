@@ -869,18 +869,45 @@ def list_subject_settings() -> list[dict[str, Any]]:
     ]
 
 
-def delete_subject_setting(subject_id: str) -> None:
+def delete_subject_setting(subject_id: str, updated_by: int = 0) -> None:
     subject_id = str(subject_id or "").strip()
     if not subject_id:
         return
 
     with db_connect() as conn:
-        if not _table_exists(conn, "subject_settings"):
-            return
-
-        conn.execute("DELETE FROM subject_settings WHERE subject_id = ?", (subject_id,))
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS deleted_subjects (
+                subject_id TEXT PRIMARY KEY,
+                deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute("INSERT OR REPLACE INTO deleted_subjects (subject_id) VALUES (?)", (subject_id,))
+        if _table_exists(conn, "subject_settings"):
+            conn.execute("DELETE FROM subject_settings WHERE subject_id = ?", (subject_id,))
         conn.commit()
     clear_cache()
+
+
+def is_subject_deleted(subject_id: str) -> bool:
+    subject_id = str(subject_id or "").strip()
+    if not subject_id:
+        return False
+    with db_connect() as conn:
+        if not _table_exists(conn, "deleted_subjects"):
+            return False
+        row = conn.execute("SELECT 1 FROM deleted_subjects WHERE subject_id = ?", (subject_id,)).fetchone()
+        return row is not None
+
+
+def get_deleted_subject_ids() -> list[str]:
+    with db_connect() as conn:
+        if not _table_exists(conn, "deleted_subjects"):
+            return []
+        rows = conn.execute("SELECT subject_id FROM deleted_subjects").fetchall()
+        return [r["subject_id"] for r in rows]
+
 
 
 @ttl_cache(60)
@@ -938,6 +965,8 @@ def set_subject_setting(
 
     with db_connect() as conn:
         _ensure_subject_settings_columns(conn)
+        if _table_exists(conn, "deleted_subjects"):
+            conn.execute("DELETE FROM deleted_subjects WHERE subject_id = ?", (subject_id,))
         conn.execute(
             """
             INSERT INTO subject_settings (subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by)
@@ -1014,8 +1043,15 @@ def set_test_metadata_setting(
 
     title_value = title if title is not None else current.get("title")
     subject_id_value = subject_id if subject_id is not None else current.get("subject_id")
-    subject_title_value = subject_title if subject_title is not None else current.get("subject_title")
-    subject_emoji_value = subject_emoji if subject_emoji is not None else current.get("subject_emoji")
+
+    is_unlinked = str(subject_id_value or "").strip().lower() in ("", "default", "unassigned", "none", "no_subject")
+    if is_unlinked:
+        subject_id_value = "default"
+        subject_title_value = ""
+        subject_emoji_value = ""
+    else:
+        subject_title_value = subject_title if subject_title is not None else current.get("subject_title")
+        subject_emoji_value = subject_emoji if subject_emoji is not None else current.get("subject_emoji")
 
     with db_connect() as conn:
         conn.execute(

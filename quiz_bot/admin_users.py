@@ -9,11 +9,6 @@ _ADMIN_TABLES_READY = False
 
 
 def ensure_admin_tables() -> None:
-    global _ADMIN_TABLES_READY
-
-    if _ADMIN_TABLES_READY:
-        return
-
     with db_connect() as conn:
         conn.execute(
             """
@@ -26,8 +21,6 @@ def ensure_admin_tables() -> None:
             """
         )
         conn.commit()
-
-    _ADMIN_TABLES_READY = True
 
 
 _BLOCKED_USERS_CACHE: dict[int, tuple[bool, float]] = {}
