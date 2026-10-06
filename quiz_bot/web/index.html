@@ -436,7 +436,7 @@
         <div class="p-5 rounded-3xl bg-app-card border border-brand-500/30 shadow-xl space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-[11px] font-bold text-brand-400 uppercase tracking-wider">Карточка теста</span>
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Готов к сдаче</span>
+            <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Доступен</span>
           </div>
           <h2 class="text-base font-bold text-white" id="hub-test-title">Название теста</h2>
           
@@ -1327,6 +1327,89 @@
       </div>
     </div>
 
+    <!-- Modal Test Access Setting (Classes of accessibility) -->
+    <div id="modal-test-access" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div class="w-full max-w-sm rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="flex items-center justify-between border-b border-app-border pb-3">
+          <div class="min-w-0 flex-1 mr-2">
+            <h3 class="text-sm font-extrabold text-white flex items-center gap-1.5">
+              <span>🔐</span> Настройка доступа к тесту
+            </h3>
+            <p id="mta-test-title" class="text-[11px] text-brand-300 font-medium truncate">Название теста</p>
+          </div>
+          <button onclick="closeAccessModal()" class="text-slate-400 hover:text-white text-sm p-1 shrink-0">✕</button>
+        </div>
+
+        <div class="space-y-2.5 overflow-y-auto hide-scrollbar max-h-[60vh] pr-0.5">
+          <p class="text-[11px] text-slate-400">Выберите класс доступности теста для студентов:</p>
+
+          <!-- Class 1: Public -->
+          <label class="p-3 rounded-2xl bg-app-surface border border-app-border hover:border-emerald-500/50 flex items-start gap-3 cursor-pointer transition">
+            <input type="radio" name="mta-access-type" value="public" onchange="onAccessTypeRadioChange()" class="mt-0.5 text-brand-600 focus:ring-0">
+            <div class="space-y-0.5 text-xs">
+              <div class="font-bold text-white flex items-center gap-1.5">
+                <span>🌍</span> Открытый
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">public</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Доступен всем ученикам без ограничений. Возле теста отображается «✓ Доступен».</div>
+            </div>
+          </label>
+
+          <!-- Class 2: Code -->
+          <label class="p-3 rounded-2xl bg-app-surface border border-app-border hover:border-amber-500/50 flex items-start gap-3 cursor-pointer transition">
+            <input type="radio" name="mta-access-type" value="code" onchange="onAccessTypeRadioChange()" class="mt-0.5 text-brand-600 focus:ring-0">
+            <div class="space-y-0.5 text-xs flex-1">
+              <div class="font-bold text-white flex items-center gap-1.5">
+                <span>🔑</span> По коду доступа
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">code</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Для запуска студент обязан ввести секретный код или пароль.</div>
+            </div>
+          </label>
+
+          <!-- Code input field -->
+          <div id="mta-code-box" class="hidden p-3 rounded-2xl bg-amber-950/30 border border-amber-500/40 space-y-1.5 ml-2">
+            <label class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider">Секретный код теста:</label>
+            <input id="mta-code-input" placeholder="Например: 1234 или med2024" class="w-full px-3 py-2 rounded-xl bg-app-card border border-amber-500/40 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-mono">
+            <p class="text-[10px] text-amber-200/80">Студент вводит этот код при первом запуске теста.</p>
+          </div>
+
+          <!-- Class 3: Private -->
+          <label class="p-3 rounded-2xl bg-app-surface border border-app-border hover:border-purple-500/50 flex items-start gap-3 cursor-pointer transition">
+            <input type="radio" name="mta-access-type" value="private" onchange="onAccessTypeRadioChange()" class="mt-0.5 text-brand-600 focus:ring-0">
+            <div class="space-y-0.5 text-xs">
+              <div class="font-bold text-white flex items-center gap-1.5">
+                <span>🔐</span> Приватный
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">private</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Доступен только администраторам и явно добавленным пользователям.</div>
+            </div>
+          </label>
+
+          <!-- Class 4: Admin only -->
+          <label class="p-3 rounded-2xl bg-app-surface border border-app-border hover:border-rose-500/50 flex items-start gap-3 cursor-pointer transition">
+            <input type="radio" name="mta-access-type" value="admin_only" onchange="onAccessTypeRadioChange()" class="mt-0.5 text-brand-600 focus:ring-0">
+            <div class="space-y-0.5 text-xs">
+              <div class="font-bold text-white flex items-center gap-1.5">
+                <span>🙈</span> Только администратор
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-mono">admin_only</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Полностью скрыт от обычных студентов в каталоге тестов.</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 pt-2 border-t border-app-border">
+          <button onclick="closeAccessModal()" class="px-3.5 py-2 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-300 hover:text-white transition">
+            Отмена
+          </button>
+          <button onclick="saveTestAccess()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition">
+            Сохранить доступ 💾
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Bottom Navigation Bar (3 Buttons: Главная, Профиль, Настройки) -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-md mx-auto glass border-t border-app-border safe-bottom px-6 py-2.5 flex items-center justify-around">
       <button id="tab-home" onclick="switchTab('home')" class="flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition">
@@ -1391,7 +1474,9 @@
       id: tid,
       title: BUNDLED_TESTS[tid].title,
       subject_id: (tid.startsWith('luchevaya_') ? 'luchevaya_diagnostika' : (tid.startsWith('farm_') ? 'farmakologiya' : 'oziz')),
-      questions_count: BUNDLED_TESTS[tid].questions.length
+      questions_count: BUNDLED_TESTS[tid].questions.length,
+      access_type: 'public',
+      access_code: ''
     }))
   };
 
@@ -1414,6 +1499,7 @@
     revealedAnswers: new Set(),
     userErrors: new Set(),
     favorites: new Set(),
+    unlockedCodeTests: new Set(JSON.parse(localStorage.getItem('ohtest_unlocked_tests') || '[]')),
     timerSeconds: 0,
     timerInterval: null,
     activeAttempt: null,
@@ -1650,6 +1736,33 @@
             emoji: s.emoji || '📚',
             tests_count: s.tests_count || 0
           }));
+
+          const loadedMeta = [];
+          data.subjects.forEach(s => {
+            (s.tests || []).forEach(t => {
+              loadedMeta.push({
+                id: t.id,
+                title: t.title,
+                subject_id: s.id,
+                questions_count: t.questions_count,
+                access_type: t.access_type || 'public',
+                access_code: t.access_code || ''
+              });
+            });
+          });
+          (data.unassigned_tests || []).forEach(t => {
+            loadedMeta.push({
+              id: t.id,
+              title: t.title,
+              subject_id: 'default',
+              questions_count: t.questions_count,
+              access_type: t.access_type || 'public',
+              access_code: t.access_code || ''
+            });
+          });
+          if (loadedMeta.length > 0) {
+            adminStore.testsMeta = loadedMeta;
+          }
         }
       }
     } catch(e) {}
@@ -1841,7 +1954,11 @@
     const container = document.getElementById('tests-items-container');
     container.innerHTML = '';
 
-    const tests = adminStore.testsMeta.filter(t => t.subject_id === subjectId);
+    let tests = adminStore.testsMeta.filter(t => t.subject_id === subjectId);
+    if (!state.isAdmin) {
+      tests = tests.filter(t => (t.access_type || 'public') !== 'admin_only');
+    }
+
     // Alphabetical sort with pinned on top
     const sortedTests = [...tests].sort((a, b) => {
       const aPinned = pinnedTests.has(a.id) ? 1 : 0;
@@ -1853,12 +1970,28 @@
     if (sortedTests.length === 0) {
       container.innerHTML = `
         <div class="p-8 text-center rounded-2xl bg-app-card border border-app-border text-slate-400 text-xs">
-          В этом разделе пока нет тестов. Вы можете привязать их в панели администратора.
+          В этом разделе пока нет доступных тестов.
         </div>
       `;
     } else {
       sortedTests.forEach(t => {
         const isPinned = pinnedTests.has(t.id);
+        const accType = t.access_type || 'public';
+        let badgeHtml = '<span class="text-[10px] text-emerald-400 font-medium">✓ Доступен</span>';
+
+        if (accType === 'code') {
+          const isUnlocked = state.isAdmin || state.unlockedCodeTests.has(t.id);
+          badgeHtml = isUnlocked 
+            ? '<span class="text-[10px] text-emerald-400 font-medium">✓ Доступен</span>' 
+            : '<span class="text-[10px] text-amber-400 font-medium">🔑 По коду</span>';
+        } else if (accType === 'private') {
+          badgeHtml = state.isAdmin
+            ? '<span class="text-[10px] text-purple-400 font-medium">🔐 Приватный (админ)</span>'
+            : '<span class="text-[10px] text-purple-400 font-medium">🔐 Приватный</span>';
+        } else if (accType === 'admin_only') {
+          badgeHtml = '<span class="text-[10px] text-rose-400 font-medium">🙈 Только админ</span>';
+        }
+
         const btn = document.createElement('div');
         btn.className = "w-full text-left p-4 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between active:scale-[0.98] transition group cursor-pointer";
         btn.onclick = () => selectTest(t.id);
@@ -1871,7 +2004,7 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 font-bold">${t.questions_count} вопросов</span>
-              <span class="text-[10px] text-emerald-400 font-medium">✓ Готов к сдаче</span>
+              ${badgeHtml}
             </div>
           </div>
           <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
@@ -1886,6 +2019,51 @@
   // Test Selection & Hub
   async function selectTest(testId) {
     triggerHaptic('light');
+
+    const testMeta = adminStore.testsMeta.find(t => t.id === testId);
+    const accType = testMeta ? (testMeta.access_type || 'public') : 'public';
+
+    if (accType === 'admin_only' && !state.isAdmin) {
+      alert('Этот тест находится в режиме «Только админ» и доступен только администраторам.');
+      return;
+    }
+
+    if (accType === 'private' && !state.isAdmin) {
+      alert('Этот тест является приватным. Доступ открывается преподавателем или администратором (@issdm).');
+      return;
+    }
+
+    if (accType === 'code' && !state.isAdmin && !state.unlockedCodeTests.has(testId)) {
+      const codeEntered = prompt(`Тест «${testMeta ? testMeta.title : testId}» защищен паролем.\n\nВведите секретный код доступа:`);
+      if (!codeEntered) return;
+
+      let verified = false;
+      if (testMeta && testMeta.access_code && testMeta.access_code.trim().toLowerCase() === codeEntered.trim().toLowerCase()) {
+        verified = true;
+      } else {
+        try {
+          const res = await fetch('/api/tests/verify_code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: state.userId, test_id: testId, code: codeEntered.trim() })
+          });
+          if (res.ok) verified = true;
+        } catch(e) {}
+      }
+
+      if (!verified) {
+        alert('❌ Неверный код доступа. Пожалуйста, проверьте код или обратитесь к @issdm.');
+        return;
+      }
+
+      state.unlockedCodeTests.add(testId);
+      try {
+        localStorage.setItem('ohtest_unlocked_tests', JSON.stringify([...state.unlockedCodeTests]));
+      } catch(e) {}
+      alert('✓ Код принят! Доступ к тесту открыт.');
+      openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
+    }
+
     state.activeTestId = testId;
     const testData = BUNDLED_TESTS[testId];
     state.activeTestTitle = testData ? testData.title : testId;
@@ -1938,6 +2116,25 @@
     document.getElementById('hub-q-errors').innerText = state.userErrors.size;
     document.getElementById('hub-q-favs').innerText = state.favorites.size;
     document.getElementById('hub-err-tag').innerText = state.userErrors.size;
+
+    const hubBadge = document.getElementById('hub-test-badge');
+    if (hubBadge) {
+      const meta = adminStore.testsMeta.find(t => t.id === state.activeTestId);
+      const acc = meta ? (meta.access_type || 'public') : 'public';
+      if (acc === 'code') {
+        hubBadge.innerText = 'Доступ по коду';
+        hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium';
+      } else if (acc === 'private') {
+        hubBadge.innerText = 'Приватный';
+        hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium';
+      } else if (acc === 'admin_only') {
+        hubBadge.innerText = 'Только админ';
+        hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium';
+      } else {
+        hubBadge.innerText = 'Доступен';
+        hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium';
+      }
+    }
 
     updateHubResumeButton();
     viewStack.push('hub');
@@ -3846,6 +4043,16 @@
 
     if (type === 'subjects_and_tests' || type === 'tests' || type === 'subjects' || type === 'unassigned') {
       title.innerHTML = '<span>📁</span> Управление предметами и тестами';
+
+      try {
+        const res = await fetch(`/api/admin/tests?user_id=${state.userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.items && data.items.length > 0) {
+            adminStore.testsMeta = data.items;
+          }
+        }
+      } catch(e) {}
       
       const unassignedTests = adminStore.testsMeta.filter(t => t.subject_id === 'default' || !t.subject_id);
 
@@ -3856,22 +4063,49 @@
         if (testsInSub.length === 0) {
           testsListHtml = '<div class="p-2 text-center text-[11px] text-slate-400">В этом предмете пока нет привязанных тестов.</div>';
         } else {
-          testsListHtml = testsInSub.map(t => `
+          testsListHtml = testsInSub.map(t => {
+            const accType = t.access_type || 'public';
+            let accBadge = '<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">🌍 Открытый</span>';
+            let accLabel = '🌍 Открытый';
+            if (accType === 'code') {
+              accBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold">🔑 Код: ${t.access_code || '—'}</span>`;
+              accLabel = '🔑 По коду';
+            } else if (accType === 'private') {
+              accBadge = '<span class="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] font-bold">🔐 Приватный</span>';
+              accLabel = '🔐 Приватный';
+            } else if (accType === 'admin_only') {
+              accBadge = '<span class="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-bold">🙈 Только админ</span>';
+              accLabel = '🙈 Только админ';
+            }
+
+            return `
             <div class="p-3 rounded-xl bg-app-card border border-app-border space-y-2">
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-bold text-white">${t.title}</span>
-                <span class="font-mono text-[10px] text-brand-300 font-bold">${t.questions_count} вопр.</span>
+              <div class="flex items-start justify-between text-xs gap-2">
+                <div class="space-y-0.5 min-w-0 flex-1">
+                  <div class="font-bold text-white truncate">${t.title}</div>
+                  <div class="text-[10px] text-slate-400 font-mono">${t.id}</div>
+                </div>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <span class="font-mono text-[10px] text-brand-300 font-bold">${t.questions_count} вопр.</span>
+                  ${accBadge}
+                </div>
               </div>
-              <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2">
-                <button onclick="renameTestPrompt('${t.id}', '${t.title.replace(/'/g, "\\'")}')" class="text-brand-300 hover:underline">
-                  ✏️ Переименовать
+              <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2 flex-wrap">
+                <button onclick="openAccessModal('${t.id}')" class="text-emerald-400 hover:underline font-bold flex items-center gap-1">
+                  ⚙️ Доступ: ${accLabel}
                 </button>
-                <button onclick="unlinkTest('${t.id}')" class="text-amber-400 hover:underline">
-                  🔗 Отвязать от предмета
-                </button>
+                <div class="flex items-center gap-2">
+                  <button onclick="renameTestPrompt('${t.id}', '${t.title.replace(/'/g, "\\'")}')" class="text-brand-300 hover:underline">
+                    ✏️ Переименовать
+                  </button>
+                  <button onclick="unlinkTest('${t.id}')" class="text-amber-400 hover:underline">
+                    🔗 Отвязать
+                  </button>
+                </div>
               </div>
             </div>
-          `).join('');
+            `;
+          }).join('');
         }
 
         return `
@@ -3900,11 +4134,37 @@
 
       let unassignedSection = '';
       if (unassignedTests.length > 0) {
-        let unassignedCards = unassignedTests.map(t => `
+        let unassignedCards = unassignedTests.map(t => {
+          const accType = t.access_type || 'public';
+          let accBadge = '<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">🌍 Открытый</span>';
+          let accLabel = '🌍 Открытый';
+          if (accType === 'code') {
+            accBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold">🔑 Код: ${t.access_code || '—'}</span>`;
+            accLabel = '🔑 По коду';
+          } else if (accType === 'private') {
+            accBadge = '<span class="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] font-bold">🔐 Приватный</span>';
+            accLabel = '🔐 Приватный';
+          } else if (accType === 'admin_only') {
+            accBadge = '<span class="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-bold">🙈 Только админ</span>';
+            accLabel = '🙈 Только админ';
+          }
+
+          return `
           <div class="p-3 rounded-xl bg-app-card border border-amber-500/30 space-y-2">
-            <div class="flex items-center justify-between text-xs">
-              <span class="font-bold text-white">${t.title}</span>
-              <span class="font-mono text-[10px] text-amber-400 font-bold">${t.questions_count} вопр.</span>
+            <div class="flex items-start justify-between text-xs gap-2">
+              <div class="space-y-0.5 min-w-0 flex-1">
+                <div class="font-bold text-white truncate">${t.title}</div>
+                <div class="text-[10px] text-slate-400 font-mono">${t.id}</div>
+              </div>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <span class="font-mono text-[10px] text-amber-400 font-bold">${t.questions_count} вопр.</span>
+                ${accBadge}
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2 flex-wrap">
+              <button onclick="openAccessModal('${t.id}')" class="text-emerald-400 hover:underline font-bold flex items-center gap-1">
+                ⚙️ Доступ: ${accLabel}
+              </button>
             </div>
             <div class="flex items-center gap-2 pt-1">
               <select id="u-assign-${t.id}" class="flex-1 px-2 py-1.5 rounded-xl bg-app-surface border border-app-border text-xs text-white">
@@ -3915,7 +4175,8 @@
               </button>
             </div>
           </div>
-        `).join('');
+          `;
+        }).join('');
 
         unassignedSection = `
           <div class="space-y-2 pt-2">
@@ -4269,6 +4530,99 @@
       openAdminModal('tests');
       renderHomeSubjects();
       updateAdminStats();
+    }
+  }
+
+  // TEST ACCESS CLASS MANAGEMENT (ADMIN)
+  let currentAccessTestId = null;
+
+  function openAccessModal(testId) {
+    triggerHaptic('light');
+    currentAccessTestId = testId;
+    const test = adminStore.testsMeta.find(x => x.id === testId);
+    if (!test) return;
+
+    const titleEl = document.getElementById('mta-test-title');
+    if (titleEl) titleEl.innerText = test.title;
+
+    const accType = test.access_type || 'public';
+    const radios = document.getElementsByName('mta-access-type');
+    for (let r of radios) {
+      r.checked = (r.value === accType);
+    }
+
+    const codeInput = document.getElementById('mta-code-input');
+    if (codeInput) {
+      codeInput.value = test.access_code || '';
+    }
+
+    const codeBox = document.getElementById('mta-code-box');
+    if (codeBox) {
+      if (accType === 'code') {
+        codeBox.classList.remove('hidden');
+      } else {
+        codeBox.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('modal-test-access').classList.remove('hidden');
+  }
+
+  function closeAccessModal() {
+    triggerHaptic('light');
+    document.getElementById('modal-test-access').classList.add('hidden');
+    currentAccessTestId = null;
+  }
+
+  function onAccessTypeRadioChange() {
+    const selected = document.querySelector('input[name="mta-access-type"]:checked')?.value || 'public';
+    const codeBox = document.getElementById('mta-code-box');
+    if (codeBox) {
+      if (selected === 'code') {
+        codeBox.classList.remove('hidden');
+        document.getElementById('mta-code-input')?.focus();
+      } else {
+        codeBox.classList.add('hidden');
+      }
+    }
+  }
+
+  async function saveTestAccess() {
+    if (!currentAccessTestId) return;
+    triggerHaptic('light');
+
+    const selectedType = document.querySelector('input[name="mta-access-type"]:checked')?.value || 'public';
+    let codeVal = document.getElementById('mta-code-input')?.value?.trim() || '';
+
+    if (selectedType === 'code' && !codeVal) {
+      alert('Пожалуйста, укажите секретный код для доступа к тесту (например: 1234).');
+      return;
+    }
+
+    const t = adminStore.testsMeta.find(x => x.id === currentAccessTestId);
+    if (t) {
+      t.access_type = selectedType;
+      t.access_code = (selectedType === 'code') ? codeVal : '';
+    }
+
+    try {
+      await fetch('/api/admin/set_test_access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: state.userId,
+          test_id: currentAccessTestId,
+          access_type: selectedType,
+          code: codeVal
+        })
+      });
+    } catch(e) {}
+
+    closeAccessModal();
+    openAdminModal('subjects_and_tests');
+    renderHomeSubjects();
+    if (state.homeActiveView === 'tests' && state.activeSubjectId) {
+      openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
     }
   }
 

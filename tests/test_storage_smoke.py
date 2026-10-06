@@ -45,3 +45,15 @@ def test_sqlite_init_and_attempt_flow(tmp_path, monkeypatch):
     assert feedbacks[0]["message"] == "Вопрос 14 требует уточнения"
     assert feedbacks[0]["contact"] == "@issdm"
 
+    # Test test_access storage
+    storage.set_test_access_setting("sample", "code", code="secret123", updated_by=777)
+    setting = storage.get_test_access_setting("sample")
+    assert setting is not None
+    assert setting["type"] == "code"
+    assert setting["code"] == "secret123"
+
+    storage.set_test_access_setting("sample", "public")
+    setting2 = storage.get_test_access_setting("sample")
+    assert setting2 is not None
+    assert setting2["type"] == "public"
+

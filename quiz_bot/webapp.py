@@ -69,16 +69,23 @@ def register_webapp_routes(app: Any) -> None:
         user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
         is_admin = is_admin_user(user_id)
 
+        from .access import effective_test_access
+
         subjects_data = []
         for s_id, s_info in get_subjects():
             tests_list = []
             for t_id, t_info in get_tests_for_subject(s_id):
                 info = effective_test_info(t_id)
+                acc = effective_test_access(t_id)
+                acc_type = acc.get("type", "public")
+                acc_code = acc.get("code", "")
                 tests_list.append({
                     "id": t_id,
                     "title": info.get("title", t_id),
                     "questions_count": len(LOADED_TESTS.get(t_id, [])),
                     "description": info.get("description", ""),
+                    "access_type": acc_type,
+                    "access_code": acc_code if is_admin else "",
                 })
             subjects_data.append({
                 "id": s_id,
@@ -91,11 +98,16 @@ def register_webapp_routes(app: Any) -> None:
         unassigned_data = []
         for t_id, t_info in get_unassigned_tests():
             info = effective_test_info(t_id)
+            acc = effective_test_access(t_id)
+            acc_type = acc.get("type", "public")
+            acc_code = acc.get("code", "")
             unassigned_data.append({
                 "id": t_id,
                 "title": info.get("title", t_id),
                 "questions_count": len(LOADED_TESTS.get(t_id, [])),
                 "file": t_info.get("file", ""),
+                "access_type": acc_type,
+                "access_code": acc_code if is_admin else "",
             })
 
         return jsonify({
@@ -134,6 +146,9 @@ def register_webapp_routes(app: Any) -> None:
                 "explanation": q.get("explanation") or (f"Правильный ответ: {options[correct_idx]}" if options else ""),
             })
 
+        from .access import effective_test_access
+        acc = effective_test_access(test_id)
+
         return jsonify({
             "id": test_id,
             "title": info.get("title", test_id),
@@ -141,6 +156,7 @@ def register_webapp_routes(app: Any) -> None:
             "subject_title": info.get("subject_title", ""),
             "questions_count": len(clean_qs),
             "questions": clean_qs,
+            "access_type": acc.get("type", "public"),
         })
 
     @app.route("/api/rating", methods=["GET"])
@@ -669,9 +685,11 @@ def register_webapp_routes(app: Any) -> None:
         if not is_admin_user(user_id):
             return jsonify({"error": "Forbidden"}), 403
 
+        from .access import effective_test_access
         items = []
         for t_id, qs in LOADED_TESTS.items():
             info = effective_test_info(t_id)
+            acc = effective_test_access(t_id)
             items.append({
                 "id": t_id,
                 "title": info.get("title", t_id),
@@ -679,6 +697,8 @@ def register_webapp_routes(app: Any) -> None:
                 "subject_title": info.get("subject_title", "Не привязан"),
                 "questions_count": len(qs),
                 "file": TESTS.get(t_id, {}).get("file", ""),
+                "access_type": acc.get("type", "public"),
+                "access_code": acc.get("code", ""),
             })
         return jsonify({"items": items})
 
@@ -717,6 +737,78 @@ def register_webapp_routes(app: Any) -> None:
                 pass
         LOADED_TESTS.pop(test_id, None)
         return jsonify({"success": True, "deleted_id": test_id})
+
+    @app.route("/api/admin/set_test_access", methods=["POST"])
+    def api_admin_set_test_access():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        data = request.get_json(force=True) or {}
+        test_id = data.get("test_id")
+        access_type = data.get("access_type", "public")
+        code = data.get("code", "")
+        if not test_id:
+            return jsonify({"error": "test_id required"}), 400
+
+        from .storage import set_test_access_setting
+        uid_int = int(user_id) if user_id and str(user_id).isdigit() else None
+        set_test_access_setting(test_id, access_type, code=code, updated_by=uid_int)
+
+        from .access import effective_test_access
+        new_acc = effective_test_access(test_id)
+        return jsonify({
+            "success": True,
+            "test_id": test_id,
+            "access_type": new_acc.get("type", "public"),
+            "access_code": new_acc.get("code", ""),
+        })
+
+    @app.route("/api/admin/reset_test_access", methods=["POST"])
+    def api_admin_reset_test_access():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        data = request.get_json(force=True) or {}
+        test_id = data.get("test_id")
+        if not test_id:
+            return jsonify({"error": "test_id required"}), 400
+
+        from .storage import reset_test_access_setting
+        reset_test_access_setting(test_id)
+
+        from .access import effective_test_access
+        new_acc = effective_test_access(test_id)
+        return jsonify({
+            "success": True,
+            "test_id": test_id,
+            "access_type": new_acc.get("type", "public"),
+            "access_code": new_acc.get("code", ""),
+        })
+
+    @app.route("/api/tests/verify_code", methods=["POST"])
+    def api_verify_test_code():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        test_id = data.get("test_id")
+        code = str(data.get("code", "")).strip()
+
+        if not test_id or not code:
+            return jsonify({"success": False, "error": "test_id and code required"}), 400
+
+        from .access import effective_access_code, grant_user_test_access
+        expected = effective_access_code(test_id)
+        if not expected or expected.casefold() != code.casefold():
+            return jsonify({"success": False, "error": "Неверный код доступа"}), 403
+
+        if user_id and str(user_id).isdigit():
+            try:
+                grant_user_test_access(int(user_id), test_id, access_source="code")
+            except Exception:
+                pass
+
+        return jsonify({"success": True, "test_id": test_id})
 
     @app.route("/api/admin/reset_user", methods=["POST"])
     def api_admin_reset_user():
