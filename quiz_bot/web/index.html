@@ -2239,18 +2239,21 @@
     document.getElementById('profile-fav-count').innerText = state.favorites.size;
     updateProfileErrorBadge(getAllSavedErrors().length);
 
-    // Check Admin Privileges
-    await checkBootstrapAndAdmin();
-
     // Check Saved Active Attempt
     restoreActiveAttemptState();
 
-
-
-    // Render Initial Home
+    // Render Initial Home INSTANTLY (Zero-wait UI from bundled data)
     renderHomeSubjects();
     renderActiveAttemptBanner();
     updateHubResumeButton();
+
+    // Fetch server updates & check admin in background (non-blocking)
+    checkBootstrapAndAdmin().then(() => {
+      renderHomeSubjects();
+      updateHubResumeButton();
+      const profFavsEl = document.getElementById('profile-fav-count');
+      if (profFavsEl) profFavsEl.innerText = getAllSavedFavorites().length;
+    });
   });
 
     // THEME MODE SWITCHER (СВЕТЛАЯ / ТЕМНАЯ ТЕМА)

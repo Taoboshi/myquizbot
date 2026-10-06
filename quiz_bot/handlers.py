@@ -113,7 +113,6 @@ async def setup_bot_commands(app) -> None:
             pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    import asyncio
     chat_id = update.effective_chat.id
     current = datetime.now().timestamp()
 
@@ -121,28 +120,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     LAST_START_AT[chat_id] = current
-    
-    # Выносим сборку тяжелого меню в отдельный поток
-    keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
-    await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
-    await asyncio.to_thread(upsert_user, update.effective_user)
-
-async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    import asyncio
-    keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
-    await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
-    await asyncio.to_thread(upsert_user, update.effective_user)
-
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     asyncio.create_task(asyncio.to_thread(upsert_user, update.effective_user))
-    open_tests = await asyncio.to_thread(_open_tests_for_user, update.effective_user.id)
-    if len(open_tests) == 1:
-        test_id = open_tests[0]
-        text = await asyncio.to_thread(my_stats_text, update.effective_user.id, test_id)
-        await update.message.reply_text(text, reply_markup=stats_keyboard(test_id))
+
+    webapp_url = os.getenv("WEBAPP_URL", "").strip()
+    if not webapp_url:
+        render_url = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+        if render_url:
+            webapp_url = f"{render_url.rstrip('/')}/app"
+
+    user_first = update.effective_user.first_name if update.effective_user else "Студент"
+
+    if webapp_url:
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🚀 Открыть ohTest (Приложение)", web_app=WebAppInfo(url=webapp_url))]
+        ])
+        await update.message.reply_text(
+            f"Привет, <b>{user_first}</b>! 👋\n\n"
+            "Все тесты, флеш-карточки, поиск и избранное теперь работают в удобном приложении <b>ohTest</b>.\n\n"
+            "Нажми кнопку ниже, чтобы начать подготовку:",
+            reply_markup=kb,
+            parse_mode="HTML",
+        )
     else:
+        # Fallback если URL не задан
         keyboard = await asyncio.to_thread(subject_select_keyboard, update.effective_user.id)
         await update.message.reply_text("Выбери предмет:", reply_markup=keyboard)
+
+async def tests_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await start(update, context)
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await start(update, context)
 
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
