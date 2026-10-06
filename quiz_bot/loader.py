@@ -57,17 +57,38 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
         order = 100
 
     if path is not None and (not subject_id or subject_id == "default"):
-        tests_root = BASE_DIR / "tests"
-        try:
-            relative = path.relative_to(tests_root)
-            if len(relative.parts) > 1:
-                subject_id = _slug(relative.parts[0])
-                title = _clean_title(relative.parts[0])
-        except ValueError:
-            pass
+        stem = path.stem.lower()
+        if stem.startswith("farm_"):
+            subject_id = "farmakologiya"
+            title = "Фармакология"
+            emoji = "💊"
+        elif stem.startswith("oziz_") or stem.startswith("voprosi"):
+            subject_id = "oziz"
+            title = "ОЗиЗ и здравоохранение"
+            emoji = "🏥"
+        elif stem.startswith("luchevaya_"):
+            subject_id = "luchevaya_diagnostika"
+            title = "Основы лучевой диагностики"
+            emoji = "🩻"
+        else:
+            tests_root = BASE_DIR / "tests"
+            try:
+                relative = path.relative_to(tests_root)
+                if len(relative.parts) > 1:
+                    subject_id = _slug(relative.parts[0])
+                    title = _clean_title(relative.parts[0])
+            except ValueError:
+                pass
 
     if not subject_id:
         subject_id = "default"
+
+    if subject_id in SUBJECTS:
+        s_cfg = SUBJECTS[subject_id]
+        if not emoji and s_cfg.get("emoji"):
+            emoji = s_cfg["emoji"]
+        if (not title or title in ("Default", "Тесты", subject_id)) and s_cfg.get("title"):
+            title = s_cfg["title"]
 
     return {
         "id": subject_id,

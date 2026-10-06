@@ -383,7 +383,20 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
             raise ApplicationHandlerStop
 
         context.user_data.pop("admin_rename_subject_id", None)
-        subject_id = _slug(text)
+
+        curr = get_subject_setting(rename_subject_id) if get_subject_setting else None
+        curr_emoji = (curr.get("emoji") if curr else "") or SUBJECTS.get(rename_subject_id, {}).get("emoji", "")
+        
+        # Check if user included an emoji in their text (e.g. "💊 Фармакология")
+        parts = text.split(maxsplit=1)
+        if parts and any(ord(c) > 10000 for c in parts[0]):
+            extracted_emoji = parts[0]
+            clean_title = parts[1].strip() if len(parts) > 1 else text
+        else:
+            extracted_emoji = curr_emoji
+            clean_title = text
+
+        subject_id = _slug(clean_title)
 
         if subject_id != rename_subject_id and not get_tests_for_subject(rename_subject_id):
             delete_subject_setting(rename_subject_id)
@@ -391,8 +404,8 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
         else:
             subject_id = rename_subject_id
 
-        set_subject_setting(subject_id, text, emoji="", updated_by=user.id)
-        add_subject_override(subject_id, text, emoji="")
+        set_subject_setting(subject_id, clean_title, emoji=extracted_emoji, updated_by=user.id)
+        add_subject_override(subject_id, clean_title, emoji=extracted_emoji)
 
         await update.message.reply_text(
             "✅ Раздел переименован.\n\n" + admin_subject_text(subject_id),
@@ -411,9 +424,17 @@ async def handle_admin_broadcast_text(update: Update, context: ContextTypes.DEFA
 
         context.user_data.pop("admin_add_subject_waiting", None)
 
-        subject_id = _slug(text)
-        set_subject_setting(subject_id, text, emoji="", updated_by=user.id)
-        add_subject_override(subject_id, text, emoji="")
+        parts = text.split(maxsplit=1)
+        if parts and any(ord(c) > 10000 for c in parts[0]):
+            extracted_emoji = parts[0]
+            clean_title = parts[1].strip() if len(parts) > 1 else text
+        else:
+            extracted_emoji = "📚"
+            clean_title = text
+
+        subject_id = _slug(clean_title)
+        set_subject_setting(subject_id, clean_title, emoji=extracted_emoji, updated_by=user.id)
+        add_subject_override(subject_id, clean_title, emoji=extracted_emoji)
 
         await update.message.reply_text(
             "✅ Раздел добавлен.\n\n" + admin_tests_text(),

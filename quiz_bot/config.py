@@ -36,7 +36,23 @@ def get_env_admin_ids() -> set[int]:
 BOT_TOKEN = get_bot_token(required=False)
 ADMIN_IDS = frozenset(get_env_admin_ids())
 
-SUBJECTS = {}
+SUBJECTS = {
+    "luchevaya_diagnostika": {
+        "title": "Основы лучевой диагностики",
+        "emoji": "🩻",
+        "order": 1,
+    },
+    "farmakologiya": {
+        "title": "Фармакология",
+        "emoji": "💊",
+        "order": 2,
+    },
+    "oziz": {
+        "title": "ОЗиЗ и здравоохранение",
+        "emoji": "🏥",
+        "order": 3,
+    },
+}
 
 TESTS = {
     "oziz_module_2": {

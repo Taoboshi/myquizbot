@@ -1927,7 +1927,14 @@
     }
 
     try {
-      const url = `/api/bootstrap${state.userId ? `?user_id=${state.userId}` : ''}`;
+      const bParams = new URLSearchParams();
+      if (state.userId) bParams.set('user_id', state.userId);
+      if (state.userName) bParams.set('name', state.userName);
+      if (state.userUsername) bParams.set('username', state.userUsername.replace('@', ''));
+      const tgU = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgU?.first_name) bParams.set('first_name', tgU.first_name);
+      if (tgU?.last_name) bParams.set('last_name', tgU.last_name);
+      const url = `/api/bootstrap?${bParams.toString()}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();

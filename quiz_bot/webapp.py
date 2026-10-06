@@ -29,6 +29,7 @@ from .storage import (
     set_subject_setting,
     set_test_metadata_setting,
     toggle_favorite,
+    upsert_user,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,9 +65,28 @@ def register_webapp_routes(app: Any) -> None:
                 return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
         return "ohTest Mini App is starting up...", 200
 
-    @app.route("/api/bootstrap", methods=["GET"])
+    @app.route("/api/bootstrap", methods=["GET", "POST"])
     def api_bootstrap():
         user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if user_id:
+            try:
+                uid = int(user_id)
+                u_name = request.args.get("name") or ""
+                u_uname = request.args.get("username") or ""
+                u_fname = request.args.get("first_name") or u_name or f"User {uid}"
+                u_lname = request.args.get("last_name") or ""
+
+                class _WebUser:
+                    def __init__(self, u_id, uname, fname, lname):
+                        self.id = u_id
+                        self.username = uname
+                        self.first_name = fname
+                        self.last_name = lname
+
+                upsert_user(_WebUser(uid, u_uname, u_fname, u_lname))
+            except Exception as e:
+                logger.warning("Failed to auto-upsert web user %s: %s", user_id, e)
+
         is_admin = is_admin_user(user_id)
 
         from .access import effective_test_access
@@ -574,13 +594,13 @@ def register_webapp_routes(app: Any) -> None:
         with db_connect() as conn:
             rows = conn.execute(
                 """
-                SELECT u.user_id, u.username, u.first_name, u.last_name, u.created_at,
-                       COUNT(a.id) as attempts_count
+                SELECT u.user_id, u.username, u.first_name, u.last_name, u.first_seen_at as created_at,
+                       COUNT(a.attempt_id) as attempts_count
                 FROM users u
                 LEFT JOIN attempts a ON a.user_id = u.user_id
-                GROUP BY u.user_id
-                ORDER BY u.created_at DESC
-                LIMIT 50
+                GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.first_seen_at
+                ORDER BY u.first_seen_at DESC
+                LIMIT 100
                 """
             ).fetchall()
 
