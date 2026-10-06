@@ -585,6 +585,36 @@
       outline: none;
     }
 
+    /* Secondary Liquid Glass Button */
+    .btn-glass-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .btn-glass-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+    .btn-glass-secondary:active {
+      transform: scale(0.98);
+    }
+    body.light-theme .btn-glass-secondary {
+      background: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+      color: #334155 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+    body.light-theme .btn-glass-secondary:hover {
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+
     /* ========================================================= */
     /* LIGHT THEME STYLES (СВЕТЛАЯ ТЕМА - ПОЛНАЯ АДАПТАЦИЯ) */
     /* ========================================================= */
@@ -1310,8 +1340,9 @@
               <button onclick="fcRestartAll()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-200 hover:text-white font-bold text-xs active:scale-95 transition flex items-center justify-center gap-2">
                 <span>🔄</span> Пройти все заново
               </button>
-              <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-400 hover:text-white font-semibold text-xs active:scale-95 transition">
-                ← В меню теста
+              <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3 rounded-2xl font-semibold text-xs active:scale-95 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>В меню теста</span>
               </button>
             </div>
           </div>
@@ -3267,8 +3298,11 @@
             msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>🎉</span> Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Все ошибки в этом тесте успешно разобраны и усвоены!</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
-                <button onclick="startQuizMode('normal')" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2"><span>🔄</span> Пройти полный тест заново</button>
-                <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">🏛 В меню этого теста</button>
+                <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти полный тест заново</button>
+                <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                  <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                  <span>В меню теста</span>
+                </button>
               `;
             }
           } else {
@@ -3276,30 +3310,23 @@
             msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>⚠️</span> Остались нерешенные вопросы</div><p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. Осталось ${remainingErrors} ошибок.</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
-                <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🔁</span> Повторить оставшиеся ошибки (${remainingErrors})</button>
-                <button onclick="startQuizMode('normal')" class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs active:scale-95 transition">🔄 Пройти весь тест заново</button>
-                <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-semibold text-xs active:scale-95 transition">🏛 В меню теста</button>
+                <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🔁</span> Повторить оставшиеся ошибки (${remainingErrors})</button>
+                <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти весь тест заново</button>
+                <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                  <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                  <span>В меню теста</span>
+                </button>
               `;
             }
           }
         }
       } else {
         if (msgBanner) msgBanner.classList.add('hidden');
-        const errCount = total - correct;
-        if (errCount > 0) {
-          const resTitle = document.getElementById('result-title');
-          if (resTitle) resTitle.innerText = "Тест завершен! 🎯";
-          const resSub = document.getElementById('result-subtitle');
-          if (resSub) resSub.innerText = "Контрольный результат";
-          if (iconBox) iconBox.innerText = "📊";
-          if (btnBox) {
-            btnBox.innerHTML = `
-              <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🧠</span> Разобрать ошибки (${errCount})</button>
-              <button onclick="startQuizMode('normal')" class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs active:scale-95 transition">🔄 Пройти заново</button>
-              <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-semibold text-xs active:scale-95 transition">🏛 В меню теста</button>
-            `;
-          }
-        } else {
+        // Count actual unsolved errors belonging to this test
+        const testErrorsCount = state.currentTestOriginalQuestions.filter(q => state.userErrors.has(q.id)).length;
+        const isPerfect = (total > 0 && correct === total);
+
+        if (isPerfect) {
           const resTitle = document.getElementById('result-title');
           if (resTitle) resTitle.innerText = "Идеальный результат! 🏆";
           const resSub = document.getElementById('result-subtitle');
@@ -3307,9 +3334,38 @@
           if (iconBox) iconBox.innerText = "🏆";
           if (btnBox) {
             btnBox.innerHTML = `
-              <button onclick="startQuizMode('normal')" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2"><span>🔄</span> Пройти ещё раз</button>
-              <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">🏛 В меню этого теста</button>
+              <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти ещё раз</button>
+              <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>В меню теста</span>
+              </button>
               <button onclick="switchTab('home')" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs transition">🏠 На главную</button>
+            `;
+          }
+        } else {
+          const resTitle = document.getElementById('result-title');
+          if (resTitle) resTitle.innerText = "Тест завершен! 🎯";
+          const resSub = document.getElementById('result-subtitle');
+          if (resSub) resSub.innerText = "Контрольный результат";
+          if (iconBox) iconBox.innerText = "📊";
+          if (btnBox) {
+            let errorButtonHtml = '';
+            if (testErrorsCount > 0) {
+              errorButtonHtml = `
+                <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">
+                  <span>🧠</span> Разобрать ошибки (${testErrorsCount})
+                </button>
+              `;
+            }
+            btnBox.innerHTML = `
+              ${errorButtonHtml}
+              <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">
+                <span>🔄</span> Пройти заново
+              </button>
+              <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>В меню теста</span>
+              </button>
             `;
           }
         }
