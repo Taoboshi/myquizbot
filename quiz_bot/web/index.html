@@ -998,60 +998,76 @@
       <section id="view-flashcards" class="hidden space-y-4">
         <!-- Active Deck Section -->
         <div id="fc-active-deck" class="space-y-4">
-          <div class="flex items-center justify-between text-xs text-slate-400">
-            <span class="font-bold text-purple-400 uppercase tracking-wider text-[11px]">Флеш-карточки</span>
-            <span id="fc-counter" class="font-bold text-white font-mono">Карточка 1 из N</span>
+          <!-- Quizlet Top Header: [X], Progress Counter, [Gear Options] -->
+          <div class="flex items-center justify-between px-1">
+            <button onclick="openTestHub()" class="w-10 h-10 rounded-full bg-app-surface border border-app-border flex items-center justify-center text-slate-300 hover:text-white active:scale-90 transition" title="Закрыть">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <span id="fc-counter" class="text-sm font-bold text-white font-mono">1 / N</span>
+            <button onclick="openFCOptionsModal()" class="w-10 h-10 rounded-full bg-app-surface border border-app-border flex items-center justify-center text-slate-300 hover:text-white active:scale-90 transition" title="Настройки карточек">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
           </div>
 
-          <!-- Progress indicators: Знаю vs Повторить -->
-          <div class="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
-            <span class="flex items-center gap-1.5 text-emerald-400">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Знаю: <span id="fc-tag-known" class="font-bold">0</span>
-            </span>
-            <span class="flex items-center gap-1.5 text-rose-400">
-              <span class="w-2 h-2 rounded-full bg-rose-400"></span> Повторить: <span id="fc-tag-review" class="font-bold">0</span>
-            </span>
+          <!-- Progress indicators: Quizlet Left (Review/Orange) and Right (Known/Emerald) counters -->
+          <div class="flex items-center justify-between px-2 text-xs font-mono font-bold">
+            <span class="px-2.5 py-1 rounded-full border border-amber-500/40 text-amber-400 bg-amber-500/10" id="fc-tag-review">0</span>
+            <span class="px-2.5 py-1 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10" id="fc-tag-known">0</span>
           </div>
 
-          <div class="perspective-1000 w-full min-h-[300px] cursor-pointer" onclick="flipCard()">
-            <div id="fc-card" class="relative w-full h-[320px] rounded-3xl transform-style-3d transition-transform duration-500 shadow-2xl">
+          <!-- 3D Flashcard without cluttered prompt texts -->
+          <div class="perspective-1000 w-full min-h-[340px] cursor-pointer" onclick="flipCard()">
+            <div id="fc-card" class="relative w-full h-[360px] rounded-3xl transform-style-3d transition-transform duration-500 shadow-2xl">
               <!-- Front -->
-              <div class="absolute inset-0 w-full h-full p-6 rounded-3xl bg-app-card border border-purple-500/40 backface-hidden flex flex-col justify-between">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">ВОПРОС</span>
-                  <span class="text-[11px] text-slate-400">Тапните, чтобы перевернуть 👆</span>
+              <div class="absolute inset-0 w-full h-full p-6 sm:p-8 rounded-3xl bg-app-card border border-white/10 backface-hidden flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-sm">
+                  <span class="text-base select-none">🔊</span>
+                  <button type="button" onclick="event.stopPropagation(); toggleFCCurrentStar();" id="fc-star-btn" class="text-xl text-slate-400 hover:text-amber-400 active:scale-90 transition">
+                    ☆
+                  </button>
                 </div>
-                <h3 id="fc-front-text" class="text-sm sm:text-base font-bold text-white text-center leading-relaxed">
-                  Вопрос
-                </h3>
-                <div class="text-center text-xs text-purple-400 font-semibold">
-                  Показать ответ ↻
+                <div class="flex-1 flex items-center justify-center my-auto px-2">
+                  <h3 id="fc-front-text" class="text-base sm:text-lg font-bold text-white text-center leading-relaxed">
+                    Вопрос
+                  </h3>
                 </div>
+                <div class="h-4"></div>
               </div>
 
               <!-- Back -->
-              <div class="absolute inset-0 w-full h-full p-6 rounded-3xl bg-gradient-to-br from-indigo-950 to-app-card border border-emerald-500/40 backface-hidden rotate-y-180 flex flex-col justify-between">
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">ПРАВИЛЬНЫЙ ОТВЕТ</span>
-                  <span class="text-[11px] text-slate-400">Тапните назад ↺</span>
+              <div class="absolute inset-0 w-full h-full p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-950/90 to-app-card border border-emerald-500/30 backface-hidden rotate-y-180 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 text-sm">
+                  <span class="text-base select-none">🔊</span>
+                  <span class="text-xs font-mono font-semibold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">ОТВЕТ</span>
                 </div>
-                <div id="fc-back-answer" class="text-sm sm:text-base font-bold text-emerald-300 text-center leading-relaxed">
-                  Ответ
+                <div class="flex-1 flex items-center justify-center my-auto px-2">
+                  <div id="fc-back-answer" class="text-base sm:text-lg font-bold text-emerald-300 text-center leading-relaxed">
+                    Ответ
+                  </div>
                 </div>
-                <div class="text-center text-[11px] text-slate-400">
-                  Запомнили ответ?
-                </div>
+                <div class="h-4"></div>
               </div>
             </div>
           </div>
 
-          <!-- Controls -->
-          <div class="flex items-center gap-3 pt-2">
-            <button onclick="fcNext(false)" class="flex-1 py-3 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-bold text-xs hover:text-white active:scale-95 transition">
-              Повторить ↻
+          <!-- Quizlet Bottom Bar: Undo (Previous card), Knowledge Action / Next Arrow -->
+          <div class="flex items-center justify-between px-4 pt-1">
+            <button id="fc-btn-prev" onclick="fcPrevCard()" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none" title="Предыдущая карточка">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a5 5 0 015 5v2m-15-7l4-4m-4 4l4 4"/></svg>
             </button>
-            <button onclick="fcNext(true)" class="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition">
-              Знаю ✓
+
+            <!-- Quick Knowledge Buttons -->
+            <div class="flex items-center gap-2">
+              <button onclick="fcNext(false)" class="px-4 py-2.5 rounded-2xl bg-app-surface border border-rose-500/30 text-rose-300 font-bold text-xs hover:border-rose-500 hover:text-white active:scale-95 transition">
+                Не знаю ✕
+              </button>
+              <button onclick="fcNext(true)" class="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition">
+                Знаю ✓
+              </button>
+            </div>
+
+            <button id="fc-btn-next-arrow" onclick="fcNext(true)" class="w-12 h-12 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white active:scale-90 transition" title="Следующая карточка">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
         </div>
@@ -1895,6 +1911,53 @@
           <button onclick="saveUserProfileEdits()" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-md transition active:scale-95">
             Сохранить 💾
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quizlet Options Modal (Настройки карточек: Перемешать, Рестарт, Избранное) -->
+    <div id="modal-fc-options" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" onclick="closeFCOptionsModal()">
+      <div class="w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-app-card border border-white/[0.1] shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-app-border pb-3">
+          <h3 class="text-base font-bold text-white">Параметры</h3>
+          <button onclick="closeFCOptionsModal()" class="w-8 h-8 rounded-full bg-app-surface border border-app-border flex items-center justify-center text-slate-400 hover:text-white text-sm transition active:scale-90">
+            ✕
+          </button>
+        </div>
+
+        <div class="space-y-3 divide-y divide-app-border/60 text-xs">
+          <!-- Toggle: Shuffle cards -->
+          <div class="flex items-center justify-between pt-2">
+            <div>
+              <div class="font-bold text-white text-xs">Перемешать карточки</div>
+              <div class="text-[11px] text-slate-400">Случайный порядок при изучении</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="fc-opt-shuffle" onchange="toggleFCShuffle(this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+            </label>
+          </div>
+
+          <!-- Toggle: Study starred terms only -->
+          <div class="flex items-center justify-between pt-3">
+            <div>
+              <div class="font-bold text-white text-xs">Только отмеченные ☆</div>
+              <div class="text-[11px] text-slate-400">Учить только избранные термины</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="fc-opt-starred-only" onchange="toggleFCStarredOnly(this.checked)" class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+            </label>
+          </div>
+
+          <!-- Action: Restart Flashcards -->
+          <div class="pt-4">
+            <button onclick="fcRestartAllModal()" class="w-full py-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Начать заново (Restart)</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -3432,11 +3495,15 @@
 
   let fcLearned = [];
   let fcReview = [];
+  let fcHistoryStack = []; // stores { index, question, known }
   let lastFlipTime = 0;
+  let fcShuffleEnabled = false;
+  let fcStarredOnlyEnabled = false;
 
   function initFlashcardGestures() {
     const card = document.getElementById('fc-card');
-    if (!card) return;
+    if (!card || fcGesturesAttached) return;
+    fcGesturesAttached = true;
 
     let touchStartX = 0;
     let touchStartY = 0;
@@ -3501,11 +3568,8 @@
     document.getElementById('header-subtitle').innerText = state.activeTestTitle;
     updateTelegramBackButton();
 
-    // Reset Deck to full test questions and clear round counters
-    state.activeQuestions = [...state.currentTestOriginalQuestions];
-    fcIndex = 0;
-    fcLearned = [];
-    fcReview = [];
+    // Prepare Questions Deck
+    setupFlashcardsDeck(false);
 
     document.getElementById('fc-active-deck').classList.remove('hidden');
     document.getElementById('fc-finish-screen').classList.add('hidden');
@@ -3515,7 +3579,39 @@
     viewStack.push('flashcards');
   }
 
+  function setupFlashcardsDeck(keepShuffle = false) {
+    let pool = [...state.currentTestOriginalQuestions];
+    if (fcStarredOnlyEnabled) {
+      pool = pool.filter(q => state.favorites.has(q.id));
+      if (pool.length === 0) {
+        showToast('☆ В избранном нет вопросов. Показаны все карточки.');
+        fcStarredOnlyEnabled = false;
+        const starChk = document.getElementById('fc-opt-starred-only');
+        if (starChk) starChk.checked = false;
+        pool = [...state.currentTestOriginalQuestions];
+      }
+    }
+
+    if (fcShuffleEnabled) {
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+    }
+
+    state.activeQuestions = pool;
+    fcIndex = 0;
+    fcLearned = [];
+    fcReview = [];
+    fcHistoryStack = [];
+  }
+
   function renderFCCard() {
+    if (!state.activeQuestions || state.activeQuestions.length === 0) {
+      showFCFinishScreen();
+      return;
+    }
+
     const q = state.activeQuestions[fcIndex];
     fcFlipped = false;
     const card = document.getElementById('fc-card');
@@ -3525,12 +3621,41 @@
     }
 
     const total = state.activeQuestions.length;
-    document.getElementById('fc-counter').innerText = `Карточка ${fcIndex + 1} из ${total}`;
+    document.getElementById('fc-counter').innerText = `${fcIndex + 1} / ${total}`;
     document.getElementById('fc-front-text').innerText = q.question;
     document.getElementById('fc-back-answer').innerText = getQuestionCorrectText(q);
 
     document.getElementById('fc-tag-known').innerText = fcLearned.length;
     document.getElementById('fc-tag-review').innerText = fcReview.length;
+
+    // Update Star button
+    const starBtn = document.getElementById('fc-star-btn');
+    if (starBtn) {
+      const isFav = state.favorites.has(q.id);
+      starBtn.innerText = isFav ? '★' : '☆';
+      starBtn.className = `text-xl ${isFav ? 'text-amber-400' : 'text-slate-400'} hover:text-amber-300 active:scale-90 transition`;
+    }
+
+    // Prev Button State
+    const prevBtn = document.getElementById('fc-btn-prev');
+    if (prevBtn) {
+      prevBtn.disabled = (fcHistoryStack.length === 0);
+    }
+  }
+
+  function toggleFCCurrentStar() {
+    const q = state.activeQuestions[fcIndex];
+    if (!q) return;
+    triggerHaptic('light');
+    if (state.favorites.has(q.id)) {
+      state.favorites.delete(q.id);
+      showToast('Удалено из избранного');
+    } else {
+      state.favorites.add(q.id);
+      showToast('★ Добавлено в избранное');
+    }
+    saveFavorites();
+    renderFCCard();
   }
 
   function flipCard() {
@@ -3547,6 +3672,8 @@
 
   function fcNext(known) {
     const q = state.activeQuestions[fcIndex];
+    fcHistoryStack.push({ index: fcIndex, question: q, known: known });
+
     if (known) {
       triggerHaptic('success');
       fcLearned.push(q);
@@ -3565,6 +3692,61 @@
       // Round Complete: Show Quizlet Summary Screen!
       showFCFinishScreen();
     }
+  }
+
+  function fcPrevCard() {
+    if (fcHistoryStack.length === 0) return;
+    triggerHaptic('light');
+    const lastAction = fcHistoryStack.pop();
+
+    if (lastAction.known) {
+      const idx = fcLearned.lastIndexOf(lastAction.question);
+      if (idx !== -1) fcLearned.splice(idx, 1);
+    } else {
+      const idx = fcReview.lastIndexOf(lastAction.question);
+      if (idx !== -1) fcReview.splice(idx, 1);
+    }
+
+    fcIndex = Math.max(0, lastAction.index);
+    renderFCCard();
+  }
+
+  function openFCOptionsModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('modal-fc-options');
+    if (!modal) return;
+    const shufChk = document.getElementById('fc-opt-shuffle');
+    if (shufChk) shufChk.checked = fcShuffleEnabled;
+    const starChk = document.getElementById('fc-opt-starred-only');
+    if (starChk) starChk.checked = fcStarredOnlyEnabled;
+    modal.classList.remove('hidden');
+  }
+
+  function closeFCOptionsModal() {
+    triggerHaptic('light');
+    const modal = document.getElementById('modal-fc-options');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function toggleFCShuffle(enabled) {
+    triggerHaptic('medium');
+    fcShuffleEnabled = enabled;
+    showToast(enabled ? '🔀 Карточки перемешаны' : 'Порядок карточек сброшен');
+    setupFlashcardsDeck(false);
+    renderFCCard();
+  }
+
+  function toggleFCStarredOnly(enabled) {
+    triggerHaptic('medium');
+    fcStarredOnlyEnabled = enabled;
+    setupFlashcardsDeck(false);
+    renderFCCard();
+  }
+
+  function fcRestartAllModal() {
+    closeFCOptionsModal();
+    fcRestartAll();
+    showToast('🔄 Раунд начат заново');
   }
 
   function showFCFinishScreen() {
@@ -3591,6 +3773,7 @@
     fcIndex = 0;
     fcLearned = [];
     fcReview = [];
+    fcHistoryStack = [];
 
     document.getElementById('fc-finish-screen').classList.add('hidden');
     document.getElementById('fc-active-deck').classList.remove('hidden');
@@ -3599,10 +3782,7 @@
 
   function fcRestartAll() {
     triggerHaptic('light');
-    state.activeQuestions = [...state.currentTestOriginalQuestions];
-    fcIndex = 0;
-    fcLearned = [];
-    fcReview = [];
+    setupFlashcardsDeck(false);
 
     document.getElementById('fc-finish-screen').classList.add('hidden');
     document.getElementById('fc-active-deck').classList.remove('hidden');
