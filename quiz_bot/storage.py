@@ -1733,3 +1733,63 @@ def stats_summary(user_id: int, test_id: str) -> dict[str, Any]:
         "favorites": favorite_count(user_id, test_id),
         "answered_questions": get_answered_question_count(user_id, test_id),
     }
+
+
+def save_support_feedback(
+    user_id: int | None,
+    contact: str,
+    fb_type: str,
+    message: str,
+    test_id: str = ""
+) -> int:
+    with db_connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS support_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id BIGINT,
+                contact TEXT,
+                fb_type TEXT,
+                message TEXT NOT NULL,
+                test_id TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur = conn.execute(
+            """
+            INSERT INTO support_feedback (user_id, contact, fb_type, message, test_id)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, contact, fb_type, message, test_id)
+        )
+        conn.commit()
+        return getattr(cur, "lastrowid", 1) or 1
+
+
+def list_support_feedback(limit: int = 50) -> list[dict[str, Any]]:
+    with db_connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS support_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id BIGINT,
+                contact TEXT,
+                fb_type TEXT,
+                message TEXT NOT NULL,
+                test_id TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        rows = conn.execute(
+            """
+            SELECT id, user_id, contact, fb_type, message, test_id, created_at
+            FROM support_feedback
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+

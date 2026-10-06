@@ -288,11 +288,18 @@
       opacity: 0.45 !important;
     }
 
-    /* Fixed equal size for Solver Header Action Buttons */
-    #btn-grid-modal, #btn-finish-early {
-      width: 96px !important;
-      min-width: 96px !important;
-      max-width: 96px !important;
+    /* Clean compact sizing for Solver Header Action Buttons */
+    #btn-grid-modal {
+      width: 82px !important;
+      min-width: 82px !important;
+      max-width: 82px !important;
+      height: 32px !important;
+      box-sizing: border-box !important;
+    }
+    #btn-finish-early {
+      width: 88px !important;
+      min-width: 88px !important;
+      max-width: 88px !important;
       height: 32px !important;
       box-sizing: border-box !important;
     }
@@ -310,48 +317,40 @@
   </style>
 </head>
 <body class="bg-app-bg text-slate-100 min-h-screen flex flex-col select-none antialiased">
-    <!-- Embedded HTML5 Audio Elements for 100% Reliable Playback -->
-    <audio id="audio-snd-correct" preload="auto" src="data:audio/wav;base64,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"></audio>
-    <audio id="audio-snd-wrong" preload="auto" src="data:audio/wav;base64,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"></audio>
-
-
   <!-- Mobile App Wrapper -->
   <div class="w-full max-w-md mx-auto min-h-screen flex flex-col bg-app-bg relative shadow-2xl border-x border-app-border/40 overflow-hidden">
 
     <!-- Top App Bar / Header -->
-    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-4 py-3 flex items-center justify-between safe-top">
-      <div class="flex items-center space-x-2.5">
-        <button id="nav-back-btn" class="hidden p-1.5 -ml-1 rounded-xl text-slate-400 hover:text-white hover:bg-app-surface active:scale-90 transition" onclick="goBack()">
+    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3.5 py-2.5 flex items-center justify-between safe-top">
+      <div class="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+        <button id="nav-back-btn" class="hidden p-1.5 -ml-1 rounded-xl text-slate-400 hover:text-white hover:bg-app-surface active:scale-90 transition shrink-0" onclick="goBack()">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <!-- Logo (Tap 5 times for secret Admin Unlock) -->
-        <div onclick="handleLogoTap()" class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer active:scale-95 transition">
+        <div id="header-logo-icon" onclick="handleLogoTap()" class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer active:scale-95 transition">
           oh
         </div>
-        <div>
-          <h1 id="header-title" class="text-sm font-extrabold text-white tracking-tight leading-none">ohTest</h1>
-          <span id="header-subtitle" class="text-[11px] text-slate-400 font-medium leading-none">Медицинские тесты</span>
+        <div class="min-w-0 flex-1">
+          <h1 id="header-title" class="text-xs sm:text-sm font-extrabold text-white tracking-tight leading-tight truncate">ohTest</h1>
+          <span id="header-subtitle" class="block text-[10px] sm:text-[11px] text-slate-400 font-medium leading-tight truncate">Медицинские тесты</span>
         </div>
       </div>
 
-      <!-- Action Buttons Right -->
-      <div class="flex items-center space-x-1.5">
-        <!-- Matrix / Grid view in solver (exact same size as btn-finish-early) -->
-        <button id="btn-grid-modal" class="hidden w-[96px] h-8 px-2 py-1 rounded-xl bg-brand-950/40 border border-brand-500/40 text-[11px] font-bold text-brand-300 hover:bg-brand-900/50 active:scale-95 transition flex items-center justify-center gap-1 shadow-sm shrink-0" onclick="toggleMatrixModal()">
+      <!-- Action Buttons Right (Clean and compact, no crowding admin pill) -->
+      <div class="flex items-center space-x-1.5 shrink-0">
+        <!-- Matrix / Grid view in solver -->
+        <button id="btn-grid-modal" class="hidden w-[82px] h-8 px-2 py-1 rounded-xl bg-brand-950/40 border border-brand-500/40 text-[11px] font-bold text-brand-300 hover:bg-brand-900/50 active:scale-95 transition flex items-center justify-center gap-1 shadow-sm shrink-0" onclick="toggleMatrixModal()">
           <span>☷</span>
           <span>Сетка</span>
         </button>
         <!-- Finish Early Button in solver -->
-        <button id="btn-finish-early" class="hidden w-[96px] h-8 px-2 py-1 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] font-bold text-rose-300 hover:bg-rose-900/50 active:scale-95 transition flex items-center justify-center gap-1 shadow-sm shrink-0" onclick="requestFinishQuiz()">
+        <button id="btn-finish-early" class="hidden w-[88px] h-8 px-2 py-1 rounded-xl bg-rose-950/40 border border-rose-500/40 text-[11px] font-bold text-rose-300 hover:bg-rose-900/50 active:scale-95 transition flex items-center justify-center gap-1 shadow-sm shrink-0" onclick="requestFinishQuiz()">
           <span>🎯</span>
           <span>Завершить</span>
         </button>
         <!-- Invisible placeholder so getElementById never returns null -->
         <button id="btn-fav-toggle" class="hidden" style="display:none;"></button>
-        <!-- Admin badge indicator -->
-        <div id="header-admin-pill" class="hidden px-2 py-0.5 rounded-full bg-brand-500/20 border border-brand-500/40 text-[10px] font-bold text-brand-300">
-          ADMIN
-        </div>
+        <div id="header-admin-pill" class="hidden" style="display:none;"></div>
       </div>
     </header>
 
@@ -920,19 +919,7 @@
               <input type="checkbox" id="set-haptic" checked class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
             </div>
 
-            <!-- Sound Signals (checked by default + test button) -->
-            <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
-              <div>
-                <div class="font-bold text-white">Звуковые сигналы</div>
-                <div class="text-[10px] text-slate-400">Звук правильного ответа</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="playQuizSound('correct')" class="px-2.5 py-1 rounded-xl bg-app-card border border-app-border text-[10px] font-bold text-brand-300 hover:text-white active:scale-95 transition">
-                  🔊 Тест
-                </button>
-                <input type="checkbox" id="set-sound" checked class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
-              </div>
-            </div>
+
 
             <!-- Clear Cache Button -->
             <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
@@ -960,7 +947,7 @@
           </div>
           <div class="pt-1 flex flex-col sm:flex-row gap-2">
             <button onclick="openSupportChat()" class="flex-1 py-2.5 px-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-brand-600/20 active:scale-95 transition">
-              <span>✈️</span> Написать разработчику (@Taoboshi)
+              <span>✈️</span> Написать разработчику (@issdm)
             </button>
             <button onclick="openFeedbackModal()" class="py-2.5 px-3 rounded-2xl bg-app-surface border border-app-border text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition">
               <span>📝</span> Обратная связь
@@ -1099,6 +1086,18 @@
               </div>
               <span class="text-xs text-brand-400">Отправить →</span>
             </button>
+
+            <!-- 6. Support Feedback Messages -->
+            <button onclick="openAdminModal('feedback')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-amber-500 flex items-center justify-between text-left active:scale-[0.98] transition">
+              <div class="flex items-center space-x-3">
+                <span class="text-xl">📩</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Обратная связь</div>
+                  <div class="text-[11px] text-slate-400">Входящие обращения, отзывы и репорты</div>
+                </div>
+              </div>
+              <span class="text-xs text-amber-400">Просмотр →</span>
+            </button>
           </div>
         </div>
       </section>
@@ -1157,7 +1156,7 @@
     </div>
 
     <!-- Admin Generic Action Modal -->
-    <div id="modal-admin-action" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-3">
+    <div id="modal-admin-action" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
       <div class="w-full max-w-sm rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <h3 id="admin-modal-title" class="text-sm font-extrabold text-white flex items-center gap-2">Действие</h3>
@@ -1173,7 +1172,7 @@
     </div>
 
     <!-- Training Count Selector Modal -->
-    <div id="modal-training-select" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+    <div id="modal-training-select" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="w-full max-w-sm rounded-3xl bg-app-card border border-emerald-500/40 p-5 space-y-4 shadow-2xl">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -1193,7 +1192,7 @@
     </div>
 
     <!-- Discipline Statistics Modal (Viewing statistics only, NO solve button) -->
-    <div id="modal-discipline-stats" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+    <div id="modal-discipline-stats" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="w-full max-w-sm rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <div>
@@ -1212,7 +1211,7 @@
     </div>
 
     <!-- View Attempt Breakdown Modal -->
-    <div id="modal-view-attempt" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+    <div id="modal-view-attempt" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="w-full max-w-md rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <div>
@@ -1231,7 +1230,7 @@
     </div>
 
     <!-- Pin Action Modal (Home page long-press) -->
-    <div id="modal-pin-action" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+    <div id="modal-pin-action" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="w-full max-w-xs rounded-3xl bg-app-card border border-app-border p-5 space-y-3 shadow-2xl text-center">
         <div id="pin-modal-icon" class="text-3xl mx-auto">📌</div>
         <h3 id="pin-modal-title" class="text-sm font-bold text-white">Действие</h3>
@@ -1248,7 +1247,7 @@
     </div>
 
         <!-- Modal Question Detail (Full Question Preview Overlay) -->
-    <div id="modal-question-detail" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 animate-fade-in">
+    <div id="modal-question-detail" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div class="w-full max-w-md rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[88vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-app-border pb-3 shrink-0">
           <div class="flex items-center space-x-2 min-w-0">
@@ -1289,12 +1288,12 @@
     </div>
 
     <!-- Modal Support Feedback -->
-    <div id="modal-support-feedback" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 animate-fade-in">
+    <div id="modal-support-feedback" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div class="w-full max-w-sm rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl flex flex-col">
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <div>
             <h3 class="text-sm font-extrabold text-white">Обратная связь</h3>
-            <p class="text-[11px] text-slate-400">Сообщение разработчику ohTest</p>
+            <p class="text-[11px] text-slate-400">Напрямую разработчику (@issdm)</p>
           </div>
           <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
         </div>
@@ -1575,17 +1574,7 @@
     // Check Saved Active Attempt
     restoreActiveAttemptState();
 
-    // Setup Sound Settings checkbox
-    const soundInput = document.getElementById('set-sound');
-    if (soundInput) {
-      soundInput.checked = localStorage.getItem('quiz_sound_enabled') !== 'false';
-      soundInput.addEventListener('change', (e) => {
-        localStorage.setItem('quiz_sound_enabled', e.target.checked);
-        if (e.target.checked) {
-          playQuizSound('test');
-        }
-      });
-    }
+
 
     // Render Initial Home
     renderHomeSubjects();
@@ -1626,131 +1615,15 @@
       }
     } catch(e) {}
 
-  // ==========================================
-  // WEB AUDIO API SYNTHESIZER SOUND SYSTEM
-  // ==========================================
-  let audioContext = null;
-
-  function getAudioCtx() {
-    if (!audioContext) {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtxClass) {
-        audioContext = new AudioCtxClass();
-      }
-    }
-    return audioContext;
-  }
-
-  function unlockAudio() {
-    const ctx = getAudioCtx();
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
-  }
-  ['click', 'touchstart', 'pointerdown'].forEach(evt => {
-    document.addEventListener(evt, unlockAudio, { once: true, passive: true });
-  });
-
-  function isSoundEnabled() {
-    const toggle = document.getElementById('set-sound');
-    if (toggle) return toggle.checked;
-    return true;
-  }
-
-  function playQuizSound(type) {
-    if (!isSoundEnabled()) return;
-    try {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtxClass) return;
-      if (!audioContext) {
-        audioContext = new AudioCtxClass();
-      }
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          emitSound(audioContext, type);
-        }).catch(() => {});
-      } else {
-        emitSound(audioContext, type);
-      }
-    } catch(e) {
-      console.warn('Audio play error:', e);
-    }
-  }
-
-  function emitSound(ctx, type) {
-    const t = ctx.currentTime;
-    if (type === 'correct') {
-      // Pleasant double ascending chime (C5 523Hz -> G5 784Hz)
-      const o1 = ctx.createOscillator();
-      const g1 = ctx.createGain();
-      o1.type = 'sine';
-      o1.frequency.setValueAtTime(523.25, t);
-      g1.gain.setValueAtTime(0.18, t);
-      g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
-      o1.connect(g1);
-      g1.connect(ctx.destination);
-      o1.start(t);
-      o1.stop(t + 0.14);
-
-      const o2 = ctx.createOscillator();
-      const g2 = ctx.createGain();
-      o2.type = 'sine';
-      o2.frequency.setValueAtTime(783.99, t + 0.08);
-      g2.gain.setValueAtTime(0.20, t + 0.08);
-      g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
-      o2.connect(g2);
-      g2.connect(ctx.destination);
-      o2.start(t + 0.08);
-      o2.stop(t + 0.28);
-    } else if (type === 'wrong') {
-      // Soft gentle warning buzz (220Hz -> 140Hz triangle)
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(220, t);
-      osc.frequency.linearRampToValueAtTime(140, t + 0.22);
-      gain.gain.setValueAtTime(0.16, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.25);
-    } else if (type === 'finish') {
-      // Triumphant 4-note victory fanfare (C5, E5, G5, C6)
-      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(freq, t + idx * 0.09);
-        g.gain.setValueAtTime(0.18, t + idx * 0.09);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + idx * 0.09 + 0.35);
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.start(t + idx * 0.09);
-        o.stop(t + idx * 0.09 + 0.35);
-      });
-    } else if (type === 'test') {
-      // Test beep when toggling checkbox in settings
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(659.25, t);
-      g.gain.setValueAtTime(0.15, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.start(t);
-      o.stop(t + 0.18);
-    }
-  }
-
-  }
+  // Sound signals completely removed per user request
+  function isSoundEnabled() { return false; }
+  function playQuizSound(type) {}
 
   // Admin Access Verification
   async function checkBootstrapAndAdmin() {
     // Enable admin UI if admin is true in state
     if (state.isAdmin) {
-      document.getElementById('header-admin-pill').classList.remove('hidden');
+      /* header-admin-pill hidden */
       document.getElementById('settings-admin-block').classList.remove('hidden');
       document.getElementById('settings-admin-login-block').classList.add('hidden');
     } else {
@@ -1766,7 +1639,7 @@
         if (data.is_admin) {
           state.isAdmin = true;
           localStorage.setItem('ohtest_is_admin', 'true');
-          document.getElementById('header-admin-pill').classList.remove('hidden');
+          /* header-admin-pill hidden */
           document.getElementById('settings-admin-block').classList.remove('hidden');
           document.getElementById('settings-admin-login-block').classList.add('hidden');
         }
@@ -1795,7 +1668,7 @@
     if (code === '1234' || code === 'admin' || (code && code.trim().length > 0)) {
       state.isAdmin = true;
       localStorage.setItem('ohtest_is_admin', 'true');
-      document.getElementById('header-admin-pill').classList.remove('hidden');
+      /* header-admin-pill hidden */
       document.getElementById('settings-admin-block').classList.remove('hidden');
       document.getElementById('settings-admin-login-block').classList.add('hidden');
       triggerHaptic('success');
@@ -1889,6 +1762,7 @@
       errors_solve: 'Разбор ошибок'
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[state.currentMode] || 'Контрольный тест';
+    document.getElementById('header-logo-icon')?.classList.add('hidden');
     document.getElementById('header-title').innerText = "Решение теста";
     document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
 
@@ -2165,6 +2039,7 @@
       errors_solve: 'Разбор ошибок'
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[mode] || 'Контрольный тест';
+    document.getElementById('header-logo-icon')?.classList.add('hidden');
     document.getElementById('header-title').innerText = "Решение теста";
     document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
 
@@ -2358,234 +2233,234 @@
     triggerHaptic('light');
     const answered = Object.keys(state.userAnswers).length;
     const total = state.activeQuestions.length;
-    const unanswered = total - answered;
-    if (unanswered > 0) {
-      document.getElementById('confirm-finish-text').innerText = `Вы ответили на ${answered} из ${total} вопросов. Без ответа: ${unanswered}. Завершить тест и сохранить результаты?`;
-    } else {
-      document.getElementById('confirm-finish-text').innerText = `Вы ответили на все ${total} вопросов теста! Завершить и сохранить результат?`;
+    const unanswered = Math.max(0, total - answered);
+    const textEl = document.getElementById('confirm-finish-text');
+    if (textEl) {
+      if (unanswered > 0) {
+        textEl.innerText = `Вы ответили на ${answered} из ${total} вопросов (пропущено: ${unanswered}). Завершить тест и подвести итоги?`;
+      } else {
+        textEl.innerText = `Вы ответили на все ${total} вопросов теста! Завершить и подвести итоги?`;
+      }
     }
-    document.getElementById('modal-confirm-finish').classList.remove('hidden');
+    const modal = document.getElementById('modal-confirm-finish');
+    if (modal) modal.classList.remove('hidden');
   }
 
   function closeFinishModal() {
-    document.getElementById('modal-confirm-finish').classList.add('hidden');
+    triggerHaptic('light');
+    const modal = document.getElementById('modal-confirm-finish');
+    if (modal) modal.classList.add('hidden');
   }
 
-  // REDESIGNED FINISH QUIZ (UNANSWERED QUESTIONS COUNT AS ERRORS!)
   function doFinishQuiz() {
-    closeFinishModal();
-    clearInterval(state.timerInterval);
-    triggerHaptic('success');
-    playQuizSound('finish');
-
-    hideAllViews();
-    state.homeActiveView = 'result';
-    document.getElementById('btn-grid-modal').classList.add('hidden');
-    document.getElementById('btn-fav-toggle')?.classList.add('hidden');
-    document.getElementById('btn-finish-early').classList.add('hidden');
-    document.getElementById('view-result').classList.remove('hidden');
-    updateTelegramBackButton();
-
-    let correct = 0;
-    const wrongQuestionIds = [];
-    state.activeQuestions.forEach(q => {
-      const ans = state.userAnswers[q.id];
-      if (ans === q.correct) {
-        correct++;
-      } else if (ans !== undefined) {
-        // ONLY user's actual incorrect answers count as errors!
-        wrongQuestionIds.push(q.id);
-        state.userErrors.add(q.id);
-      }
-      // Skipped/unanswered questions are NOT added to userErrors!
-    });
-    const total = state.activeQuestions.length;
-    const answeredCount = Object.keys(state.userAnswers).length;
-    const errorsCount = wrongQuestionIds.length;
-    const skippedCount = total - answeredCount;
-    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-    // Persist error set to localStorage
     try {
-      localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
-    } catch(e) {}
+      closeFinishModal();
+      clearInterval(state.timerInterval);
+      triggerHaptic('success');
 
-    // Update hub tags and profile count
-    document.getElementById('hub-q-errors').innerText = state.userErrors.size;
-    document.getElementById('hub-err-tag').innerText = state.userErrors.size;
-    document.getElementById('profile-err-count').innerText = getAllSavedErrors().length;
+      hideAllViews();
+      state.homeActiveView = 'result';
+      const resultView = document.getElementById('view-result');
+      if (resultView) resultView.classList.remove('hidden');
+      updateTelegramBackButton();
 
-    document.getElementById('result-percent').innerText = `${pct}%`;
-    document.getElementById('result-counts').innerText = `${correct} из ${total} правильно${skippedCount > 0 ? ` (пропущено: ${skippedCount})` : ''}`;
-    document.getElementById('result-errors').innerText = `${errorsCount}`;
+      let correct = 0;
+      const wrongQuestionIds = [];
+      const total = state.activeQuestions.length;
 
-    const mins = String(Math.floor(state.timerSeconds / 60)).padStart(2, '0');
-    const secs = String(state.timerSeconds % 60).padStart(2, '0');
-    document.getElementById('result-time').innerText = `${mins}:${secs}`;
-
-    // Clear active attempt only for regular tests (PRESERVES main attempt if this was error review)
-    if (state.currentMode !== 'errors_solve') {
-      state.activeAttempt = null;
-      localStorage.removeItem('ohtest_active_attempt');
-      renderActiveAttemptBanner();
-      updateHubResumeButton();
-    }
-
-    // Save full question snapshot in history
-    const qSnapshot = state.activeQuestions.map(q => ({
-      id: q.id,
-      question: q.question,
-      options: q.options,
-      correct: q.correct,
-      userAnswer: state.userAnswers[q.id]
-    }));
-
-    state.historyAttempts.unshift({
-      date: 'Только что',
-      title: state.activeTestTitle,
-      testId: state.activeTestId,
-      score: `${correct}/${total} (${pct}%)`,
-      total: total,
-      correct: correct,
-      pct: pct,
-      mode: state.currentMode,
-      duration: state.timerSeconds,
-      questionsSnapshot: qSnapshot
-    });
-    try {
-      localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts.slice(0, 50)));
-    } catch(e) {}
-    document.getElementById('profile-attempts-count').innerText = state.historyAttempts.length;
-
-    // Persist attempt to backend
-    try {
-      fetch('/api/attempts/record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: state.userId,
-          test_id: state.activeTestId,
-          correct: correct,
-          answered: total,
-          duration: state.timerSeconds,
-          mode: state.currentMode,
-          wrong_questions: wrongQuestionIds
-        })
-      }).catch(() => {});
-    } catch(e) {}
-
-    // CONTEXT-AWARE BUTTONS AND TITLES
-    const btnBox = document.getElementById('result-buttons-container');
-    const msgBanner = document.getElementById('result-msg-banner');
-    const iconBox = document.getElementById('result-icon-box');
-    btnBox.innerHTML = '';
-
-    if (state.currentMode === 'errors_solve') {
-      document.getElementById('result-title').innerText = "Разбор ошибок завершен! 🎯";
-      document.getElementById('result-subtitle').innerText = "Работа над ошибками";
-      iconBox.innerText = "🎯";
-
-      // Questions answered correctly in this error run are officially resolved!
       state.activeQuestions.forEach(q => {
-        if (state.userAnswers[q.id] === q.correct) {
-          state.userErrors.delete(q.id);
-          try {
-            const resKey = `ohtest_resolved_errors_${state.activeTestId}`;
-            const curRes = new Set(JSON.parse(localStorage.getItem(resKey) || '[]'));
-            curRes.add(q.id);
-            localStorage.setItem(resKey, JSON.stringify([...curRes]));
-          } catch(e) {}
-          try {
-            fetch('/api/errors/resolve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ user_id: state.userId, test_id: state.activeTestId, question_id: q.id })
-            }).catch(() => {});
-          } catch(e) {}
+        const correctIdx = getCorrectIndex(q);
+        const ans = state.userAnswers[q.id];
+        if (ans !== undefined && Number(ans) === Number(correctIdx)) {
+          correct++;
+        } else if (ans !== undefined) {
+          wrongQuestionIds.push(q.id);
+          state.userErrors.add(q.id);
         }
       });
 
+      const answeredCount = Object.keys(state.userAnswers).length;
+      const errorsCount = wrongQuestionIds.length;
+      const skippedCount = Math.max(0, total - answeredCount);
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+      // Persist error set to localStorage
       try {
         localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
       } catch(e) {}
 
-      const remainingErrors = state.userErrors.size;
-      document.getElementById('hub-q-errors').innerText = remainingErrors;
-      document.getElementById('hub-err-tag').innerText = remainingErrors;
-      document.getElementById('profile-err-count').innerText = remainingErrors;
-      msgBanner.classList.remove('hidden');
+      // Update counters
+      try {
+        const hubErr = document.getElementById('hub-q-errors');
+        if (hubErr) hubErr.innerText = state.userErrors.size;
+        const hubErrTag = document.getElementById('hub-err-tag');
+        if (hubErrTag) hubErrTag.innerText = state.userErrors.size;
+        const profErr = document.getElementById('profile-err-count');
+        if (profErr) profErr.innerText = getAllSavedErrors().length;
+      } catch(e) {}
 
-      if (remainingErrors === 0) {
-        msgBanner.className = "p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs space-y-1";
-        msgBanner.innerHTML = `
-          <div class="font-bold flex items-center gap-1.5"><span>🎉</span> Отличная работа!</div>
-          <p class="text-[11px] text-emerald-200/90 leading-relaxed">Все ошибки в этом тесте успешно разобраны и усвоены. Теперь вы готовы решить весь тест на 100%!</p>
-        `;
+      const resPct = document.getElementById('result-percent');
+      if (resPct) resPct.innerText = `${pct}%`;
+      const resCounts = document.getElementById('result-counts');
+      if (resCounts) resCounts.innerText = `${correct} из ${total} правильно${skippedCount > 0 ? ` (пропущено: ${skippedCount})` : ''}`;
+      const resErrors = document.getElementById('result-errors');
+      if (resErrors) resErrors.innerText = `${errorsCount}`;
 
-        btnBox.innerHTML = `
-          <button onclick="startQuizMode('normal')" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2">
-            <span>🔄</span> Пройти полный тест заново
-          </button>
-          <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">
-            🏛 В меню этого теста
-          </button>
-        `;
-      } else {
-        msgBanner.className = "p-3.5 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1";
-        msgBanner.innerHTML = `
-          <div class="font-bold flex items-center gap-1.5"><span>⚠️</span> Остались нерешенные вопросы</div>
-          <p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. В тесте осталось ${remainingErrors} нерешенных ошибок.</p>
-        `;
+      const mins = String(Math.floor(state.timerSeconds / 60)).padStart(2, '0');
+      const secs = String(state.timerSeconds % 60).padStart(2, '0');
+      const resTime = document.getElementById('result-time');
+      if (resTime) resTime.innerText = `${mins}:${secs}`;
 
-        btnBox.innerHTML = `
-          <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">
-            <span>🔁</span> Повторить оставшиеся ошибки (${remainingErrors})
-          </button>
-          <button onclick="startQuizMode('normal')" class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs active:scale-95 transition">
-            🔄 Пройти весь тест заново
-          </button>
-          <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-semibold text-xs active:scale-95 transition">
-            🏛 В меню теста
-          </button>
-        `;
+      // Clear active attempt so it no longer prompts resume
+      if (state.currentMode !== 'errors_solve') {
+        state.activeAttempt = null;
+        try { localStorage.removeItem('ohtest_active_attempt'); } catch(e) {}
+        renderActiveAttemptBanner();
+        updateHubResumeButton();
       }
-    } else {
-      msgBanner.classList.add('hidden');
-      const errCount = total - correct;
 
-      if (errCount > 0) {
-        document.getElementById('result-title').innerText = "Тест завершен! 🎯";
-        document.getElementById('result-subtitle').innerText = "Контрольный результат";
-        iconBox.innerText = "📊";
+      // Snapshot & history
+      try {
+        const qSnapshot = state.activeQuestions.map(q => ({
+          id: q.id,
+          question: q.question,
+          options: q.options,
+          correct: getCorrectIndex(q),
+          userAnswer: state.userAnswers[q.id]
+        }));
 
-        btnBox.innerHTML = `
-          <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">
-            <span>🧠</span> Разобрать ошибки (${errCount})
-          </button>
-          <button onclick="startQuizMode('normal')" class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs active:scale-95 transition">
-            🔄 Пройти заново
-          </button>
-          <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-semibold text-xs active:scale-95 transition">
-            🏛 В меню теста
-          </button>
-        `;
+        state.historyAttempts.unshift({
+          date: 'Только что',
+          title: state.activeTestTitle,
+          testId: state.activeTestId,
+          score: `${correct}/${total} (${pct}%)`,
+          total: total,
+          correct: correct,
+          pct: pct,
+          mode: state.currentMode,
+          duration: state.timerSeconds,
+          questionsSnapshot: qSnapshot
+        });
+        localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts.slice(0, 50)));
+        const profAtt = document.getElementById('profile-attempts-count');
+        if (profAtt) profAtt.innerText = state.historyAttempts.length;
+      } catch(e) {}
+
+      // Backend attempt record (non-blocking)
+      try {
+        fetch('/api/attempts/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: state.userId,
+            test_id: state.activeTestId,
+            correct: correct,
+            answered: total,
+            duration: state.timerSeconds,
+            mode: state.currentMode,
+            wrong_questions: wrongQuestionIds
+          })
+        }).catch(() => {});
+      } catch(e) {}
+
+      // Action buttons
+      const btnBox = document.getElementById('result-buttons-container');
+      const msgBanner = document.getElementById('result-msg-banner');
+      const iconBox = document.getElementById('result-icon-box');
+      if (btnBox) btnBox.innerHTML = '';
+
+      if (state.currentMode === 'errors_solve') {
+        const resTitle = document.getElementById('result-title');
+        if (resTitle) resTitle.innerText = "Разбор ошибок завершен! 🎯";
+        const resSub = document.getElementById('result-subtitle');
+        if (resSub) resSub.innerText = "Работа над ошибками";
+        if (iconBox) iconBox.innerText = "🎯";
+
+        // Mark resolved errors
+        state.activeQuestions.forEach(q => {
+          const cIdx = getCorrectIndex(q);
+          if (state.userAnswers[q.id] !== undefined && Number(state.userAnswers[q.id]) === Number(cIdx)) {
+            state.userErrors.delete(q.id);
+            try {
+              const resKey = `ohtest_resolved_errors_${state.activeTestId}`;
+              const curRes = new Set(JSON.parse(localStorage.getItem(resKey) || '[]'));
+              curRes.add(q.id);
+              localStorage.setItem(resKey, JSON.stringify([...curRes]));
+            } catch(e) {}
+            try {
+              fetch('/api/errors/resolve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: state.userId, test_id: state.activeTestId, question_id: q.id })
+              }).catch(() => {});
+            } catch(e) {}
+          }
+        });
+
+        try {
+          localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
+        } catch(e) {}
+
+        const remainingErrors = state.userErrors.size;
+        if (msgBanner) {
+          msgBanner.classList.remove('hidden');
+          if (remainingErrors === 0) {
+            msgBanner.className = "p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs space-y-1";
+            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>🎉</span> Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Все ошибки в этом тесте успешно разобраны и усвоены!</p>`;
+            if (btnBox) {
+              btnBox.innerHTML = `
+                <button onclick="startQuizMode('normal')" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2"><span>🔄</span> Пройти полный тест заново</button>
+                <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">🏛 В меню этого теста</button>
+              `;
+            }
+          } else {
+            msgBanner.className = "p-3.5 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1";
+            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>⚠️</span> Остались нерешенные вопросы</div><p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. Осталось ${remainingErrors} ошибок.</p>`;
+            if (btnBox) {
+              btnBox.innerHTML = `
+                <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🔁</span> Повторить оставшиеся ошибки (${remainingErrors})</button>
+                <button onclick="startQuizMode('normal')" class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs active:scale-95 transition">🔄 Пройти весь тест заново</button>
+                <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-semibold text-xs active:scale-95 transition">🏛 В меню теста</button>
+              `;
+            }
+          }
+        }
       } else {
-        document.getElementById('result-title').innerText = "Идеальный результат! 🏆";
-        document.getElementById('result-subtitle').innerText = "100% правильных ответов";
-        iconBox.innerText = "🏆";
-
-        btnBox.innerHTML = `
-          <button onclick="startQuizMode('normal')" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2">
-            <span>🔄</span> Пройти ещё раз
-          </button>
-          <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">
-            🏛 В меню этого теста
-          </button>
-          <button onclick="switchTab('home')" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs transition">
-            🏠 На главную
-          </button>
-        `;
+        if (msgBanner) msgBanner.classList.add('hidden');
+        const errCount = total - correct;
+        if (errCount > 0) {
+          const resTitle = document.getElementById('result-title');
+          if (resTitle) resTitle.innerText = "Тест завершен! 🎯";
+          const resSub = document.getElementById('result-subtitle');
+          if (resSub) resSub.innerText = "Контрольный результат";
+          if (iconBox) iconBox.innerText = "📊";
+          if (btnBox) {
+            btnBox.innerHTML = `
+              <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🧠</span> Разобрать ошибки (${errCount})</button>
+              <button onclick="startQuizMode('normal')" class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs active:scale-95 transition">🔄 Пройти заново</button>
+              <button onclick="openTestHub()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-300 font-semibold text-xs active:scale-95 transition">🏛 В меню теста</button>
+            `;
+          }
+        } else {
+          const resTitle = document.getElementById('result-title');
+          if (resTitle) resTitle.innerText = "Идеальный результат! 🏆";
+          const resSub = document.getElementById('result-subtitle');
+          if (resSub) resSub.innerText = "100% правильных ответов";
+          if (iconBox) iconBox.innerText = "🏆";
+          if (btnBox) {
+            btnBox.innerHTML = `
+              <button onclick="startQuizMode('normal')" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs active:scale-95 transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2"><span>🔄</span> Пройти ещё раз</button>
+              <button onclick="openTestHub()" class="w-full py-3 rounded-2xl bg-app-surface hover:bg-slate-800 border border-app-border text-white font-semibold text-xs active:scale-95 transition">🏛 В меню этого теста</button>
+              <button onclick="switchTab('home')" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs transition">🏠 На главную</button>
+            `;
+          }
+        }
       }
+    } catch(err) {
+      console.error('doFinishQuiz execution error:', err);
+      hideAllViews();
+      const resView = document.getElementById('view-result');
+      if (resView) resView.classList.remove('hidden');
     }
   }
 
@@ -4177,6 +4052,56 @@
           <div id="adm-bc-status" class="hidden p-2.5 rounded-xl text-center text-xs"></div>
         </div>
       `;
+    } else if (type === 'feedback') {
+      title.innerHTML = '<span>📩</span> Входящая обратная связь';
+      body.innerHTML = '<div class="space-y-2" id="adm-feedback-list"><div class="p-6 text-center text-xs text-slate-400">Загрузка сообщений...</div></div>';
+      try {
+        const res = await fetch(`/api/admin/feedback?user_id=${state.userId}`);
+        const data = await res.json();
+        const list = document.getElementById('adm-feedback-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const items = data.items || [];
+        if (items.length === 0) {
+          list.innerHTML = `
+            <div class="p-8 text-center text-xs text-slate-400 space-y-2">
+              <div class="text-3xl">📭</div>
+              <div class="font-bold text-white">Входящих обращений пока нет</div>
+              <p class="text-[11px] text-slate-500">Все обращения пользователей через кнопку поддержки сохраняются в базу данных и дублируются администратору @issdm в Telegram.</p>
+            </div>
+          `;
+          return;
+        }
+        items.forEach(item => {
+          const el = document.createElement('div');
+          const typeLabels = {
+            bug: '🐛 Ошибка в вопросе',
+            feature: '💡 Предложение',
+            question: '❓ Вопрос',
+            other: '💬 Другое'
+          };
+          const badgeType = typeLabels[item.fb_type] || item.fb_type || 'Сообщение';
+          const safeMsg = (item.message || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const safeContact = (item.contact || 'ID: ' + (item.user_id || '—')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const safeTest = (item.test_id || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          el.className = "p-3 rounded-2xl bg-app-surface border border-app-border text-xs space-y-2";
+          el.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px]">${badgeType}</span>
+              <span class="text-slate-500 text-[10px] font-mono">${item.created_at || ''}</span>
+            </div>
+            <p class="text-xs text-white leading-relaxed whitespace-pre-wrap">${safeMsg}</p>
+            <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] text-slate-400">
+              <span>👤 ${safeContact}</span>
+              ${safeTest ? `<span class="font-mono text-[10px] text-brand-300">Тест: ${safeTest}</span>` : ''}
+            </div>
+          `;
+          list.appendChild(el);
+        });
+      } catch(e) {
+        const list = document.getElementById('adm-feedback-list');
+        if (list) list.innerHTML = '<div class="p-6 text-center text-xs text-rose-400">Ошибка при получении данных обратной связи</div>';
+      }
     }
   }
 
@@ -4613,9 +4538,9 @@
     triggerHaptic('light');
     const tg = window.Telegram?.WebApp;
     if (tg?.openTelegramLink) {
-      tg.openTelegramLink('https://t.me/Taoboshi');
+      tg.openTelegramLink('https://t.me/issdm');
     } else {
-      window.open('https://t.me/Taoboshi', '_blank');
+      window.open('https://t.me/issdm', '_blank');
     }
   }
 
@@ -4705,7 +4630,8 @@
         document.getElementById('btn-grid-modal').classList.remove('hidden');
         document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
         document.getElementById('btn-finish-early').classList.remove('hidden');
-        document.getElementById('header-title').innerText = "Решение теста";
+        document.getElementById('header-logo-icon')?.classList.add('hidden');
+    document.getElementById('header-title').innerText = "Решение теста";
         document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
         renderCurrentQuestion();
       } else if (targetView === 'hub') {
@@ -4750,6 +4676,7 @@
       if (el) el.classList.add('hidden');
     });
     // NEVER leak solver header buttons onto other views!
+    document.getElementById('header-logo-icon')?.classList.remove('hidden');
     const finishBtn = document.getElementById('btn-finish-early');
     if (finishBtn) finishBtn.classList.add('hidden');
     const gridBtn = document.getElementById('btn-grid-modal');

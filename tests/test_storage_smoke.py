@@ -30,3 +30,18 @@ def test_sqlite_init_and_attempt_flow(tmp_path, monkeypatch):
     with sqlite3.connect(db_path) as conn:
         index_count = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='index'").fetchone()[0]
     assert index_count > 0
+
+    # Test feedback storage
+    fb_id = storage.save_support_feedback(
+        user_id=777,
+        contact="@issdm",
+        fb_type="bug",
+        message="Вопрос 14 требует уточнения",
+        test_id="sample"
+    )
+    assert fb_id is not None
+    feedbacks = storage.list_support_feedback(limit=10)
+    assert len(feedbacks) >= 1
+    assert feedbacks[0]["message"] == "Вопрос 14 требует уточнения"
+    assert feedbacks[0]["contact"] == "@issdm"
+

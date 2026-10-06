@@ -739,16 +739,61 @@ def register_webapp_routes(app: Any) -> None:
         user_id = data.get("user_id") or request.headers.get("X-Telegram-User-Id")
         message = data.get("message", "").strip()
         contact = data.get("contact", "").strip()
+        fb_type = data.get("type", "feedback").strip()
         test_id = data.get("test_id", "")
         question_id = data.get("question_id", "")
         if not message:
             return jsonify({"error": "Message required"}), 400
 
-        import logging
-        logging.getLogger("quiz_bot").info(
-            "SUPPORT_FEEDBACK from user=%s contact=%s test=%s q=%s: %s",
-            user_id, contact, test_id, question_id, message
-        )
+        try:
+            from .storage import save_support_feedback
+            uid_int = int(user_id) if user_id and str(user_id).isdigit() else None
+            save_support_feedback(
+                user_id=uid_int,
+                contact=contact,
+                fb_type=fb_type,
+                message=message,
+                test_id=test_id
+            )
+        except Exception as e:
+            logger.warning("Failed to save feedback to db: %s", e)
+
+        # Notify Telegram Admin if BOT_TOKEN and admin ids exist
+        try:
+            token = get_bot_token(required=False)
+            admin_ids = get_env_admin_ids()
+            if token and admin_ids:
+                import urllib.request
+                import json as py_json
+                text = (
+                    f"📩 <b>Новое обращение в поддержку ohTest!</b>\n"
+                    f"👤 <b>Пользователь:</b> {user_id or '—'}\n"
+                    f"📱 <b>Контакт:</b> {contact or '@issdm'}\n"
+                    f"🏷️ <b>Тип:</b> {fb_type}\n"
+                    f"📚 <b>Тест:</b> {test_id or '—'}\n\n"
+                    f"💬 <b>Текст:</b>\n{message}"
+                )
+                for aid in admin_ids:
+                    try:
+                        url = f"https://api.telegram.org/bot{token}/sendMessage"
+                        payload = py_json.dumps({"chat_id": aid, "text": text, "parse_mode": "HTML"}).encode("utf-8")
+                        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+                        urllib.request.urlopen(req, timeout=3)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         return jsonify({"success": True, "message": "Feedback received"})
+
+    @app.route("/api/admin/feedback", methods=["GET"])
+    def api_admin_feedback():
+        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        if not is_admin_user(user_id):
+            return jsonify({"error": "Forbidden"}), 403
+
+        from .storage import list_support_feedback
+        return jsonify({"items": list_support_feedback(limit=50)})
+
 
 
