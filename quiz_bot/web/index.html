@@ -1141,11 +1141,11 @@
           <!-- Level Progress Bar -->
           <div class="space-y-1.5 pt-1 border-t border-app-border/70">
             <div class="flex justify-between items-center text-[10px]">
-              <span id="profile-level-title" class="font-bold text-slate-300">Уровень 1 • Стажёр</span>
+              <span id="profile-level-title" class="font-bold text-slate-300">Уровень 1 • 0 / 100 XP</span>
               <span id="profile-next-rank-text" class="text-brand-300 font-mono">До след. ранга: 100 XP</span>
             </div>
             <div class="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden border border-white/5">
-              <div id="profile-xp-bar" class="h-2 rounded-full bg-gradient-to-r from-brand-500 to-brand-300 transition-all duration-500" style="width: 15%;"></div>
+              <div id="profile-xp-bar" class="h-2 rounded-full bg-gradient-to-r from-brand-500 to-brand-300 transition-all duration-500" style="width: 5%;"></div>
             </div>
           </div>
 
@@ -3600,34 +3600,39 @@
     let avgAcc = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
     let userXp = totalCorrect * 10;
 
-    let rankTitle = "🌱 Новичок";
-    let levelTitle = "Уровень 1 • Стажёр";
-    let nextXp = 100;
-    let rankBadgeClass = "bg-brand-500/15 text-brand-400 border-brand-500/30";
+    const LEVELS = [
+      { level: 1, title: 'Новичок', icon: '🌱', minXp: 0, nextXp: 100, badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+      { level: 2, title: 'Студент', icon: '📚', minXp: 100, nextXp: 300, badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+      { level: 3, title: 'Стажёр', icon: '🩺', minXp: 300, nextXp: 600, badgeClass: 'bg-teal-500/15 text-teal-300 border-teal-500/30' },
+      { level: 4, title: 'Интерн', icon: '🏥', minXp: 600, nextXp: 1000, badgeClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' },
+      { level: 5, title: 'Практик', icon: '🔬', minXp: 1000, nextXp: 1600, badgeClass: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
+      { level: 6, title: 'Ординатор', icon: '⚡', minXp: 1600, nextXp: 2500, badgeClass: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30' },
+      { level: 7, title: 'Врач-специалист', icon: '⚕️', minXp: 2500, nextXp: 3800, badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+      { level: 8, title: 'Старший ординатор', icon: '⭐', minXp: 3800, nextXp: 5500, badgeClass: 'bg-violet-500/15 text-violet-300 border-violet-500/30' },
+      { level: 9, title: 'Заведующий отделением', icon: '🏆', minXp: 5500, nextXp: 8000, badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+      { level: 10, title: 'Профессор медицины', icon: '👑', minXp: 8000, nextXp: null, badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40' }
+    ];
 
-    if (totalAttempts >= 15) {
-      rankTitle = "👑 Магистр";
-      levelTitle = "Уровень 5 • Высшая категория";
-      nextXp = 5000;
-      rankBadgeClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
-    } else if (totalAttempts >= 8) {
-      rankTitle = "⚡ Эксперт";
-      levelTitle = "Уровень 4 • Старший ординатор";
-      nextXp = 2500;
-      rankBadgeClass = "bg-purple-500/20 text-purple-300 border-purple-500/40";
-    } else if (totalAttempts >= 4) {
-      rankTitle = "🔬 Знаток";
-      levelTitle = "Уровень 3 • Практик";
-      nextXp = 1000;
-      rankBadgeClass = "bg-cyan-500/20 text-cyan-300 border-cyan-500/40";
-    } else if (totalAttempts >= 1) {
-      rankTitle = "📚 Студент";
-      levelTitle = "Уровень 2 • Интерн";
-      nextXp = 300;
-      rankBadgeClass = "bg-blue-500/20 text-blue-300 border-blue-500/40";
+    let currentLvl = LEVELS[0];
+    for (let i = LEVELS.length - 1; i >= 0; i--) {
+      if (userXp >= LEVELS[i].minXp) {
+        currentLvl = LEVELS[i];
+        break;
+      }
     }
 
-    const xpProgressPct = Math.min(100, Math.max(8, Math.round((userXp / nextXp) * 100)));
+    let xpProgressPct = 100;
+    let nextRankText = "Макс. ранг достигнут!";
+    let levelTitle = `Уровень ${currentLvl.level} • ${userXp} XP`;
+
+    if (currentLvl.nextXp !== null) {
+      const neededForNext = currentLvl.nextXp - userXp;
+      const levelSpan = currentLvl.nextXp - currentLvl.minXp;
+      const currentSpanXp = userXp - currentLvl.minXp;
+      xpProgressPct = Math.min(100, Math.max(5, Math.round((currentSpanXp / levelSpan) * 100)));
+      nextRankText = `До след. ранга: ${neededForNext} XP`;
+      levelTitle = `Уровень ${currentLvl.level} • ${userXp} / ${currentLvl.nextXp} XP`;
+    }
 
     document.getElementById('profile-name').innerText = state.userName || 'Студент';
     document.getElementById('profile-username').innerText = state.userUsername || 'Telegram User';
@@ -3635,13 +3640,13 @@
     document.getElementById('profile-avatar').innerText = (state.userName || 'С')[0].toUpperCase();
     document.getElementById('profile-xp-text').innerText = `${userXp} XP`;
     document.getElementById('profile-level-title').innerText = levelTitle;
-    document.getElementById('profile-next-rank-text').innerText = userXp >= nextXp ? "Макс. ранг достигнут!" : `До след. ранга: ${nextXp - userXp} XP`;
+    document.getElementById('profile-next-rank-text').innerText = nextRankText;
     document.getElementById('profile-xp-bar').style.width = `${xpProgressPct}%`;
 
     const rankBadgeEl = document.getElementById('profile-rank-badge');
     if (rankBadgeEl) {
-      rankBadgeEl.innerText = rankTitle;
-      rankBadgeEl.className = `px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${rankBadgeClass}`;
+      rankBadgeEl.innerText = `${currentLvl.icon} ${currentLvl.title}`;
+      rankBadgeEl.className = `px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${currentLvl.badgeClass}`;
     }
 
     document.getElementById('profile-attempts-count').innerText = totalAttempts;
