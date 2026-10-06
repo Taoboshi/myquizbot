@@ -1199,62 +1199,65 @@
       <!-- ========================================== -->
       <section id="view-tab-settings" class="hidden space-y-4">
         
-        <!-- App Settings -->
+                <!-- App Settings -->
         <div class="p-5 rounded-3xl bg-app-card border border-app-border space-y-3">
           <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Параметры интерфейса</h3>
           
           <div class="space-y-2 text-xs">
-                        <!-- Theme Toggle: Dark / Light -->
-            <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
-              <div>
-                <div class="font-bold text-white">Тема оформления</div>
-                <div class="text-[10px] text-slate-400">Светлая или тёмная тема</div>
-              </div>
-              <div class="flex items-center p-1 rounded-xl bg-black/20 border border-white/10" id="theme-segmented-ctrl">
-                <button type="button" id="theme-btn-dark" onclick="setThemeMode('dark')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white/15 text-white shadow-sm">
-                  <span>🌙</span> <span>Тёмная</span>
-                </button>
-                <button type="button" id="theme-btn-light" onclick="setThemeMode('light')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
-                  <span>☀️</span> <span>Светлая</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Accent Background Selector (5 calm tints without neon) -->
-            <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border/60 space-y-2.5">
-              <div class="flex items-center justify-between">
+            <!-- Hidden experimental Theme & Accent controls (feature kept in engine, access removed as requested) -->
+            <div id="theme-accent-settings-block" class="hidden">
+              <!-- Theme Toggle: Dark / Light -->
+              <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
                 <div>
-                  <div class="font-bold text-white">Акцентный фон</div>
-                  <div class="text-[10px] text-slate-400">Спокойный оттенок без неонового свечения</div>
+                  <div class="font-bold text-white">Тема оформления</div>
+                  <div class="text-[10px] text-slate-400">Светлая или тёмная тема</div>
                 </div>
-                <span id="accent-name-badge" class="px-2.5 py-1 rounded-xl text-[10px] font-bold border border-app-border bg-app-card text-brand-300">Базовый</span>
+                <div class="flex items-center p-1 rounded-xl bg-black/20 border border-white/10" id="theme-segmented-ctrl">
+                  <button type="button" id="theme-btn-dark" onclick="setThemeMode('dark')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white/15 text-white shadow-sm">
+                    <span>🌙</span> <span>Тёмная</span>
+                  </button>
+                  <button type="button" id="theme-btn-light" onclick="setThemeMode('light')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <span>☀️</span> <span>Светлая</span>
+                  </button>
+                </div>
               </div>
-              <div class="grid grid-cols-5 gap-2 pt-1">
-                <!-- Base (Neutral) -->
-                <button type="button" onclick="setAccentColor('base')" data-accent="base" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Базовый (без акцента)">
-                  <div class="w-8 h-8 rounded-full bg-slate-400 border-2 border-transparent flex items-center justify-center text-xs font-black text-slate-950 swatch-check">✓</div>
-                  <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Базовый</span>
-                </button>
-                <!-- Green -->
-                <button type="button" onclick="setAccentColor('green')" data-accent="green" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Зеленый (Изумруд)">
-                  <div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
-                  <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Зеленый</span>
-                </button>
-                <!-- Blue -->
-                <button type="button" onclick="setAccentColor('blue')" data-accent="blue" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Синий (Сапфир)">
-                  <div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
-                  <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Синий</span>
-                </button>
-                <!-- Purple -->
-                <button type="button" onclick="setAccentColor('purple')" data-accent="purple" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Фиолетовый (Аметист)">
-                  <div class="w-8 h-8 rounded-full bg-purple-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
-                  <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Фиолетовый</span>
-                </button>
-                <!-- Red -->
-                <button type="button" onclick="setAccentColor('red')" data-accent="red" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Красный (Рубин)">
-                  <div class="w-8 h-8 rounded-full bg-rose-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
-                  <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Красный</span>
-                </button>
+
+              <!-- Accent Background Selector (5 calm tints without neon) -->
+              <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border/60 space-y-2.5 mt-2">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-bold text-white">Акцентный фон</div>
+                    <div class="text-[10px] text-slate-400">Спокойный оттенок без неонового свечения</div>
+                  </div>
+                  <span id="accent-name-badge" class="px-2.5 py-1 rounded-xl text-[10px] font-bold border border-app-border bg-app-card text-brand-300">Базовый</span>
+                </div>
+                <div class="grid grid-cols-5 gap-2 pt-1">
+                  <!-- Base (Neutral) -->
+                  <button type="button" onclick="setAccentColor('base')" data-accent="base" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Базовый (без акцента)">
+                    <div class="w-8 h-8 rounded-full bg-slate-400 border-2 border-transparent flex items-center justify-center text-xs font-black text-slate-950 swatch-check">✓</div>
+                    <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Базовый</span>
+                  </button>
+                  <!-- Green -->
+                  <button type="button" onclick="setAccentColor('green')" data-accent="green" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Зеленый (Изумруд)">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
+                    <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Зеленый</span>
+                  </button>
+                  <!-- Blue -->
+                  <button type="button" onclick="setAccentColor('blue')" data-accent="blue" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Синий (Сапфир)">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
+                    <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Синий</span>
+                  </button>
+                  <!-- Purple -->
+                  <button type="button" onclick="setAccentColor('purple')" data-accent="purple" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Фиолетовый (Аметист)">
+                    <div class="w-8 h-8 rounded-full bg-purple-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
+                    <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Фиолетовый</span>
+                  </button>
+                  <!-- Red -->
+                  <button type="button" onclick="setAccentColor('red')" data-accent="red" class="accent-swatch flex flex-col items-center gap-1.5 p-2 rounded-xl transition active:scale-95 group relative" title="Красный (Рубин)">
+                    <div class="w-8 h-8 rounded-full bg-rose-500 border-2 border-transparent flex items-center justify-center text-xs font-black text-white swatch-check hidden">✓</div>
+                    <span class="text-[9px] font-semibold text-slate-300 group-hover:text-white">Красный</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1266,8 +1269,6 @@
               </div>
               <input type="checkbox" id="set-haptic" checked class="w-4 h-4 accent-brand-500 rounded cursor-pointer">
             </div>
-
-
 
             <!-- Clear Cache Button -->
             <div class="flex items-center justify-between p-3 rounded-2xl bg-app-surface border border-app-border/60">
@@ -1282,7 +1283,7 @@
           </div>
         </div>
 
-                <!-- Support & Developer Contact Block -->
+        <!-- Support & Developer Contact Block -->
         <div class="p-4 rounded-3xl bg-app-card border border-brand-500/40 space-y-3 shadow-lg">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-2xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-lg shrink-0">
@@ -1833,19 +1834,13 @@
 
   <!-- APPLICATION JAVASCRIPT ENGINE -->
   <script>
-    // Early Theme & Accent Restore to avoid visual flash
+    // Early Theme & Accent Restore (defaults to standard Dark Clear Glass)
   try {
-    let _earlyAccent = localStorage.getItem('ohtest_accent') || 'base';
-    if (_earlyAccent === 'emerald') _earlyAccent = 'green';
-    else if (_earlyAccent === 'cyan') _earlyAccent = 'blue';
-    else if (_earlyAccent === 'amber') _earlyAccent = 'base';
-    else if (_earlyAccent === 'rose') _earlyAccent = 'red';
-
-    if (_earlyAccent && _earlyAccent !== 'base') {
+    // Default to clean standard dark theme
+    document.body.classList.remove('light-theme');
+    const _earlyAccent = localStorage.getItem('ohtest_accent');
+    if (_earlyAccent && _earlyAccent !== 'base' && ['green', 'blue', 'purple', 'red'].includes(_earlyAccent)) {
       document.body.classList.add(`theme-${_earlyAccent}`);
-    }
-    if (localStorage.getItem('ohtest_theme') === 'light') {
-      document.body.classList.add('light-theme');
     }
   } catch(e) {}
 
@@ -2033,16 +2028,9 @@
 
   // Telegram WebApp Initialization
   window.addEventListener('DOMContentLoaded', async () => {
-        // Apply Theme from localStorage
-    const savedTheme = localStorage.getItem('ohtest_theme') || 'dark';
-    setThemeMode(savedTheme, true);
-
-    // Apply Accent Color from localStorage
-    let savedAccent = localStorage.getItem('ohtest_accent') || 'base';
-    if (savedAccent === 'emerald') savedAccent = 'green';
-    else if (savedAccent === 'cyan') savedAccent = 'blue';
-    else if (savedAccent === 'amber') savedAccent = 'base';
-    else if (savedAccent === 'rose') savedAccent = 'red';
+    // Apply Theme (standard Dark Clear Glass mode, functions preserved)
+    setThemeMode('dark', true);
+    const savedAccent = localStorage.getItem('ohtest_accent') || 'base';
     setAccentColor(savedAccent, true);
 
     const tg = window.Telegram?.WebApp;
