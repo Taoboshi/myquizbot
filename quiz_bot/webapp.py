@@ -733,3 +733,22 @@ def register_webapp_routes(app: Any) -> None:
         reset_user_progress(int(target_uid))
         return jsonify({"success": True, "target_user_id": target_uid})
 
+    @app.route("/api/support/feedback", methods=["POST"])
+    def api_support_feedback():
+        data = request.get_json(force=True) or {}
+        user_id = data.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        message = data.get("message", "").strip()
+        contact = data.get("contact", "").strip()
+        test_id = data.get("test_id", "")
+        question_id = data.get("question_id", "")
+        if not message:
+            return jsonify({"error": "Message required"}), 400
+
+        import logging
+        logging.getLogger("quiz_bot").info(
+            "SUPPORT_FEEDBACK from user=%s contact=%s test=%s q=%s: %s",
+            user_id, contact, test_id, question_id, message
+        )
+        return jsonify({"success": True, "message": "Feedback received"})
+
+
