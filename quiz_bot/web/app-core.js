@@ -698,6 +698,7 @@ const nativeFetch = window.fetch.bind(window);
                 id: t.id,
                 title: t.title,
                 subject_id: isUnassigned ? 'default' : s.id,
+                subject_emoji: s.emoji || '📚',
                 questions_count: t.questions_count,
                 access_type: t.access_type || 'public',
                 access_code: t.access_code || ''
