@@ -119,6 +119,31 @@ class AdminApiTestCase(unittest.TestCase):
         self.assertEqual(len(data["attempts"]), 1)
         self.assertEqual(data["attempts"][0]["correct"], 1)
 
+    def test_custom_profile_is_saved_and_returned_by_bootstrap(self):
+        headers = self._auth_header(99999)
+        saved = self.client.post(
+            "/api/user/profile",
+            headers=headers,
+            json={"display_name": "Моё имя", "avatar": "🧬"},
+        )
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.get_json()["profile"], {"display_name": "Моё имя", "avatar": "🧬"})
+
+        bootstrap = self.client.get("/api/bootstrap?user_id=99999", headers=headers)
+        self.assertEqual(bootstrap.status_code, 200)
+        self.assertEqual(
+            bootstrap.get_json()["user_profile"],
+            {"display_name": "Моё имя", "avatar": "🧬"},
+        )
+
+    def test_custom_profile_rejects_untrusted_avatar_markup(self):
+        response = self.client.post(
+            "/api/user/profile",
+            headers=self._auth_header(99999),
+            json={"display_name": "Моё имя", "avatar": "<img src=x onerror=alert(1)>"},
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_web_favorite_can_be_saved_and_removed(self):
         headers = self._auth_header(99999)
         response = self.client.post("/api/user/favorite", headers=headers, json={

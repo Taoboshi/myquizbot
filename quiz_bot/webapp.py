@@ -1,5 +1,7 @@
 """Flask web application and REST API for ohTest Telegram Mini App."""
 
+import base64
+import binascii
 import json
 import hashlib
 import hmac
@@ -27,6 +29,7 @@ from .storage import (
     db_connect,
     delete_subject_setting,
     get_all_time_error_indices,
+    get_user_profile,
     is_user_rating_hidden,
     mark_all_time_error_resolved,
     record_attempt_finish,
@@ -34,11 +37,16 @@ from .storage import (
     set_subject_setting,
     set_test_metadata_setting,
     set_user_rating_hidden,
+    save_user_profile,
     set_favorite,
     upsert_user,
 )
 
 logger = logging.getLogger(__name__)
+
+_WEB_PROFILE_AVATARS = frozenset({
+    "👨‍⚕️", "👩‍⚕️", "🩺", "🔬", "🧬", "💊", "🏥", "🧠", "🫀", "🦴", "🎓", "⚡",
+})
 
 
 def is_admin_user(user_id: Any = None) -> bool:
@@ -210,12 +218,62 @@ def register_webapp_routes(app: Any) -> None:
             except Exception:
                 pass
 
+        try:
+            user_profile = get_user_profile(user_id)
+        except Exception as e:
+            logger.warning("Failed to load custom profile for user %s: %s", user_id, e)
+            user_profile = {"display_name": None, "avatar": None}
+
         return jsonify({
             "is_admin": is_admin,
             "is_hidden_in_rating": is_hidden_in_rating,
+            "user_profile": user_profile,
             "subjects": subjects_data,
             "unassigned_tests": unassigned_data,
             "total_loaded_tests": len(LOADED_TESTS),
+        })
+
+    @app.route("/api/user/profile", methods=["POST"])
+    def api_save_user_profile():
+        if request.content_length and request.content_length > 96 * 1024:
+            return jsonify({"error": "Profile payload is too large"}), 413
+
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "JSON profile payload required"}), 400
+
+        display_name = payload.get("display_name")
+        if not isinstance(display_name, str):
+            return jsonify({"error": "display_name must be text"}), 400
+        display_name = display_name.strip()
+        if not display_name or len(display_name) > 32:
+            return jsonify({"error": "display_name must contain 1 to 32 characters"}), 400
+
+        avatar = payload.get("avatar", "")
+        if not isinstance(avatar, str):
+            return jsonify({"error": "avatar must be text"}), 400
+        if len(avatar) > 72 * 1024:
+            return jsonify({"error": "avatar is too large"}), 413
+        if avatar.startswith("data:image/jpeg;base64,"):
+            try:
+                image_bytes = base64.b64decode(avatar.partition(",")[2], validate=True)
+            except (binascii.Error, ValueError):
+                return jsonify({"error": "avatar image is invalid"}), 400
+            if not image_bytes or len(image_bytes) > 52 * 1024:
+                return jsonify({"error": "avatar image is too large"}), 413
+        elif avatar and avatar not in _WEB_PROFILE_AVATARS:
+            return jsonify({"error": "avatar must be a supported preset or JPEG image"}), 400
+
+        user_id = authenticated_user_id()
+        try:
+            save_user_profile(user_id, display_name, avatar)
+        except Exception as e:
+            logger.warning("Failed to save custom profile for user %s: %s", user_id, e)
+            return jsonify({"error": "Could not save profile"}), 500
+
+        return jsonify({
+            "success": True,
+            "profile": {"display_name": display_name, "avatar": avatar},
         })
 
     @app.route("/api/tests/<test_id>", methods=["GET"])

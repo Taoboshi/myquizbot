@@ -672,7 +672,7 @@
     showToast('Аватар сброшен на стандартный');
   }
 
-  function saveUserProfileEdits() {
+  async function saveUserProfileEdits() {
     dismissKeyboard();
     triggerHaptic('medium');
     const nameInput = document.getElementById('edit-profile-name-input');
@@ -683,24 +683,52 @@
       return;
     }
 
-    state.userName = newName;
-    state.userAvatar = tempEditAvatar;
+    const saveButton = document.getElementById('save-profile-btn');
+    if (saveButton?.disabled) return;
+    if (saveButton) saveButton.disabled = true;
 
     try {
-      localStorage.setItem('ohtest_custom_name', newName);
-      if (tempEditAvatar) {
-        localStorage.setItem('ohtest_custom_avatar', tempEditAvatar);
-      } else {
-        localStorage.removeItem('ohtest_custom_avatar');
+      if (!state.userId) {
+        state.userName = newName;
+        state.userAvatar = tempEditAvatar;
+        localStorage.setItem('ohtest_custom_name', newName);
+        if (tempEditAvatar) localStorage.setItem('ohtest_custom_avatar', tempEditAvatar);
+        else localStorage.removeItem('ohtest_custom_avatar');
+        updateProfileFullView();
+        closeEditProfileModal();
+        showToast('Сохранено только на этом устройстве');
+        return;
       }
-    } catch(e) {
-      console.warn('LocalStorage save failed for profile edits:', e);
-    }
 
-    // Refresh Profile Screen
-    updateProfileFullView();
-    closeEditProfileModal();
-    showToast('✅ Профиль успешно обновлен!');
+      const response = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: newName, avatar: tempEditAvatar || '' })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.profile) {
+        throw new Error(result.error || `Profile save failed (${response.status})`);
+      }
+
+      state.userName = result.profile.display_name;
+      state.userAvatar = result.profile.avatar || '';
+      try {
+        localStorage.setItem('ohtest_custom_name', state.userName);
+        if (state.userAvatar) localStorage.setItem('ohtest_custom_avatar', state.userAvatar);
+        else localStorage.removeItem('ohtest_custom_avatar');
+      } catch (cacheError) {
+        console.warn('Profile saved remotely, but local cache could not be updated:', cacheError);
+      }
+
+      updateProfileFullView();
+      closeEditProfileModal();
+      showToast('✅ Профиль синхронизирован');
+    } catch(e) {
+      console.error('Profile save failed:', e);
+      showToast('⚠️ Не удалось сохранить. Проверьте подключение и повторите.');
+    } finally {
+      if (saveButton) saveButton.disabled = false;
+    }
   }
 
   const profileErrorTestLoads = new Map();

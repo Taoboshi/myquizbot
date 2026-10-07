@@ -537,6 +537,8 @@ def _init_postgres_db() -> None:
 
         for stmt in [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_hidden_in_rating INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_name TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_avatar TEXT",
             "ALTER TABLE all_time_errors ADD COLUMN IF NOT EXISTS last_wrong_answer_index INTEGER",
             "ALTER TABLE attempts ADD COLUMN IF NOT EXISTS finished_by_user INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE active_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
@@ -686,6 +688,8 @@ def _init_sqlite_db() -> None:
 
         for stmt in [
             "ALTER TABLE users ADD COLUMN is_hidden_in_rating INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN profile_name TEXT",
+            "ALTER TABLE users ADD COLUMN profile_avatar TEXT",
             "ALTER TABLE all_time_errors ADD COLUMN last_wrong_answer_index INTEGER",
             "ALTER TABLE attempts ADD COLUMN finished_by_user INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE active_sessions ADD COLUMN updated_at TEXT",
@@ -1209,6 +1213,35 @@ def upsert_user(user) -> None:
         conn.commit()
 
     _USER_UPSERT_CACHE[user.id] = now
+
+
+def get_user_profile(user_id: int) -> dict[str, str | None]:
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT profile_name, profile_avatar FROM users WHERE user_id = ?",
+            (int(user_id),),
+        ).fetchone()
+    if not row:
+        return {"display_name": None, "avatar": None}
+    return {
+        "display_name": row["profile_name"],
+        "avatar": row["profile_avatar"],
+    }
+
+
+def save_user_profile(user_id: int, display_name: str, avatar: str) -> None:
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO users (user_id, profile_name, profile_avatar)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                profile_name = excluded.profile_name,
+                profile_avatar = excluded.profile_avatar
+            """,
+            (int(user_id), display_name, avatar),
+        )
+        conn.commit()
 
 
 def set_user_rating_hidden(user_id: int, is_hidden: bool) -> None:

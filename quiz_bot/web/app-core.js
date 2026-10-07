@@ -677,6 +677,56 @@ const nativeFetch = window.fetch.bind(window);
       state.catalogLoadFailed = false;
       {
         const data = await res.json();
+        if (data.user_profile && typeof data.user_profile === 'object') {
+          const serverProfile = data.user_profile;
+          const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+          const telegramName = [telegramUser?.first_name, telegramUser?.last_name].filter(Boolean).join(' ')
+            || telegramUser?.username
+            || 'Студент';
+          let localCustomName = '';
+          let localCustomAvatar = '';
+          try {
+            localCustomName = localStorage.getItem('ohtest_custom_name') || '';
+            localCustomAvatar = localStorage.getItem('ohtest_custom_avatar') || '';
+          } catch(e) {}
+
+          state.userName = serverProfile.display_name || localCustomName || telegramName;
+          state.userAvatar = serverProfile.avatar || localCustomAvatar;
+
+          if (!serverProfile.display_name && localCustomName && state.userId) {
+            try {
+              const migrationResponse = await fetch('/api/user/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ display_name: localCustomName, avatar: localCustomAvatar })
+              });
+              const migrationResult = await migrationResponse.json().catch(() => ({}));
+              if (migrationResponse.ok && migrationResult.profile) {
+                state.userName = migrationResult.profile.display_name;
+                state.userAvatar = migrationResult.profile.avatar || '';
+              } else {
+                console.warn('Could not sync the existing local profile:', migrationResult.error || migrationResponse.status);
+              }
+            } catch(e) {
+              console.warn('Could not sync the existing local profile:', e);
+            }
+          }
+
+          try {
+            if (serverProfile.display_name) {
+              localStorage.setItem('ohtest_custom_name', state.userName);
+              if (state.userAvatar) localStorage.setItem('ohtest_custom_avatar', state.userAvatar);
+              else localStorage.removeItem('ohtest_custom_avatar');
+            } else if (!localCustomName) {
+              localStorage.removeItem('ohtest_custom_name');
+              localStorage.removeItem('ohtest_custom_avatar');
+            }
+          } catch(e) {}
+          const profileName = document.getElementById('profile-name');
+          const profileAvatar = document.getElementById('profile-avatar');
+          if (profileName) profileName.innerText = state.userName;
+          if (profileAvatar) renderProfileAvatarElement(profileAvatar, state.userAvatar, state.userName);
+        }
         if (data.is_admin) {
           state.isAdmin = true;
           /* header-admin-pill hidden */
