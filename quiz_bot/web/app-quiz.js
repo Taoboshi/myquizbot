@@ -127,7 +127,7 @@
     const countLabel = document.getElementById('home-subjects-count');
     if (countLabel) {
       const testCount = visibleTests.length;
-      countLabel.innerText = `${testCount} ${testCount === 1 ? 'тест' : (testCount < 5 ? 'теста' : 'тестов')} доступно`;
+      countLabel.innerText = `${formatTestCount(testCount)} доступно`;
     }
 
     // Only display subjects that have at least 1 test assigned

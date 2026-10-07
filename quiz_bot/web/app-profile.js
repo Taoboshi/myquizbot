@@ -125,7 +125,7 @@
     const totalTestsBadge = document.getElementById('profile-total-tests-label');
     if (totalTestsBadge) {
       const allTestsCount = getCatalogVisibleTests().length;
-      totalTestsBadge.innerText = `${allTestsCount} ${allTestsCount === 1 ? 'тест' : (allTestsCount < 5 ? 'теста' : 'тестов')}`;
+      totalTestsBadge.innerText = formatTestCount(allTestsCount);
     }
 
     if (subjects.length === 0) {

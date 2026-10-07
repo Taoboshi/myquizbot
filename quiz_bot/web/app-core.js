@@ -9,9 +9,10 @@ const nativeFetch = window.fetch.bind(window);
       return nativeFetch(input, { ...init, headers });
     };
 
-    // Early Theme & Accent Restore (defaults to Dark Green Clear Glass)
+    // Restore the saved theme before the first screen is rendered.
   try {
-    document.body.classList.remove('light-theme');
+    const _earlyTheme = localStorage.getItem('ohtest_theme') || 'dark';
+    document.body.classList.toggle('light-theme', _earlyTheme === 'light');
     let _earlyAccent = localStorage.getItem('ohtest_accent') || 'green';
     if (_earlyAccent === 'emerald') _earlyAccent = 'green';
     else if (_earlyAccent === 'amber') _earlyAccent = 'base';
@@ -113,8 +114,20 @@ const nativeFetch = window.fetch.bind(window);
   function getCatalogVisibleTests() {
     const subjectIds = new Set((adminStore.subjects || []).map(subject => subject.id));
     return (adminStore.testsMeta || []).filter(test =>
-      test && subjectIds.has(test.subject_id) && (state.isAdmin || (test.access_type || 'public') !== 'admin_only')
+      test && test.subject_id && test.subject_id !== 'default' && subjectIds.has(test.subject_id) && (state.isAdmin || (test.access_type || 'public') !== 'admin_only')
     );
+  }
+
+  function formatTestCount(count) {
+    const value = Math.max(0, Math.floor(Number(count) || 0));
+    const lastTwo = value % 100;
+    const lastOne = value % 10;
+    const noun = lastOne === 1 && lastTwo !== 11
+      ? 'тест'
+      : lastOne >= 2 && lastOne <= 4 && (lastTwo < 12 || lastTwo > 14)
+        ? 'теста'
+        : 'тестов';
+    return `${value} ${noun}`;
   }
 
   let pinnedSubjects = new Set(JSON.parse(localStorage.getItem('ohtest_pinned_subjects') || '[]'));
@@ -210,8 +223,8 @@ const nativeFetch = window.fetch.bind(window);
 
   // Telegram WebApp Initialization
   window.addEventListener('DOMContentLoaded', async () => {
-    // Apply Theme (standard Dark Green Clear Glass mode, functions preserved)
-    setThemeMode('dark', true);
+    // Reapply saved theme after settings controls are available.
+    setThemeMode(document.body.classList.contains('light-theme') ? 'light' : 'dark', true);
     let savedAccent = localStorage.getItem('ohtest_accent') || 'green';
     if (savedAccent === 'emerald') savedAccent = 'green';
     else if (savedAccent === 'amber') savedAccent = 'base';
@@ -608,6 +621,7 @@ const nativeFetch = window.fetch.bind(window);
       const isSelected = (swColor === activeColor);
       const circle = swatch.querySelector('.rounded-full');
       const check = swatch.querySelector('.swatch-check');
+      swatch.classList.toggle('accent-swatch-active', isSelected);
 
       if (isSelected) {
         swatch.classList.add('bg-white/10', 'border-white/20');
