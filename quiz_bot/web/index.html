@@ -712,9 +712,9 @@
       min-height: 36px !important;
       max-height: 36px !important;
       border-radius: 12px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       box-sizing: border-box !important;
       background: rgba(255, 255, 255, 0.05) !important;
       backdrop-filter: blur(12px) !important;
@@ -730,6 +730,13 @@
       user-select: none !important;
       -webkit-user-select: none !important;
       transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+    }
+    .header-icon-btn.hidden,
+    #nav-back-btn.hidden,
+    #header-logo-icon.hidden,
+    #header-search-btn.hidden,
+    #header-title-container.hidden {
+      display: none !important;
     }
     body.light-theme .header-icon-btn {
       background: rgba(0, 0, 0, 0.04) !important;
@@ -794,7 +801,7 @@
     <header id="app-header" class="glass px-3.5 py-2.5 flex items-center justify-between safe-top">
       <div class="flex items-center space-x-2.5 min-w-0 flex-1 mr-2">
         <!-- Upgraded Ergonomic Back Button (identical 36x36 size and style to search button) -->
-        <button id="nav-back-btn" class="header-icon-btn hidden" onclick="goBack()" title="Назад">
+        <button id="nav-back-btn" class="header-icon-btn hidden" onclick="goBack()" title="Назад" style="display: none !important;">
           <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <!-- Logo (Tap 5 times for secret Admin Unlock) - shown on 3 main tabs -->
@@ -2507,7 +2514,7 @@
     renderHomeSubjects();
     renderActiveAttemptBanner();
     updateHubResumeButton();
-    updateHeaderNavState('home');
+    updateHeaderNavState();
 
     // Dynamic Header Scroll Shrink & Tap-to-top setup
     setupHeaderScrollObserver();
@@ -2531,26 +2538,48 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function showHeaderElement(el) {
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.removeProperty('display');
+  }
+
+  function hideHeaderElement(el) {
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.setProperty('display', 'none', 'important');
+  }
+
   // Detect which view is currently active in the DOM
   function getCurrentActiveView() {
-    // Nested views where Back button replaces Logo
+    // 1. If currently in Profile tab and profile view is visible
+    if (state.currentTab === 'profile') {
+      const p = document.getElementById('view-tab-profile');
+      if (p && !p.classList.contains('hidden') && p.style.display !== 'none') {
+        return 'view-tab-profile';
+      }
+    }
+    // 2. If currently in Settings tab and settings view is visible
+    if (state.currentTab === 'settings') {
+      const s = document.getElementById('view-tab-settings');
+      if (s && !s.classList.contains('hidden') && s.style.display !== 'none') {
+        return 'view-tab-settings';
+      }
+    }
+
+    // 3. Check nested views where Back button replaces Logo
     const nestedViews = [
       'view-tests', 'view-hub', 'view-solver', 'view-result',
       'view-flashcards', 'view-search', 'view-admin'
     ];
     for (const v of nestedViews) {
       const el = document.getElementById(v);
-      if (el && !el.classList.contains('hidden')) return v;
+      if (el && !el.classList.contains('hidden') && el.style.display !== 'none') {
+        return v;
+      }
     }
-    // Main tab views where Logo and title are present
-    if (state.currentTab === 'profile') {
-      const el = document.getElementById('view-tab-profile');
-      if (el && !el.classList.contains('hidden')) return 'view-tab-profile';
-    }
-    if (state.currentTab === 'settings') {
-      const el = document.getElementById('view-tab-settings');
-      if (el && !el.classList.contains('hidden')) return 'view-tab-settings';
-    }
+
+    // 4. Default to home catalog
     return 'view-home';
   }
 
@@ -2572,11 +2601,11 @@
 
     if (isMainTabRoot) {
       // 1. Root main screen: Show Logo, Hide Back button
-      if (logoEl) logoEl.classList.remove('hidden');
-      if (backEl) backEl.classList.add('hidden');
+      showHeaderElement(logoEl);
+      hideHeaderElement(backEl);
 
       // 2. Show Title text strictly for the 3 main screens
-      if (titleContainer) titleContainer.classList.remove('hidden');
+      showHeaderElement(titleContainer);
       if (titleEl) {
         if (activeView === 'view-home') titleEl.innerText = "Главная";
         else if (activeView === 'view-tab-profile') titleEl.innerText = "Профиль";
@@ -2584,37 +2613,33 @@
       }
       if (subEl) {
         subEl.innerText = '';
-        subEl.classList.add('hidden');
+        hideHeaderElement(subEl);
       }
 
       // 3. Search button (лупа): ONLY on Home catalog; strictly hidden on Profile & Settings
-      if (searchBtn) {
-        if (activeView === 'view-home') {
-          searchBtn.classList.remove('hidden');
-        } else {
-          searchBtn.classList.add('hidden');
-        }
+      if (activeView === 'view-home') {
+        showHeaderElement(searchBtn);
+      } else {
+        hideHeaderElement(searchBtn);
       }
     } else {
       // Nested screen: Logo is hidden, Back button replaces Logo in exact 36x36 slot
-      if (logoEl) logoEl.classList.add('hidden');
-      if (backEl) backEl.classList.remove('hidden');
+      hideHeaderElement(logoEl);
+      showHeaderElement(backEl);
 
       // Title text completely hidden on all nested screens
-      if (titleContainer) titleContainer.classList.add('hidden');
+      hideHeaderElement(titleContainer);
       if (titleEl) titleEl.innerText = '';
       if (subEl) {
         subEl.innerText = '';
-        subEl.classList.add('hidden');
+        hideHeaderElement(subEl);
       }
 
       // Search button (лупа) only on screens with contextual list search:
-      if (searchBtn) {
-        if (activeView === 'view-tests' || activeView === 'view-hub' || activeView === 'view-solver') {
-          searchBtn.classList.remove('hidden');
-        } else {
-          searchBtn.classList.add('hidden');
-        }
+      if (activeView === 'view-tests' || activeView === 'view-hub' || activeView === 'view-solver') {
+        showHeaderElement(searchBtn);
+      } else {
+        hideHeaderElement(searchBtn);
       }
     }
   }
