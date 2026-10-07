@@ -123,11 +123,16 @@
     const list = document.getElementById('home-subjects-list');
     if (!list) return;
     list.innerHTML = '';
+    const visibleTests = getCatalogVisibleTests();
+    const countLabel = document.getElementById('home-subjects-count');
+    if (countLabel) {
+      const testCount = visibleTests.length;
+      countLabel.innerText = `${testCount} ${testCount === 1 ? 'тест' : (testCount < 5 ? 'теста' : 'тестов')} доступно`;
+    }
 
     // Only display subjects that have at least 1 test assigned
     const activeSubjects = adminStore.subjects.filter(subj => {
-      const testsOfSubj = adminStore.testsMeta.filter(t => t.subject_id === subj.id);
-      return testsOfSubj.length > 0;
+      return visibleTests.some(test => test.subject_id === subj.id);
     });
 
     if (activeSubjects.length === 0) {
@@ -160,7 +165,7 @@
       card.onclick = () => openSubjectTests(subj.id, subj.title);
       attachLongPress(card, () => showPinActionModal('subject', subj.id, subj.title));
 
-      const testsOfSubj = adminStore.testsMeta.filter(t => t.subject_id === subj.id);
+      const testsOfSubj = visibleTests.filter(t => t.subject_id === subj.id);
       const testsCount = testsOfSubj.length;
 
       card.innerHTML = `

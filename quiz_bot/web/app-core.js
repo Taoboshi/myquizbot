@@ -110,6 +110,13 @@ const nativeFetch = window.fetch.bind(window);
     isHiddenInRating: localStorage.getItem('ohtest_hide_rating') === 'true',
   };
 
+  function getCatalogVisibleTests() {
+    const subjectIds = new Set((adminStore.subjects || []).map(subject => subject.id));
+    return (adminStore.testsMeta || []).filter(test =>
+      test && subjectIds.has(test.subject_id) && (state.isAdmin || (test.access_type || 'public') !== 'admin_only')
+    );
+  }
+
   let pinnedSubjects = new Set(JSON.parse(localStorage.getItem('ohtest_pinned_subjects') || '[]'));
   let pinnedTests = new Set(JSON.parse(localStorage.getItem('ohtest_pinned_tests') || '[]'));
   let pinActionTarget = null;

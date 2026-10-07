@@ -124,9 +124,7 @@
     // Update total tests count badge in profile disciplines header
     const totalTestsBadge = document.getElementById('profile-total-tests-label');
     if (totalTestsBadge) {
-      const allTestsCount = (adminStore.testsMeta && adminStore.testsMeta.length > 0) 
-        ? adminStore.testsMeta.length 
-        : Object.keys(BUNDLED_TESTS || {}).length;
+      const allTestsCount = getCatalogVisibleTests().length;
       totalTestsBadge.innerText = `${allTestsCount} ${allTestsCount === 1 ? 'тест' : (allTestsCount < 5 ? 'теста' : 'тестов')}`;
     }
 
