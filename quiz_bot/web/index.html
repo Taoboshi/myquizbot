@@ -422,6 +422,10 @@
     [class*="text-brand-200/"] {
       color: var(--accent-color) !important;
     }
+    .group:hover [class~="group-hover:text-brand-300"],
+    .group:hover [class~="group-hover:text-brand-400"] {
+      color: var(--accent-color) !important;
+    }
     .border-brand-500, .border-brand-400 {
       border-color: var(--accent-border-subtle) !important;
     }
@@ -467,6 +471,11 @@
     }
     [class~="shadow-brand-600/30"] {
       --tw-shadow-color: var(--accent-border-subtle) !important;
+    }
+    #profile-rank-badge {
+      background-color: var(--accent-bg-subtle) !important;
+      color: var(--accent-color) !important;
+      border-color: var(--accent-border-subtle) !important;
     }
 
     /* Flashcards */
