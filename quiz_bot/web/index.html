@@ -472,6 +472,26 @@
     [class~="shadow-brand-600/30"] {
       --tw-shadow-color: var(--accent-border-subtle) !important;
     }
+    .status-positive {
+      color: #34d399 !important;
+      background-color: rgba(16, 185, 129, 0.10) !important;
+      border-color: rgba(16, 185, 129, 0.24) !important;
+    }
+    .status-negative {
+      color: #fb7185 !important;
+      background-color: rgba(244, 63, 94, 0.10) !important;
+      border-color: rgba(244, 63, 94, 0.24) !important;
+    }
+    body.light-theme .status-positive {
+      color: #047857 !important;
+      background-color: rgba(16, 185, 129, 0.08) !important;
+      border-color: rgba(5, 150, 105, 0.24) !important;
+    }
+    body.light-theme .status-negative {
+      color: #be123c !important;
+      background-color: rgba(244, 63, 94, 0.08) !important;
+      border-color: rgba(225, 29, 72, 0.24) !important;
+    }
     #profile-rank-badge {
       background-color: var(--accent-bg-subtle) !important;
       color: var(--accent-color) !important;
@@ -945,8 +965,8 @@
         <!-- Hero Banner -->
         <div class="relative overflow-hidden p-5 rounded-3xl hero-glass-banner shadow-xl">
           <div class="relative z-10 space-y-1.5">
-            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 text-[11px] font-semibold border border-brand-500/30">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-ping"></span>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full status-positive text-[11px] font-semibold border">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
               Готово к обучению
             </div>
             <h2 class="text-lg font-bold text-white tracking-tight">Каталог дисциплин</h2>
@@ -1051,8 +1071,8 @@
         <!-- Test Info Card -->
         <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-3">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">Карточка теста</span>
-            <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-medium">Доступен</span>
+            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20 uppercase">Карточка теста</span>
+            <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full status-positive border font-medium">Доступен</span>
           </div>
           <h2 class="text-base font-bold text-white tracking-tight" id="hub-test-title">Название теста</h2>
           
@@ -1092,43 +1112,43 @@
             </button>
 
             <!-- Random Shuffle Mode -->
-            <button onclick="startQuizMode('random')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-indigo-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+            <button onclick="startQuizMode('random')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
               <div class="flex items-center justify-between w-full mb-2">
-                <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-base group-hover:scale-105 transition">
+                <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center text-base group-hover:scale-105 transition">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M16 3h5v5"/><path d="m4 20 16-16"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m15 9 6-6"/></svg>
                 </div>
-                <span class="text-xs text-slate-500 group-hover:text-indigo-400 transition">→</span>
+                <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
               </div>
               <div>
-                <h4 class="text-xs font-bold text-white group-hover:text-indigo-300 transition">Вразброс</h4>
+                <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">Вразброс</h4>
                 <p class="text-[10px] text-slate-400 mt-0.5">Случайный порядок</p>
               </div>
             </button>
 
             <!-- Reverse Mode -->
-            <button onclick="startQuizMode('reverse')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-cyan-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+            <button onclick="startQuizMode('reverse')" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
               <div class="flex items-center justify-between w-full mb-2">
-                <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center text-base group-hover:scale-105 transition">
+                <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center text-base group-hover:scale-105 transition">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
                 </div>
-                <span class="text-xs text-slate-500 group-hover:text-cyan-400 transition">→</span>
+                <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
               </div>
               <div>
-                <h4 class="text-xs font-bold text-white group-hover:text-cyan-300 transition">С конца</h4>
+                <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">С конца</h4>
                 <p class="text-[10px] text-slate-400 mt-0.5">В обратном порядке</p>
               </div>
             </button>
 
             <!-- Start from Number Mode -->
-            <button onclick="openStartFromModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-amber-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
+            <button onclick="openStartFromModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex flex-col justify-between text-left active:scale-[0.97] transition group">
               <div class="flex items-center justify-between w-full mb-2">
-                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-base group-hover:scale-105 transition">
+                <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center text-base group-hover:scale-105 transition">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
                 </div>
-                <span class="text-xs text-slate-500 group-hover:text-amber-400 transition">→</span>
+                <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
               </div>
               <div>
-                <h4 class="text-xs font-bold text-white group-hover:text-amber-300 transition">С номера...</h4>
+                <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">С номера...</h4>
                 <p class="text-[10px] text-slate-400 mt-0.5">Выбрать стартовый</p>
               </div>
             </button>

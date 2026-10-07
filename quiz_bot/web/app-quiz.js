@@ -235,12 +235,12 @@
       sortedTests.forEach(t => {
         const isPinned = pinnedTests.has(t.id);
         const accType = t.access_type || 'public';
-        let badgeHtml = '<span class="text-[10px] text-brand-400 font-medium">✓ Доступен</span>';
+        let badgeHtml = '<span class="text-[10px] status-positive font-medium">✓ Доступен</span>';
 
         if (accType === 'code') {
           const isUnlocked = state.isAdmin || state.unlockedCodeTests.has(t.id);
           badgeHtml = isUnlocked 
-            ? '<span class="text-[10px] text-brand-400 font-medium">✓ Доступен</span>' 
+            ? '<span class="text-[10px] status-positive font-medium">✓ Доступен</span>'
             : '<span class="text-[10px] text-amber-400 font-medium">🔑 По коду</span>';
         } else if (accType === 'private') {
           badgeHtml = state.isAdmin
@@ -398,7 +398,7 @@
         hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium';
       } else {
         hubBadge.innerText = 'Доступен';
-        hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium';
+        hubBadge.className = 'text-xs px-2.5 py-0.5 rounded-full status-positive border font-medium';
       }
     }
 
