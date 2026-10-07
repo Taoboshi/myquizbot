@@ -1945,13 +1945,13 @@
     </div>
 
     <!-- Admin Generic Action Modal -->
-    <div id="modal-admin-action" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div class="w-full max-w-md sm:max-w-lg rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[88vh] flex flex-col">
+    <div id="modal-admin-action" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+      <div class="w-full max-w-md sm:max-w-lg rounded-3xl bg-app-card border border-brand-500/40 p-4 sm:p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col my-auto" style="max-height: calc(100dvh - 16px)">
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <h3 id="admin-modal-title" class="text-sm font-extrabold text-white flex items-center gap-2">Действие</h3>
           <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
         </div>
-        <div id="admin-modal-body" class="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
+        <div id="admin-modal-body" class="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 hide-scrollbar" style="-webkit-overflow-scrolling: touch">
           <!-- Dynamic Content -->
         </div>
         <button onclick="closeAdminModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-bold text-slate-300 hover:text-white">

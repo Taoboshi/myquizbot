@@ -201,6 +201,8 @@
 
       body.innerHTML = `
         <div class="space-y-3">
+          ${unassignedSection}
+
           <!-- Add Subject Box -->
           <div class="p-3 rounded-2xl bg-app-surface border border-app-border space-y-2">
             <div class="text-xs font-bold text-white">Добавить новую дисциплину</div>
@@ -214,7 +216,6 @@
             ${subjectsHtml}
           </div>
 
-          ${unassignedSection}
         </div>
       `;
     } else if (type === 'upload') {
