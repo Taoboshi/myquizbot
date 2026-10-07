@@ -342,13 +342,27 @@
       renderActiveAttemptBanner();
     } else if (tabId === 'profile') {
       document.getElementById('view-tab-profile').classList.remove('hidden');
-      updateProfileFullView();
     } else if (tabId === 'settings') {
       document.getElementById('view-tab-settings').classList.remove('hidden');
     }
 
     updateHeaderNavState();
     updateTelegramBackButton();
+    if (tabId === 'profile') {
+      try {
+        updateProfileFullView();
+      } catch(e) {
+        console.error('Could not update profile view:', e);
+        const disciplines = document.getElementById('profile-disciplines-list');
+        const content = document.getElementById('profile-subtab-content');
+        if (disciplines && !disciplines.innerHTML.trim()) {
+          disciplines.innerHTML = '<div class="p-4 text-center text-xs text-rose-300">Не удалось загрузить дисциплины.</div>';
+        }
+        if (content && !content.innerHTML.trim()) {
+          content.innerHTML = '<div class="p-6 text-center text-xs text-rose-300">Не удалось загрузить вкладку профиля.</div>';
+        }
+      }
+    }
   }
 
   function hideAllViews() {

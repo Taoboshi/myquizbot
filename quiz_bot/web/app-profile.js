@@ -5,6 +5,8 @@
   state.ratingActiveTest = 'all';
 
   function updateProfileFullView() {
+    if (!Array.isArray(state.historyAttempts)) state.historyAttempts = [];
+    state.historyAttempts = state.historyAttempts.filter(attempt => attempt && typeof attempt === 'object');
     let totalAttempts = state.historyAttempts.length;
     let totalCorrect = 0;
     let totalAnswered = 0;
@@ -76,8 +78,20 @@
       profFavEl.className = `text-xs font-bold font-mono ${allFavs.length > 0 ? 'text-amber-400' : 'text-slate-300'}`;
     }
 
-    renderDisciplineMastery();
-    switchProfileTab(state.activeProfileSubTab || 'favs');
+    try {
+      renderDisciplineMastery();
+    } catch(e) {
+      console.error('Could not render profile disciplines:', e);
+      const disciplines = document.getElementById('profile-disciplines-list');
+      if (disciplines) disciplines.innerHTML = '<div class="p-4 text-center text-xs text-rose-300">Не удалось показать дисциплины.</div>';
+    }
+    try {
+      switchProfileTab(state.activeProfileSubTab || 'favs');
+    } catch(e) {
+      console.error('Could not render profile tab:', e);
+      const content = document.getElementById('profile-subtab-content');
+      if (content) content.innerHTML = '<div class="p-6 text-center text-xs text-rose-300">Не удалось загрузить вкладку. Переключитесь на неё ещё раз.</div>';
+    }
   }
 
   function renderDisciplineMastery() {
@@ -86,8 +100,8 @@
     container.innerHTML = '';
 
     // Collect subjects dynamically: from adminStore.subjects, or derived from adminStore.testsMeta
-    let subjects = (adminStore.subjects && adminStore.subjects.length > 0) ? [...adminStore.subjects] : [];
-    if (subjects.length === 0 && adminStore.testsMeta && adminStore.testsMeta.length > 0) {
+    let subjects = Array.isArray(adminStore.subjects) ? adminStore.subjects.filter(subject => subject && typeof subject === 'object') : [];
+    if (subjects.length === 0 && Array.isArray(adminStore.testsMeta) && adminStore.testsMeta.length > 0) {
       const seen = new Set();
       adminStore.testsMeta.forEach(t => {
         const sId = t.subject_id || 'default';
@@ -127,7 +141,7 @@
 
     subjects.forEach(sub => {
       // Dynamically find tests assigned to this subject
-      const subjectTests = (adminStore.testsMeta || []).filter(t => t.subject_id === sub.id);
+      const subjectTests = (Array.isArray(adminStore.testsMeta) ? adminStore.testsMeta : []).filter(t => t && t.subject_id === sub.id);
       const subjectTestIds = new Set(subjectTests.map(t => t.id));
 
       const subjectAttempts = state.historyAttempts.filter(h => {
@@ -260,7 +274,13 @@
         btn.className = "py-2.5 px-1 rounded-xl text-slate-400 hover:text-white font-semibold text-xs transition flex items-center justify-center gap-1.5 truncate";
       }
     });
-    renderProfileSubtab(subtab);
+    try {
+      renderProfileSubtab(subtab);
+    } catch(e) {
+      console.error(`Could not render profile tab ${subtab}:`, e);
+      const content = document.getElementById('profile-subtab-content');
+      if (content) content.innerHTML = '<div class="p-6 text-center text-xs text-rose-300">Не удалось загрузить вкладку. Переключитесь на неё ещё раз.</div>';
+    }
   }
 
   function renderProfileSubtab(subtab) {
@@ -706,18 +726,21 @@
   }
 
   function removePreviouslySyncedServerStats() {
-    state.historyAttempts = state.historyAttempts.filter(attempt => !attempt.serverAttemptId);
-    localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts));
+    const history = Array.isArray(state.historyAttempts) ? state.historyAttempts : [];
+    state.historyAttempts = history.filter(attempt => attempt && !attempt.serverAttemptId);
+    try { localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts)); } catch(e) {}
 
-    if (localStorage.getItem('ohtest_server_profile_cleanup_v1') !== 'done') {
-      const errorKeys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('ohtest_errors_')) errorKeys.push(key);
+    try {
+      if (localStorage.getItem('ohtest_server_profile_cleanup_v1') !== 'done') {
+        const errorKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith('ohtest_errors_')) errorKeys.push(key);
+        }
+        errorKeys.forEach(key => localStorage.removeItem(key));
+        localStorage.setItem('ohtest_server_profile_cleanup_v1', 'done');
       }
-      errorKeys.forEach(key => localStorage.removeItem(key));
-      localStorage.setItem('ohtest_server_profile_cleanup_v1', 'done');
-    }
+    } catch(e) {}
     state.userErrors = new Set();
   }
 

@@ -61,16 +61,18 @@ const nativeFetch = window.fetch.bind(window);
   let initialSubjects = [];
   let initialTestsMeta = [];
   try {
-    if (cachedSubjectsRaw) initialSubjects = JSON.parse(cachedSubjectsRaw);
-    if (cachedTestsMetaRaw) initialTestsMeta = JSON.parse(cachedTestsMetaRaw);
+    const parsedSubjects = cachedSubjectsRaw ? JSON.parse(cachedSubjectsRaw) : [];
+    const parsedTestsMeta = cachedTestsMetaRaw ? JSON.parse(cachedTestsMetaRaw) : [];
+    if (Array.isArray(parsedSubjects)) initialSubjects = parsedSubjects;
+    if (Array.isArray(parsedTestsMeta)) initialTestsMeta = parsedTestsMeta;
   } catch(e) {}
 
   // Admin In-memory store (Synchronized from backend / localStorage cache)
   const adminStore = {
     users: [],
     frequentErrors: [],
-    subjects: initialSubjects.filter(s => !storedDeletedSubjects.has(s.id)),
-    testsMeta: initialTestsMeta.length > 0 ? initialTestsMeta : []
+    subjects: initialSubjects.filter(s => s && typeof s === 'object' && !storedDeletedSubjects.has(s.id)),
+    testsMeta: initialTestsMeta.filter(t => t && typeof t === 'object')
   };
 
   // User State
@@ -235,7 +237,10 @@ const nativeFetch = window.fetch.bind(window);
     // Local Storage restore
     try {
       const savedHistory = localStorage.getItem('ohtest_history');
-      if (savedHistory) state.historyAttempts = JSON.parse(savedHistory);
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory);
+        state.historyAttempts = Array.isArray(parsedHistory) ? parsedHistory.filter(item => item && typeof item === 'object') : [];
+      }
       const savedFavs = localStorage.getItem(`ohtest_favs_${state.activeTestId}`);
       if (savedFavs) state.favorites = new Set(JSON.parse(savedFavs));
       const savedErrors = localStorage.getItem(`ohtest_errors_${state.activeTestId}`);
