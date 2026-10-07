@@ -686,73 +686,20 @@
     return profileErrorTestLoads.get(testId);
   }
 
-  async function syncProfileNotebookFromServer() {
-    if (!state.userId) return;
-    try {
-      const response = await fetch('/api/user/state');
-      if (!response.ok) return;
-      const data = await response.json();
-      const serverTests = data.tests && typeof data.tests === 'object' ? data.tests : {};
-      const testIds = new Set(Object.keys(serverTests));
+  function removePreviouslySyncedServerStats() {
+    state.historyAttempts = state.historyAttempts.filter(attempt => !attempt.serverAttemptId);
+    localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts));
+
+    if (localStorage.getItem('ohtest_server_profile_cleanup_v1') !== 'done') {
+      const errorKeys = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key?.startsWith('ohtest_favs_')) testIds.add(key.slice('ohtest_favs_'.length));
-        if (key?.startsWith('ohtest_errors_')) testIds.add(key.slice('ohtest_errors_'.length));
+        if (key?.startsWith('ohtest_errors_')) errorKeys.push(key);
       }
-
-      for (const testId of testIds) {
-        if (!await loadProfileErrorTest(testId)) continue;
-        const remote = serverTests[testId] || {};
-        const questionIds = new Set(BUNDLED_TESTS[testId].questions.map(question => String(question.id)));
-        const mergeIds = (key, remoteIds) => {
-          let localIds = [];
-          try { localIds = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) {}
-          const merged = [...new Set([...(Array.isArray(localIds) ? localIds : []), ...(Array.isArray(remoteIds) ? remoteIds : [])]
-            .map(Number).filter(id => Number.isFinite(id) && questionIds.has(String(id))))];
-          localStorage.setItem(key, JSON.stringify(merged));
-          return merged;
-        };
-        const favorites = mergeIds(`ohtest_favs_${testId}`, remote.favorites);
-        mergeIds(`ohtest_errors_${testId}`, remote.errors);
-        if (state.activeTestId === testId) state.favorites = new Set(favorites);
-      }
-
-      if (Array.isArray(data.attempts) && data.attempts.length) {
-        let localHistory = [];
-        try {
-          const saved = JSON.parse(localStorage.getItem('ohtest_history') || '[]');
-          if (Array.isArray(saved)) localHistory = saved;
-        } catch(e) {}
-        const remainingLocal = [...localHistory];
-        const serverHistory = data.attempts.map(attempt => {
-          const matchIndex = remainingLocal.findIndex(item => item.testId === attempt.test_id && item.mode === attempt.mode &&
-            Number(item.correct || 0) === Number(attempt.correct || 0) && Number(item.duration || 0) === Number(attempt.duration || 0));
-          const local = matchIndex >= 0 ? remainingLocal.splice(matchIndex, 1)[0] : null;
-          const test = BUNDLED_TESTS[attempt.test_id];
-          const total = Math.max(Number(attempt.answered || 0), Number(local?.total || 0));
-          const correct = Number(attempt.correct || 0);
-          const pct = total ? Math.round(correct / total * 100) : 0;
-          let date = 'Недавно';
-          if (attempt.finished_at) {
-            const parsed = new Date(`${String(attempt.finished_at).replace(' ', 'T')}Z`);
-            if (!Number.isNaN(parsed.getTime())) date = parsed.toLocaleString('ru-RU');
-          }
-          return {
-            ...(local || {}), serverAttemptId: attempt.attempt_id, date,
-            title: local?.title || test?.title || attempt.test_id, testId: attempt.test_id,
-            score: `${correct}/${total} (${pct}%)`, total, correct,
-            errors: Math.max(0, Number(attempt.answered || 0) - correct),
-            skipped: Math.max(0, total - Number(attempt.answered || 0)), pct,
-            mode: attempt.mode, duration: Number(attempt.duration || 0),
-            questionsSnapshot: local?.questionsSnapshot || []
-          };
-        });
-        state.historyAttempts = [...remainingLocal, ...serverHistory].slice(0, 50);
-        localStorage.setItem('ohtest_history', JSON.stringify(state.historyAttempts));
-      }
-    } catch(e) {
-      console.warn('Could not sync profile notebook:', e);
+      errorKeys.forEach(key => localStorage.removeItem(key));
+      localStorage.setItem('ohtest_server_profile_cleanup_v1', 'done');
     }
+    state.userErrors = new Set();
   }
 
   function getAllSavedErrors() {

@@ -252,6 +252,8 @@ const nativeFetch = window.fetch.bind(window);
       }
     } catch(e) {}
 
+    removePreviouslySyncedServerStats();
+
     // Update Profile UI
     document.getElementById('profile-name').innerText = state.userName;
     document.getElementById('profile-username').innerText = state.userUsername || 'Telegram User';
@@ -269,13 +271,6 @@ const nativeFetch = window.fetch.bind(window);
     renderActiveAttemptBanner();
     updateHubResumeButton();
     updateHeaderNavState();
-
-    syncProfileNotebookFromServer().then(() => {
-      updateProfileErrorBadge(getAllSavedErrors().length);
-      const profFavsEl = document.getElementById('profile-fav-count');
-      if (profFavsEl) profFavsEl.innerText = getAllSavedFavorites().length;
-      if (state.currentTab === 'profile') updateProfileFullView();
-    });
 
     // Dynamic Header Scroll Shrink & Tap-to-top setup
     setupHeaderScrollObserver();
