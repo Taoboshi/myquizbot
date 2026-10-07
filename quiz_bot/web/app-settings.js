@@ -308,6 +308,10 @@
     closeFeedbackModal();
   }
 
+  let homeTabScrollTop = 0;
+  const tabScrollPositions = { profile: 0, settings: 0 };
+  let homeHeaderControls = null;
+
   function switchTab(tabId) {
     triggerHaptic('light');
 
@@ -317,9 +321,27 @@
       return;
     }
 
+    const previousTab = state.currentTab;
+    const appBody = document.getElementById('app-body');
+    if (previousTab === 'home' && tabId !== 'home') {
+      homeTabScrollTop = appBody?.scrollTop || 0;
+      homeHeaderControls = ['btn-grid-modal', 'btn-finish-early', 'btn-fav-toggle', 'header-admin-pill']
+        .reduce((controls, id) => {
+          const element = document.getElementById(id);
+          if (element) controls[id] = { hidden: element.classList.contains('hidden'), display: element.style.display };
+          return controls;
+        }, {});
+    } else if (previousTab !== 'home' && previousTab !== tabId) {
+      tabScrollPositions[previousTab] = appBody?.scrollTop || 0;
+    }
+
     state.currentTab = tabId;
-    state.homeActiveView = 'home';
-    viewStack = ['home'];
+    if (tabId === 'home') {
+      if (previousTab === 'home') {
+        state.homeActiveView = 'home';
+        viewStack = ['home'];
+      }
+    }
 
     const tabs = ['home', 'profile', 'settings'];
     document.querySelector('nav.glass').style.setProperty('--nav-active-index', String(Math.max(0, tabs.indexOf(tabId))));
@@ -343,7 +365,22 @@
     hideAllViews();
 
     if (tabId === 'home') {
-      document.getElementById('view-home').classList.remove('hidden');
+      const viewIds = {
+        home: 'view-home', tests: 'view-tests', hub: 'view-hub', solver: 'view-solver',
+        result: 'view-result', flashcards: 'view-flashcards', search: 'view-search', admin: 'view-admin'
+      };
+      const activeView = document.getElementById(viewIds[state.homeActiveView]) ? state.homeActiveView : 'home';
+      state.homeActiveView = activeView;
+      document.getElementById(viewIds[activeView]).classList.remove('hidden');
+      if (activeView === 'solver' && homeHeaderControls) {
+        Object.entries(homeHeaderControls).forEach(([id, saved]) => {
+          const element = document.getElementById(id);
+          if (!element) return;
+          element.classList.toggle('hidden', saved.hidden);
+          if (saved.display) element.style.display = saved.display;
+          else element.style.removeProperty('display');
+        });
+      }
       renderActiveAttemptBanner();
     } else if (tabId === 'profile') {
       document.getElementById('view-tab-profile').classList.remove('hidden');
@@ -367,6 +404,12 @@
           content.innerHTML = '<div class="p-6 text-center text-xs text-rose-300">Не удалось загрузить вкладку профиля.</div>';
         }
       }
+    }
+    if (appBody) {
+      const scrollTop = tabId === 'home'
+        ? (previousTab === 'home' ? 0 : homeTabScrollTop)
+        : (tabScrollPositions[tabId] || 0);
+      requestAnimationFrame(() => { appBody.scrollTop = scrollTop; });
     }
   }
 
