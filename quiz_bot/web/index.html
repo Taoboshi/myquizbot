@@ -352,51 +352,19 @@
     /* Floating Navigation Pill */
     nav.glass {
       position: fixed !important;
-      bottom: max(env(safe-area-inset-bottom), 12px) !important;
-      left: 16px !important;
-      right: 16px !important;
-      max-width: 400px !important;
+      bottom: max(env(safe-area-inset-bottom), 14px) !important;
+      left: 14px !important;
+      right: 14px !important;
+      max-width: 420px !important;
       margin: 0 auto !important;
-      border-radius: 26px !important;
+      border-radius: 24px !important;
       background: var(--nav-glass) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--glass-border) !important;
       box-shadow: var(--glass-highlight), 0 16px 36px rgba(0, 0, 0, 0.45) !important;
-      padding: 6px 8px !important;
+      padding: 10px 20px !important;
       z-index: 50 !important;
-      display: grid !important;
-      grid-template-columns: repeat(3, 1fr) !important;
-      gap: 6px !important;
-    }
-    nav.glass button {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 7px 4px 6px !important;
-      border-radius: 20px !important;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }
-    nav.glass button.nav-active {
-      background: rgba(255, 255, 255, 0.08) !important;
-      color: var(--accent-color) !important;
-    }
-    nav.glass button.nav-active svg {
-      transform: translateY(-1px) scale(1.08) !important;
-      color: var(--accent-color) !important;
-    }
-    nav.glass button.nav-active span {
-      color: var(--accent-color) !important;
-      font-weight: 700 !important;
-    }
-    nav.glass button.nav-inactive {
-      color: #94a3b8 !important;
-      opacity: 0.8 !important;
-    }
-    nav.glass button.nav-inactive:hover {
-      color: #f1f5f9 !important;
-      opacity: 1 !important;
     }
     nav.glass button.text-brand-400 svg,
     nav.glass button.text-brand-400 span {
@@ -682,6 +650,32 @@
       border-color: #fecdd3 !important;
       color: #be123c !important;
     }
+
+    /* Dynamic Floating Header Styling & Transitions */
+    #app-header {
+      transition: padding 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  background 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #app-header.header-scrolled {
+      padding-top: max(env(safe-area-inset-top), 8px) !important;
+      padding-bottom: 7px !important;
+      background: var(--nav-glass) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), var(--glass-highlight) !important;
+      border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    #app-header.header-scrolled #header-logo-icon {
+      width: 28px !important;
+      height: 28px !important;
+    }
+    #app-header.header-scrolled #nav-back-btn {
+      padding: 5px 8px !important;
+    }
+    body.light-theme #app-header.header-scrolled {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+    }
   </style>
 </head>
 <body class="theme-green text-slate-100 min-h-screen flex flex-col select-none antialiased">
@@ -696,23 +690,30 @@
   <div class="w-full max-w-md mx-auto min-h-screen flex flex-col app-wrapper relative shadow-2xl overflow-hidden">
 
     <!-- Top App Bar / Header -->
-    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3.5 py-2.5 flex items-center justify-between safe-top">
+    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3 py-2 flex items-center justify-between safe-top">
       <div class="flex items-center space-x-2 min-w-0 flex-1 mr-2">
-        <button id="nav-back-btn" class="hidden p-1.5 -ml-1 rounded-xl text-slate-400 hover:text-white hover:bg-app-surface active:scale-90 transition shrink-0" onclick="goBack()">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+        <!-- Upgraded Ergonomic Back Button -->
+        <button id="nav-back-btn" class="hidden px-2.5 py-1 rounded-xl bg-app-surface border border-app-border text-slate-300 hover:text-white active:scale-95 transition flex items-center gap-1 shrink-0 shadow-sm" onclick="goBack()" title="Назад">
+          <svg class="w-4 h-4 shrink-0 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          <span class="text-[11px] font-bold">Назад</span>
         </button>
         <!-- Logo (Tap 5 times for secret Admin Unlock) -->
         <div id="header-logo-icon" onclick="handleLogoTap()" class="w-8 h-8 rounded-xl overflow-hidden bg-black/60 border border-brand-400/35 flex items-center justify-center shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer active:scale-95 transition p-0.5" title="ohTest">
           <img src="/logo.png" alt="Logo" class="w-full h-full object-contain rounded-lg" onerror="this.onerror=null; this.src='logo.png'">
         </div>
-        <div class="min-w-0 flex-1">
+        <!-- Title & Subtitle with Tap-to-Scroll-Top -->
+        <div class="min-w-0 flex-1 cursor-pointer select-none" onclick="scrollToAppTop()" title="Нажмите, чтобы вернуться наверх">
           <h1 id="header-title" class="text-xs sm:text-sm font-extrabold text-white tracking-tight leading-tight truncate">ohTest</h1>
           <span id="header-subtitle" class="block text-[10px] sm:text-[11px] text-slate-400 font-medium leading-tight truncate">Медицинские тесты</span>
         </div>
       </div>
 
-      <!-- Action Buttons Right (Clean and compact, no crowding admin pill) -->
+      <!-- Action Buttons Right -->
       <div class="flex items-center space-x-1.5 shrink-0">
+        <!-- Quick Search Button in Header -->
+        <button id="header-search-btn" class="w-8 h-8 rounded-xl bg-app-surface border border-app-border text-slate-400 hover:text-brand-400 hover:border-brand-500/40 active:scale-95 transition flex items-center justify-center shadow-sm shrink-0" onclick="handleHeaderSearchClick()" title="Поиск">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </button>
         <!-- Matrix / Grid view in solver -->
         <button id="btn-grid-modal" class="hidden h-8 px-2.5 py-1 rounded-xl bg-brand-950/40 border border-brand-500/40 text-[11px] font-bold text-brand-300 hover:bg-brand-900/50 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm shrink-0" onclick="toggleMatrixModal()">
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
@@ -2126,18 +2127,18 @@
     </div>
 
     <!-- Bottom Navigation Bar (3 Buttons: Главная, Профиль, Настройки) -->
-    <nav class="glass">
-      <button id="tab-home" onclick="switchTab('home')" class="nav-active active:scale-95 transition">
+    <nav class="glass flex items-center justify-around">
+      <button id="tab-home" onclick="switchTab('home')" class="flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         <span class="text-[11px] font-bold">Главная</span>
       </button>
 
-      <button id="tab-profile" onclick="switchTab('profile')" class="nav-inactive active:scale-95 transition">
+      <button id="tab-profile" onclick="switchTab('profile')" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 active:scale-95 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
         <span class="text-[11px] font-semibold">Профиль</span>
       </button>
 
-      <button id="tab-settings" onclick="switchTab('settings')" class="nav-inactive active:scale-95 transition">
+      <button id="tab-settings" onclick="switchTab('settings')" class="flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 active:scale-95 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         <span class="text-[11px] font-semibold">Настройки</span>
       </button>
@@ -2407,6 +2408,9 @@
     renderActiveAttemptBanner();
     updateHubResumeButton();
 
+    // Dynamic Header Scroll Shrink & Tap-to-top setup
+    setupHeaderScrollObserver();
+
     // Fetch server updates & check admin in background (non-blocking)
     checkBootstrapAndAdmin().then(() => {
       renderHomeSubjects();
@@ -2415,6 +2419,87 @@
       if (profFavsEl) profFavsEl.innerText = getAllSavedFavorites().length;
     });
   });
+
+  // Smooth scroll to top of app-body
+  function scrollToAppTop() {
+    triggerHaptic('light');
+    const bodyEl = document.getElementById('app-body');
+    if (bodyEl) {
+      bodyEl.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  // Dynamic Header title helper (with modern breadcrumbs / badges instead of plain text)
+  function setDynamicHeaderTitle(title, subtitle, badge = null) {
+    const titleEl = document.getElementById('header-title');
+    const subEl = document.getElementById('header-subtitle');
+    if (titleEl) {
+      if (badge) {
+        titleEl.innerHTML = `<span class="inline-flex items-center gap-1.5 truncate"><span class="px-1.5 py-0.5 rounded-md bg-brand-500/20 text-brand-300 text-[9px] font-bold uppercase tracking-wider">${badge}</span><span class="truncate">${title}</span></span>`;
+      } else {
+        titleEl.innerText = title;
+      }
+    }
+    if (subEl) {
+      subEl.innerText = subtitle || '';
+    }
+  }
+
+  // Setup scroll listener for app-body to toggle header-scrolled class
+  function setupHeaderScrollObserver() {
+    const bodyEl = document.getElementById('app-body');
+    const headerEl = document.getElementById('app-header');
+    if (!bodyEl || !headerEl) return;
+    bodyEl.addEventListener('scroll', () => {
+      if (bodyEl.scrollTop > 18) {
+        headerEl.classList.add('header-scrolled');
+      } else {
+        headerEl.classList.remove('header-scrolled');
+      }
+    }, { passive: true });
+  }
+
+  // Header quick search button handler
+  function handleHeaderSearchClick() {
+    triggerHaptic('light');
+    // If inside a test or test hub with questions, open live search for this test
+    if (state.activeTestId && (state.currentTestOriginalQuestions?.length || state.activeQuestions?.length)) {
+      openLiveSearch();
+      return;
+    }
+    // If on home/catalog screen, switch to home and focus the subject or scroll to top
+    if (state.currentTab !== 'home') {
+      switchTab('home');
+    }
+    scrollToAppTop();
+    // Quick prompt for search
+    const query = prompt('Быстрый поиск предмета или теста:');
+    if (query && query.trim()) {
+      filterCatalogByQuery(query.trim().toLowerCase());
+    }
+  }
+
+  function filterCatalogByQuery(q) {
+    const list = document.getElementById('home-subjects-list');
+    if (!list) return;
+    const cards = list.querySelectorAll('.p-4');
+    let matchedCount = 0;
+    cards.forEach(card => {
+      const txt = card.innerText.toLowerCase();
+      if (txt.includes(q)) {
+        card.style.display = '';
+        matchedCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    showToast(matchedCount > 0 ? `Найдено разделов: ${matchedCount}` : 'Ничего не найдено, сброс фильтра');
+    if (matchedCount === 0) {
+      setTimeout(() => {
+        cards.forEach(c => c.style.display = '');
+      }, 1500);
+    }
+  }
 
     // THEME MODE SWITCHER (СВЕТЛАЯ / ТЕМНАЯ ТЕМА)
   function setThemeMode(mode, skipSave = false) {
@@ -2755,8 +2840,7 @@
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[state.currentMode] || 'Контрольный тест';
     document.getElementById('header-logo-icon')?.classList.add('hidden');
-    document.getElementById('header-title').innerText = "Решение теста";
-    document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
+    setDynamicHeaderTitle("Решение теста", `${state.activeQuestions.length} вопросов`, 'ТЕСТ');
 
     renderCurrentQuestion();
     viewStack.push('solver');
@@ -2846,8 +2930,7 @@
     hideAllViews();
     document.getElementById('view-tests').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
-    document.getElementById('header-title').innerText = subjectTitle;
-    document.getElementById('header-subtitle').innerText = "Список тестов";
+    setDynamicHeaderTitle(subjectTitle, "Список тестов", 'РАЗДЕЛ');
     updateTelegramBackButton();
 
     document.getElementById('tests-subj-title').innerText = subjectTitle;
@@ -3008,8 +3091,7 @@
     hideAllViews();
     document.getElementById('view-hub').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
-    document.getElementById('header-title').innerText = state.activeTestTitle;
-    document.getElementById('header-subtitle').innerText = "Меню теста";
+    setDynamicHeaderTitle(state.activeTestTitle, "Хаб дисциплины", 'ТЕСТ');
     updateTelegramBackButton();
 
     document.getElementById('hub-test-title').innerText = state.activeTestTitle;
@@ -3146,8 +3228,7 @@
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[mode] || 'Контрольный тест';
     document.getElementById('header-logo-icon')?.classList.add('hidden');
-    document.getElementById('header-title').innerText = "Решение теста";
-    document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
+    setDynamicHeaderTitle("Решение теста", `${state.activeQuestions.length} вопросов`, 'ТЕСТ');
 
     // Start timer
     state.timerSeconds = 0;
@@ -3823,8 +3904,7 @@
     hideAllViews();
     document.getElementById('view-flashcards').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
-    document.getElementById('header-title').innerText = "Флеш-карточки";
-    document.getElementById('header-subtitle').innerText = state.activeTestTitle;
+    setDynamicHeaderTitle("Флеш-карточки", state.activeTestTitle, 'КАРТОЧКИ');
     updateTelegramBackButton();
 
     // Prepare Questions Deck
@@ -4107,8 +4187,7 @@
     hideAllViews();
     document.getElementById('view-search').classList.remove('hidden');
     document.getElementById('nav-back-btn').classList.remove('hidden');
-    document.getElementById('header-title').innerText = "Поиск вопроса";
-    document.getElementById('header-subtitle').innerText = state.activeTestTitle;
+    setDynamicHeaderTitle("Поиск вопроса", state.activeTestTitle, 'ПОИСК');
     updateTelegramBackButton();
     document.getElementById('live-search-input').value = '';
     handleLiveSearch();
@@ -6927,11 +7006,11 @@
       const btn = document.getElementById('tab-' + t);
       if (!btn) return;
       if (t === tabId) {
-        btn.className = "nav-active flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition";
+        btn.className = "flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition";
         const sp = btn.querySelector('span');
         if (sp) sp.className = "text-[11px] font-bold";
       } else {
-        btn.className = "nav-inactive flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 active:scale-95 transition";
+        btn.className = "flex flex-col items-center space-y-1 text-slate-400 hover:text-slate-200 active:scale-95 transition";
         const sp = btn.querySelector('span');
         if (sp) sp.className = "text-[11px] font-semibold";
       }
@@ -6952,39 +7031,33 @@
         document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
         document.getElementById('btn-finish-early').classList.remove('hidden');
         document.getElementById('header-logo-icon')?.classList.add('hidden');
-    document.getElementById('header-title').innerText = "Решение теста";
-        document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
+        setDynamicHeaderTitle("Решение теста", `${state.activeQuestions.length} вопросов`, 'ТЕСТ');
         renderCurrentQuestion();
       } else if (targetView === 'hub') {
         openTestHub();
       } else if (targetView === 'tests') {
         document.getElementById('view-tests').classList.remove('hidden');
         document.getElementById('nav-back-btn').classList.remove('hidden');
-        document.getElementById('header-title').innerText = state.activeSubjectTitle;
-        document.getElementById('header-subtitle').innerText = "Список тестов";
+        setDynamicHeaderTitle(state.activeSubjectTitle, "Список тестов", 'РАЗДЕЛ');
       } else if (targetView === 'result') {
         document.getElementById('view-result').classList.remove('hidden');
-        document.getElementById('header-title').innerText = "Результат";
-        document.getElementById('header-subtitle').innerText = state.activeTestTitle;
+        setDynamicHeaderTitle("Результат", state.activeTestTitle, 'ИТОГ');
       } else if (targetView === 'flashcards') {
         openFlashcards();
       } else if (targetView === 'search') {
         openLiveSearch();
       } else {
         document.getElementById('view-home').classList.remove('hidden');
-        document.getElementById('header-title').innerText = "ohTest";
-        document.getElementById('header-subtitle').innerText = "Каталог дисциплин";
+        setDynamicHeaderTitle("ohTest", "Медицинские тесты");
         renderActiveAttemptBanner();
       }
     } else if (tabId === 'profile') {
       document.getElementById('view-tab-profile').classList.remove('hidden');
-      document.getElementById('header-title').innerText = "Профиль";
-      document.getElementById('header-subtitle').innerText = "Кабинет студента";
+      setDynamicHeaderTitle("Профиль", "Кабинет студента");
       updateProfileFullView();
     } else if (tabId === 'settings') {
       document.getElementById('view-tab-settings').classList.remove('hidden');
-      document.getElementById('header-title').innerText = "Настройки";
-      document.getElementById('header-subtitle').innerText = "Параметры и управление";
+      setDynamicHeaderTitle("Настройки", "Параметры и управление");
     }
 
     updateTelegramBackButton();
@@ -7047,14 +7120,12 @@
         state.homeActiveView = 'home';
         document.getElementById('view-home').classList.remove('hidden');
         document.getElementById('nav-back-btn').classList.add('hidden');
-        document.getElementById('header-title').innerText = "ohTest";
-        document.getElementById('header-subtitle').innerText = "Каталог дисциплин";
+        setDynamicHeaderTitle("ohTest", "Медицинские тесты");
         renderActiveAttemptBanner();
       } else if (prev === 'tests') {
         state.homeActiveView = 'tests';
         document.getElementById('view-tests').classList.remove('hidden');
-        document.getElementById('header-title').innerText = state.activeSubjectTitle;
-        document.getElementById('header-subtitle').innerText = "Список тестов";
+        setDynamicHeaderTitle(state.activeSubjectTitle, "Список тестов", 'РАЗДЕЛ');
       } else if (prev === 'hub') {
         openTestHub();
       } else if (prev === 'admin') {
