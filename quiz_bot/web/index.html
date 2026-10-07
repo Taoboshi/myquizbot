@@ -882,6 +882,11 @@
           <div class="absolute -right-6 -bottom-8 w-32 h-32 bg-brand-400/20 rounded-full blur-2xl pointer-events-none"></div>
         </div>
 
+        <div id="home-catalog-search-wrap" class="hidden relative">
+          <input id="home-catalog-search" oninput="filterCatalogByQuery(this.value)" placeholder="Найти предмет..." class="w-full px-4 py-3 pr-10 rounded-xl bg-app-card border border-app-border text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">
+          <button onclick="clearInlineSearch('home-catalog-search', filterCatalogByQuery)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" title="Очистить поиск" aria-label="Очистить поиск">×</button>
+        </div>
+
         <!-- Subjects Container (Populated dynamically) -->
         <div class="space-y-2.5">
           <div class="flex items-center justify-between px-1">
@@ -892,6 +897,7 @@
           <div id="home-subjects-list" class="space-y-2.5">
             <!-- Rendered dynamically -->
           </div>
+          <div id="home-search-empty" class="hidden py-8 text-center text-sm text-slate-400">Предметы не найдены</div>
         </div>
       </section>
 
@@ -929,10 +935,16 @@
           <p class="text-xs text-slate-400" id="tests-subj-desc">Все доступные тесты этого раздела:</p>
         </div>
 
+        <div id="subject-tests-search-wrap" class="hidden relative">
+          <input id="subject-tests-search" oninput="filterSubjectTestsByQuery(this.value)" placeholder="Найти тест..." class="w-full px-4 py-3 pr-10 rounded-xl bg-app-card border border-app-border text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">
+          <button onclick="clearInlineSearch('subject-tests-search', filterSubjectTestsByQuery)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white" title="Очистить поиск" aria-label="Очистить поиск">×</button>
+        </div>
+
         <!-- Tests List Container -->
         <div id="tests-items-container" class="space-y-2.5">
           <!-- Rendered dynamically -->
         </div>
+        <div id="subject-tests-search-empty" class="hidden py-8 text-center text-sm text-slate-400">Тесты не найдены</div>
       </section>
 
       <!-- ========================================== -->
@@ -2691,27 +2703,37 @@
 
     // 2. On Subject Tests list: search tests within this specific subject
     if (activeView === 'view-tests') {
-      setTimeout(() => {
-        const q = prompt(`Поиск тестов по предмету «${state.activeSubjectTitle || 'предмету'}»:`);
-        if (btn) btn.blur();
-        if (q !== null) {
-          filterSubjectTestsByQuery(q.trim().toLowerCase());
-        }
-      }, 50);
+      toggleInlineSearch('subject-tests-search-wrap', 'subject-tests-search', filterSubjectTestsByQuery);
       return;
     }
 
     // 3. On Home Catalog: search subjects on the catalog page
     if (activeView === 'view-home') {
-      setTimeout(() => {
-        const q = prompt('Поиск предмета в каталоге:');
-        if (btn) btn.blur();
-        if (q !== null) {
-          filterCatalogByQuery(q.trim().toLowerCase());
-        }
-      }, 50);
+      toggleInlineSearch('home-catalog-search-wrap', 'home-catalog-search', filterCatalogByQuery);
       return;
     }
+  }
+
+  function toggleInlineSearch(wrapId, inputId, filterFn) {
+    const wrap = document.getElementById(wrapId);
+    const input = document.getElementById(inputId);
+    if (!wrap || !input) return;
+    const opening = wrap.classList.contains('hidden');
+    wrap.classList.toggle('hidden', !opening);
+    if (opening) {
+      setTimeout(() => input.focus(), 0);
+    } else {
+      input.value = '';
+      filterFn('');
+    }
+  }
+
+  function clearInlineSearch(inputId, filterFn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.value = '';
+    filterFn('');
+    input.focus();
   }
 
   // Filter tests inside view-tests for the current subject
@@ -2720,18 +2742,17 @@
     if (!container) return;
     const cards = container.querySelectorAll('.p-4');
     let matched = 0;
+    const query = (q || '').toLocaleLowerCase('ru').trim();
     cards.forEach(card => {
-      const txt = card.innerText.toLowerCase();
-      if (!q || txt.includes(q)) {
+      const txt = card.innerText.toLocaleLowerCase('ru');
+      if (!query || txt.includes(query)) {
         card.style.display = '';
         matched++;
       } else {
         card.style.display = 'none';
       }
     });
-    if (q) {
-      showToast(matched > 0 ? `Найдено тестов: ${matched}` : 'Ничего не найдено');
-    }
+    document.getElementById('subject-tests-search-empty')?.classList.toggle('hidden', !query || matched > 0);
   }
 
   // Filter subjects inside view-home for the catalog page
@@ -2740,18 +2761,17 @@
     if (!list) return;
     const cards = list.querySelectorAll('.p-4');
     let matchedCount = 0;
+    const query = (q || '').toLocaleLowerCase('ru').trim();
     cards.forEach(card => {
-      const txt = card.innerText.toLowerCase();
-      if (!q || txt.includes(q)) {
+      const txt = card.innerText.toLocaleLowerCase('ru');
+      if (!query || txt.includes(query)) {
         card.style.display = '';
         matchedCount++;
       } else {
         card.style.display = 'none';
       }
     });
-    if (q) {
-      showToast(matchedCount > 0 ? `Найдено разделов: ${matchedCount}` : 'Ничего не найдено');
-    }
+    document.getElementById('home-search-empty')?.classList.toggle('hidden', !query || matchedCount > 0);
   }
 
     // THEME MODE SWITCHER (СВЕТЛАЯ / ТЕМНАЯ ТЕМА)
@@ -3136,11 +3156,19 @@
       `;
       list.appendChild(card);
     });
+
+    const searchInput = document.getElementById('home-catalog-search');
+    if (searchInput?.value) filterCatalogByQuery(searchInput.value);
   }
 
   // Subject Tests View
   function openSubjectTests(subjectId, subjectTitle) {
     triggerHaptic('light');
+    const testsSearch = document.getElementById('subject-tests-search');
+    const testsSearchWrap = document.getElementById('subject-tests-search-wrap');
+    if (testsSearch) testsSearch.value = '';
+    testsSearchWrap?.classList.add('hidden');
+    filterSubjectTestsByQuery('');
     state.activeSubjectId = subjectId;
     state.activeSubjectTitle = subjectTitle;
     state.homeActiveView = 'tests';
@@ -3213,6 +3241,8 @@
         container.appendChild(btn);
       });
     }
+
+    filterSubjectTestsByQuery('');
 
     viewStack.push('tests');
   }
