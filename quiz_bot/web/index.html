@@ -73,17 +73,13 @@
       --header-scrolled-glass: rgba(11, 15, 23, 0.88);
       --nav-glass: rgba(13, 17, 26, 0.62);
       --nav-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
-      --bar-fill: rgba(7, 9, 13, 0.46);
-      --bar-fill-scrolled: rgba(7, 9, 13, 0.58);
+      --bar-fill: rgba(7, 9, 13, 0.28);
+      --bar-fill-scrolled: rgba(7, 9, 13, 0.36);
       --bar-fallback: rgba(7, 9, 13, 0.96);
-      --bar-backdrop: blur(18px) saturate(135%);
+      --bar-backdrop: blur(14px) saturate(125%);
       --bar-rim: rgba(255, 255, 255, 0.14);
-      --bar-edge-top: rgba(255, 255, 255, 0.24);
-      --bar-edge-bottom: rgba(255, 255, 255, 0.05);
-      --bar-sheen: rgba(255, 255, 255, 0.065);
       --bar-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
       --bar-active-fill: rgba(255, 255, 255, 0.18);
-      --bar-active-rim: rgba(255, 255, 255, 0.12);
       --modal-glass: rgba(13, 17, 26, 0.95);
 
       --text-main: #f8fafc;
@@ -190,17 +186,13 @@
       --header-scrolled-glass: rgba(255, 255, 255, 0.90);
       --nav-glass: rgba(255, 255, 255, 0.68);
       --nav-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
-      --bar-fill: rgba(255, 255, 255, 0.58);
-      --bar-fill-scrolled: rgba(255, 255, 255, 0.70);
+      --bar-fill: rgba(255, 255, 255, 0.40);
+      --bar-fill-scrolled: rgba(255, 255, 255, 0.50);
       --bar-fallback: rgba(255, 255, 255, 0.96);
-      --bar-backdrop: blur(18px) saturate(120%);
+      --bar-backdrop: blur(14px) saturate(115%);
       --bar-rim: rgba(15, 23, 42, 0.10);
-      --bar-edge-top: rgba(255, 255, 255, 0.90);
-      --bar-edge-bottom: rgba(15, 23, 42, 0.04);
-      --bar-sheen: rgba(255, 255, 255, 0.28);
       --bar-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
       --bar-active-fill: rgba(15, 23, 42, 0.085);
-      --bar-active-rim: rgba(255, 255, 255, 0.50);
       --modal-glass: rgba(255, 255, 255, 0.97);
 
       --text-main: #0f172a;
@@ -363,7 +355,7 @@
       backdrop-filter: var(--bar-backdrop) !important;
       -webkit-backdrop-filter: var(--bar-backdrop) !important;
       border: 1px solid var(--bar-rim) !important;
-      box-shadow: inset 0 1px 0 var(--bar-edge-top), inset 0 -1px 0 var(--bar-edge-bottom), var(--bar-shadow) !important;
+      box-shadow: var(--bar-shadow) !important;
       display: grid !important;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 4px;
@@ -372,15 +364,7 @@
       z-index: 50 !important;
       transition: background-color 0.25s ease !important;
     }
-    #app-header::before, nav.glass::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(115deg, var(--bar-sheen), transparent 32%, transparent 68%, var(--bar-sheen));
-      pointer-events: none;
-    }
-    #app-header > div, nav.glass > button { position: relative; z-index: 1; }
+    nav.glass > button { position: relative; z-index: 1; }
     nav.glass::after {
       content: '';
       position: absolute;
@@ -390,7 +374,6 @@
       width: calc((100% - 20px) / 3);
       border-radius: 23px;
       background: var(--bar-active-fill);
-      box-shadow: inset 0 1px 0 var(--bar-active-rim), inset 0 0 0 1px var(--bar-active-rim), 0 3px 10px rgba(0, 0, 0, 0.06);
       transform: translateX(calc(var(--nav-active-index, 0) * (100% + 4px)));
       transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s ease;
       pointer-events: none;
@@ -476,66 +459,72 @@
     }
 
     /* Accent Utility Classes */
-    body.theme-base .text-brand-100, body.theme-base .text-brand-200, body.theme-base .text-brand-300,
-    body.theme-base .text-brand-400, body.theme-base .text-brand-500, body.theme-base .text-brand-600,
-    body.theme-base [class*="text-brand-200/"] {
+    .text-brand-100, .text-brand-200, .text-brand-300,
+    .text-brand-400, .text-brand-500, .text-brand-600,
+    [class~="text-brand-200/80"] {
       color: var(--accent-color) !important;
     }
-    body.theme-base .group:hover [class~="group-hover:text-brand-300"],
-    body.theme-base .group:hover [class~="group-hover:text-brand-400"] {
+    .group:hover [class~="group-hover:text-brand-300"],
+    .group:hover [class~="group-hover:text-brand-400"] {
       color: var(--accent-color) !important;
     }
-    body.theme-base .border-brand-500, body.theme-base .border-brand-400 {
+    .border-brand-500, .border-brand-400 {
       border-color: var(--accent-border-subtle) !important;
     }
-    body.theme-base [class~="focus:border-brand-500"]:focus,
-    body.theme-base [class~="hover:border-brand-500"]:hover,
-    body.theme-base [class~="hover:border-brand-400"]:hover {
+    [class~="focus:border-brand-500"]:focus,
+    [class~="hover:border-brand-500"]:hover,
+    [class~="hover:border-brand-400"]:hover,
+    [class~="hover:border-brand-500/60"]:hover {
       border-color: var(--accent-color) !important;
     }
-    body.theme-base [class~="bg-brand-400"], body.theme-base [class~="bg-brand-500"], body.theme-base [class~="bg-brand-600"] {
+    [class~="bg-brand-400"], [class~="bg-brand-500"], [class~="bg-brand-600"] {
       background: var(--accent-gradient) !important;
     }
-    body.theme-base [class~="bg-brand-500/10"], body.theme-base [class~="bg-brand-500/20"], body.theme-base [class~="bg-brand-500/30"],
-    body.theme-base [class~="bg-brand-400/10"], body.theme-base [class~="bg-brand-400/20"],
-    body.theme-base [class~="bg-brand-600/20"], body.theme-base [class~="bg-brand-600/30"],
-    body.theme-base [class~="bg-brand-900/50"], body.theme-base [class~="bg-brand-950"], body.theme-base [class~="bg-brand-950/40"], body.theme-base [class~="bg-brand-950/70"] {
+    [class~="bg-brand-500/10"], [class~="bg-brand-500/15"], [class~="bg-brand-500/20"], [class~="bg-brand-500/30"],
+    [class~="bg-brand-400/10"], [class~="bg-brand-400/20"],
+    [class~="bg-brand-600/20"], [class~="bg-brand-600/30"],
+    [class~="bg-brand-900/50"], [class~="bg-brand-950"], [class~="bg-brand-950/40"], [class~="bg-brand-950/70"] {
       background-color: var(--accent-bg-subtle) !important;
     }
-    body.theme-base [class~="border-brand-500/20"], body.theme-base [class~="border-brand-500/30"], body.theme-base [class~="border-brand-500/40"],
-    body.theme-base [class~="border-brand-500/50"], body.theme-base [class~="border-brand-500/60"],
-    body.theme-base [class~="border-brand-400/20"], body.theme-base [class~="border-brand-400/30"], body.theme-base [class~="border-brand-400/40"] {
+    [class~="border-brand-500/20"], [class~="border-brand-500/30"], [class~="border-brand-500/40"],
+    [class~="border-brand-500/50"], [class~="border-brand-500/60"],
+    [class~="border-brand-400/20"], [class~="border-brand-400/30"], [class~="border-brand-400/40"] {
       border-color: var(--accent-border-subtle) !important;
     }
-    body.theme-base [class~="from-brand-950"], body.theme-base [class~="from-brand-950/70"], body.theme-base [class~="from-brand-950/80"] {
+    [class~="from-brand-950"], [class~="from-brand-950/70"], [class~="from-brand-950/80"] {
       --tw-gradient-from: var(--accent-bg-subtle) var(--tw-gradient-from-position) !important;
       --tw-gradient-to: transparent var(--tw-gradient-to-position) !important;
     }
-    body.theme-base [class~="from-brand-500"], body.theme-base [class~="from-brand-600"] {
+    [class~="from-brand-500"], [class~="from-brand-600"] {
       --tw-gradient-from: var(--accent-color) var(--tw-gradient-from-position) !important;
       --tw-gradient-to: transparent var(--tw-gradient-to-position) !important;
     }
-    body.theme-base [class~="via-brand-500"] {
+    [class~="via-brand-500"] {
       --tw-gradient-via: var(--accent-color) var(--tw-gradient-via-position) !important;
     }
-    body.theme-base [class~="to-brand-300"] {
+    [class~="to-brand-300"] {
       --tw-gradient-to: var(--accent-color-hover) var(--tw-gradient-to-position) !important;
     }
-    body.theme-base [class~="hover:bg-brand-900/50"]:hover {
+    [class~="hover:bg-brand-900/50"]:hover {
       background: var(--accent-gradient) !important;
     }
-    body.theme-base [class~="hover:bg-brand-500"]:hover,
-    body.theme-base [class~="hover:bg-brand-600"]:hover {
+    [class~="hover:bg-brand-500"]:hover,
+    [class~="hover:bg-brand-600"]:hover {
       background: var(--accent-gradient) !important;
     }
-    body.theme-base [class~="shadow-brand-500/30"],
-    body.theme-base [class~="shadow-brand-600/30"],
-    body.theme-base [class~="shadow-brand-600/40"] {
+    [class~="shadow-brand-500/25"], [class~="shadow-brand-500/30"],
+    [class~="shadow-brand-600/20"], [class~="shadow-brand-600/30"],
+    [class~="shadow-brand-600/40"] {
       --tw-shadow-color: var(--accent-glow) !important;
     }
-    body.theme-base [class~="ring-brand-400/30"] {
+    [class~="ring-brand-400/30"], [class~="ring-brand-500/30"], [class~="ring-brand-500/40"] {
       --tw-ring-color: var(--accent-border-subtle) !important;
     }
+    .ring-brand-400 { --tw-ring-color: var(--accent-color) !important; }
+    .accent-brand-500 { accent-color: var(--accent-color) !important; }
+    body.light-theme button.bg-brand-600,
+    body.light-theme button.bg-brand-600 span,
+    body.light-theme button.bg-brand-600 svg { color: var(--accent-btn-text) !important; }
     .status-positive {
       color: #34d399 !important;
       background-color: rgba(16, 185, 129, 0.10) !important;
@@ -843,7 +832,7 @@
       backdrop-filter: var(--bar-backdrop) !important;
       -webkit-backdrop-filter: var(--bar-backdrop) !important;
       border-color: var(--bar-rim) !important;
-      box-shadow: inset 0 1px 0 var(--bar-edge-top), inset 0 -1px 0 var(--bar-edge-bottom), var(--bar-shadow) !important;
+      box-shadow: var(--bar-shadow) !important;
       padding-left: 14px !important;
       padding-right: 14px !important;
       padding-top: max(env(safe-area-inset-top, 0px), 12px) !important;
