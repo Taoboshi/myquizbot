@@ -1918,7 +1918,7 @@
       <div class="w-full max-w-sm rounded-3xl bg-app-card border border-brand-500/40 p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-app-border pb-3">
           <div>
-            <h3 id="disc-modal-title" class="text-sm font-extrabold text-white flex items-center gap-1.5">📚 Дисциплина</h3>
+            <h3 id="disc-modal-title" class="text-sm font-extrabold text-white flex items-center gap-1.5">Дисциплина</h3>
             <p id="disc-modal-subtitle" class="text-[11px] text-slate-400">Статистика освоения</p>
           </div>
           <button onclick="closeDisciplineStatsModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
@@ -4648,22 +4648,54 @@
     if (!container) return;
     container.innerHTML = '';
 
-    const subjects = (adminStore.subjects && adminStore.subjects.length > 0) ? adminStore.subjects : [
-      { id: 'luchevaya_diagnostika', title: 'Основы лучевой диагностики', emoji: '🩻', tests_count: 4 },
-      { id: 'oziz', title: 'ОЗ и Здравоохранение', emoji: '📊', tests_count: 4 }
-    ];
+    // Collect subjects dynamically: from adminStore.subjects, or derived from adminStore.testsMeta
+    let subjects = (adminStore.subjects && adminStore.subjects.length > 0) ? [...adminStore.subjects] : [];
+    if (subjects.length === 0 && adminStore.testsMeta && adminStore.testsMeta.length > 0) {
+      const seen = new Set();
+      adminStore.testsMeta.forEach(t => {
+        const sId = t.subject_id || 'default';
+        if (!seen.has(sId)) {
+          seen.add(sId);
+          subjects.push({
+            id: sId,
+            title: t.subject_title || (sId === 'default' ? 'Общие тесты' : sId)
+          });
+        }
+      });
+    }
+
+    // Update total tests count badge in profile disciplines header
+    const totalTestsBadge = document.getElementById('profile-total-tests-label');
+    if (totalTestsBadge) {
+      const allTestsCount = (adminStore.testsMeta && adminStore.testsMeta.length > 0) 
+        ? adminStore.testsMeta.length 
+        : Object.keys(BUNDLED_TESTS || {}).length;
+      totalTestsBadge.innerText = `${allTestsCount} ${allTestsCount === 1 ? 'тест' : (allTestsCount < 5 ? 'теста' : 'тестов')}`;
+    }
+
+    if (subjects.length === 0) {
+      container.innerHTML = `
+        <div class="p-4 rounded-2xl bg-app-surface border border-app-border text-center text-xs text-slate-400">
+          Список дисциплин пуст
+        </div>
+      `;
+      return;
+    }
 
     subjects.forEach(sub => {
+      // Dynamically find tests assigned to this subject
+      const subjectTests = (adminStore.testsMeta || []).filter(t => t.subject_id === sub.id);
+      const subjectTestIds = new Set(subjectTests.map(t => t.id));
+
       const subjectAttempts = state.historyAttempts.filter(h => {
-        if (h.subjectId === sub.id) return true;
-        if (sub.id === 'luchevaya_diagnostika' && h.testId && h.testId.startsWith('luchevaya_')) return true;
-        if (sub.id === 'oziz' && h.testId && (h.testId.startsWith('oziz_') || h.testId.startsWith('voprosi'))) return true;
+        if (h.subjectId && h.subjectId === sub.id) return true;
+        if (h.testId && subjectTestIds.has(h.testId)) return true;
         return false;
       });
 
       const doneTestsCount = new Set(subjectAttempts.map(h => h.testId)).size;
-      const totalTestsCount = sub.tests_count || 3;
-      const progressPct = Math.min(100, Math.round((doneTestsCount / totalTestsCount) * 100));
+      const totalTestsCount = subjectTests.length || sub.tests_count || 0;
+      const progressPct = totalTestsCount > 0 ? Math.min(100, Math.round((doneTestsCount / totalTestsCount) * 100)) : 0;
 
       let correctInSub = 0;
       let answeredInSub = 0;
@@ -4680,13 +4712,15 @@
       item.innerHTML = `
         <div class="flex items-center justify-between text-xs">
           <div class="flex items-center space-x-2">
-            <span class="text-base">${sub.emoji || '📚'}</span>
-            <span class="font-bold text-white">${sub.title}</span>
+            <span class="p-1 rounded-lg bg-brand-500/10 text-brand-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            </span>
+            <span class="font-bold text-white">${escapeHtml(sub.title || 'Дисциплина')}</span>
           </div>
-          <span class="text-[11px] font-mono font-semibold text-brand-300">${doneTestsCount}/${totalTestsCount} тестов</span>
+          <span class="text-[11px] font-mono font-semibold text-brand-300">${totalTestsCount > 0 ? `${doneTestsCount}/${totalTestsCount} тестов` : 'Нет тестов'}</span>
         </div>
         <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-          <div class="h-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-300" style="width: ${Math.max(5, progressPct)}%;"></div>
+          <div class="h-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-300" style="width: ${progressPct > 0 ? Math.max(5, progressPct) : 0}%;"></div>
         </div>
         <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono">
           <span>Освоено: ${progressPct}%</span>
@@ -4703,10 +4737,12 @@
     const titleEl = document.getElementById('disc-modal-title');
     const bodyEl = document.getElementById('disc-modal-body');
 
-    const subj = adminStore.subjects.find(s => s.id === subjectId) || { title: 'Дисциплина', emoji: '📚' };
-    titleEl.innerText = `${subj.emoji} ${subj.title}`;
+    const subj = (adminStore.subjects || []).find(s => s.id === subjectId) || { title: 'Дисциплина' };
+    if (titleEl) {
+      titleEl.innerText = subj.title || 'Дисциплина';
+    }
 
-    const tests = adminStore.testsMeta.filter(t => t.subject_id === subjectId);
+    const tests = (adminStore.testsMeta || []).filter(t => t.subject_id === subjectId);
     if (tests.length === 0) {
       bodyEl.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">В этом разделе пока нет тестов.</div>';
     } else {
@@ -4724,8 +4760,8 @@
         return `
           <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border space-y-2">
             <div class="flex items-center justify-between">
-              <h4 class="text-xs font-bold text-white">${t.title}</h4>
-              <span class="text-[10px] font-mono font-bold text-brand-300">${t.questions_count} вопр.</span>
+              <h4 class="text-xs font-bold text-white">${escapeHtml(t.title || t.id)}</h4>
+              <span class="text-[10px] font-mono font-bold text-brand-300">${t.questions_count || 0} вопр.</span>
             </div>
             <div class="grid grid-cols-3 gap-1.5 pt-1 text-center text-[10px]">
               <div class="p-1.5 rounded-xl bg-app-card border border-app-border/40">
