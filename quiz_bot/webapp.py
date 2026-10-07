@@ -375,7 +375,6 @@ def register_webapp_routes(app: Any) -> None:
         answered = int(data.get("answered", 0))
         duration = int(data.get("duration", 0))
         mode = data.get("mode", "normal")
-        wrong_questions = data.get("wrong_questions", [])
 
         if not test_id:
             return jsonify({"error": "test_id required"}), 400
@@ -427,13 +426,6 @@ def register_webapp_routes(app: Any) -> None:
                 (uid, test_id),
             )
             conn.commit()
-
-        # Record wrong answers
-        for q_idx in wrong_questions:
-            try:
-                add_all_time_error(uid, test_id, int(q_idx) - 1, None)
-            except Exception:
-                pass
 
         return jsonify({"success": True, "attempt_id": attempt_id})
 

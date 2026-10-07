@@ -2376,6 +2376,7 @@
     userUsername: '',
     userAvatar: '',
     historyAttempts: [],
+    favoriteReviewQueue: [],
     isHiddenInRating: localStorage.getItem('ohtest_hide_rating') === 'true',
   };
 
@@ -2980,7 +2981,7 @@
   function saveActiveAttemptState() {
     if (state.activeQuestions.length === 0) return;
     // DO NOT overwrite active main attempt during error reviews
-    if (state.currentMode === 'errors_solve') return;
+    if (state.currentMode === 'errors_solve' || state.currentMode === 'all_favs') return;
     state.activeAttempt = {
       testId: state.activeTestId,
       testTitle: state.activeTestTitle,
@@ -3765,7 +3766,7 @@
       if (resTime) resTime.innerText = `${mins}:${secs}`;
 
       // Clear active attempt so it no longer prompts resume
-      if (state.currentMode !== 'errors_solve') {
+      if (state.currentMode !== 'errors_solve' && state.currentMode !== 'all_favs') {
         state.activeAttempt = null;
         try { localStorage.removeItem('ohtest_active_attempt'); } catch(e) {}
         renderActiveAttemptBanner();
@@ -3810,10 +3811,9 @@
             user_id: state.userId,
             test_id: state.activeTestId,
             correct: correct,
-            answered: total,
+            answered: answeredCount,
             duration: state.timerSeconds,
-            mode: state.currentMode,
-            wrong_questions: wrongQuestionIds
+            mode: state.currentMode
           })
         }).catch(() => {});
       } catch(e) {}
@@ -3824,7 +3824,28 @@
       const iconBox = document.getElementById('result-icon-box');
       if (btnBox) btnBox.innerHTML = '';
 
-      if (state.currentMode === 'errors_solve') {
+      if (state.currentMode === 'all_favs') {
+        const remainingFavorites = state.favoriteReviewQueue.reduce((count, testId) =>
+          count + getAllSavedFavorites().filter(item => item.testId === testId).length, 0
+        );
+        const resTitle = document.getElementById('result-title');
+        if (resTitle) resTitle.innerText = 'Тренировка избранного завершена!';
+        const resSub = document.getElementById('result-subtitle');
+        if (resSub) resSub.innerText = 'Вопросы из избранного';
+        if (iconBox) iconBox.innerText = '⭐';
+        if (msgBanner) {
+          msgBanner.classList.remove('hidden');
+          msgBanner.className = 'p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs';
+          msgBanner.innerText = remainingFavorites > 0
+            ? `Группа завершена. В очереди ещё ${remainingFavorites} вопросов из избранного.`
+            : 'Все группы избранного пройдены. Сохранённые вопросы остались в избранном.';
+        }
+        if (btnBox) {
+          btnBox.innerHTML = remainingFavorites > 0
+            ? `<button onclick="startNextFavoriteGroup()" class="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2"><span>▶</span> Следующая группа (${remainingFavorites})</button>`
+            : `<button onclick="finishFavoriteReview()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition">К избранному</button>`;
+        }
+      } else if (state.currentMode === 'errors_solve') {
         const resTitle = document.getElementById('result-title');
         if (resTitle) resTitle.innerText = "Разбор ошибок завершен! 🎯";
         const resSub = document.getElementById('result-subtitle');
@@ -5528,26 +5549,56 @@
     const favs = getAllSavedFavorites();
     if (favs.length === 0) return;
 
-    state.activeQuestions = favs.map(f => ({...f.question}));
-    state.currentTestOriginalQuestions = [...state.activeQuestions];
-    state.activeTestTitle = `Тренировка избранного (${favs.length})`;
-    state.currentMode = 'normal';
-    state.userAnswers = {};
-    state.revealedAnswers = new Set();
-    state.currentQIndex = 0;
-    state.timerSeconds = 0;
-    clearInterval(state.timerInterval);
-    state.timerInterval = setInterval(() => { state.timerSeconds++; }, 1000);
+    state.favoriteReviewQueue = [...new Set(favs.map(item => item.testId))];
+    startNextFavoriteGroup();
+  }
 
-    hideAllViews();
-    state.homeActiveView = 'solver';
-    document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
-    document.getElementById('btn-finish-early').classList.remove('hidden');
-    updateHeaderNavState();
-    renderCurrentQuestion();
-    updateTelegramBackButton();
+  function startNextFavoriteGroup() {
+    while (state.favoriteReviewQueue.length > 0) {
+      const testId = state.favoriteReviewQueue.shift();
+      const test = BUNDLED_TESTS[testId];
+      const favs = getAllSavedFavorites().filter(item => item.testId === testId);
+      if (!test || favs.length === 0) continue;
+
+      state.activeTestId = testId;
+      state.activeTestTitle = test.title;
+      state.currentTestOriginalQuestions = [...test.questions];
+      state.activeQuestions = favs.map(item => ({ ...item.question }));
+      try {
+        state.userErrors = new Set(JSON.parse(localStorage.getItem(`ohtest_errors_${testId}`) || '[]'));
+        state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${testId}`) || '[]'));
+      } catch(e) {
+        state.userErrors = new Set();
+        state.favorites = new Set();
+      }
+      state.currentMode = 'all_favs';
+      state.userAnswers = {};
+      state.revealedAnswers = new Set();
+      state.currentQIndex = 0;
+      state.timerSeconds = 0;
+      clearInterval(state.timerInterval);
+      state.timerInterval = setInterval(() => { state.timerSeconds++; }, 1000);
+
+      hideAllViews();
+      state.homeActiveView = 'solver';
+      document.getElementById('view-solver').classList.remove('hidden');
+      document.getElementById('btn-grid-modal').classList.remove('hidden');
+      document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
+      document.getElementById('btn-finish-early').classList.remove('hidden');
+      document.getElementById('solver-mode-tag').innerText = 'Тренировка избранного';
+      updateHeaderNavState();
+      renderCurrentQuestion();
+      updateTelegramBackButton();
+      return;
+    }
+
+    finishFavoriteReview();
+  }
+
+  function finishFavoriteReview() {
+    state.favoriteReviewQueue = [];
+    switchTab('profile');
+    switchProfileTab('favs');
   }
 
   function dismissOneFav(testId, qid) {
