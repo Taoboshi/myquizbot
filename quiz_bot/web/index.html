@@ -915,6 +915,18 @@
       transform: scale(1.8);
       transform-origin: 50% 50%;
     }
+    .admin-management-tab { color: var(--text-sub); letter-spacing: 0; }
+    #modal-admin-action { z-index: 60; }
+    #modal-test-access, #modal-admin-user-detail { z-index: 70; }
+    .admin-management-tab[aria-selected="true"] {
+      background: var(--accent-bg-subtle);
+      color: var(--accent-color);
+      box-shadow: inset 0 0 0 1px var(--accent-border-subtle);
+    }
+    .admin-unassigned-row[data-selected="true"] { border-color: var(--accent-color) !important; }
+    #admin-modal-tools input[type="checkbox"], .admin-unassigned-row input[type="checkbox"] { accent-color: var(--accent-color); }
+    #admin-modal-tools button:disabled, #admin-modal-tools select:disabled,
+    .admin-page-button:disabled, .admin-unassigned-row button:disabled { opacity: 0.45; cursor: default; }
   </style>
 </head>
 <body class="theme-green text-slate-100 min-h-screen flex flex-col select-none antialiased">
@@ -1947,14 +1959,15 @@
     <!-- Admin Generic Action Modal -->
     <div id="modal-admin-action" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
       <div class="w-full max-w-md sm:max-w-lg rounded-3xl bg-app-card border border-brand-500/40 p-4 sm:p-5 space-y-4 shadow-2xl max-h-[90vh] flex flex-col my-auto" style="max-height: calc(100dvh - 16px)">
-        <div class="flex items-center justify-between border-b border-app-border pb-3">
+        <div class="flex items-center justify-between border-b border-app-border pb-3 shrink-0">
           <h3 id="admin-modal-title" class="text-sm font-extrabold text-white flex items-center gap-2">Действие</h3>
           <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
         </div>
+        <div id="admin-modal-tools" class="hidden shrink-0"></div>
         <div id="admin-modal-body" class="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 hide-scrollbar" style="-webkit-overflow-scrolling: touch">
           <!-- Dynamic Content -->
         </div>
-        <button onclick="closeAdminModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-bold text-slate-300 hover:text-white">
+        <button onclick="closeAdminModal()" class="shrink-0 w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-bold text-slate-300 hover:text-white">
           Закрыть
         </button>
       </div>

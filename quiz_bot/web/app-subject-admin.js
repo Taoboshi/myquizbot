@@ -72,6 +72,7 @@ function openSubjectEditor(subjectId) {
   if (!subject) return;
   selectedSubjectIconKey = subject.icon_key || suggestSubjectIcon(subject.title);
   subjectIconWasManuallySelected = true;
+  document.getElementById('admin-modal-tools').classList.add('hidden');
   document.getElementById('admin-modal-title').textContent = 'Изменить дисциплину';
   document.getElementById('admin-modal-body').innerHTML = `
     <div class="space-y-3">

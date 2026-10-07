@@ -1,4 +1,131 @@
 // REAL ADMIN DASHBOARD
+  const adminTestManager = {
+    tab: 'subjects', query: '', page: 1, pageSize: 20,
+    selectedIds: new Set(), targetSubjectId: '', tests: [],
+    loaded: false, busy: false, message: '', hasError: false
+  };
+
+  function filteredAdminUnassignedTests() {
+    const query = adminTestManager.query.trim().toLocaleLowerCase();
+    return adminTestManager.tests.filter(test =>
+      `${test.title || ''} ${test.id}`.toLocaleLowerCase().includes(query)
+    );
+  }
+
+  function switchAdminManagementTab(tab) {
+    adminTestManager.tab = tab;
+    ['subjects', 'unassigned'].forEach(name => {
+      document.getElementById(`admin-${name}-panel`).classList.toggle('hidden', name !== tab);
+      document.getElementById(`admin-tab-${name}`).setAttribute('aria-selected', String(name === tab));
+    });
+    document.getElementById('admin-unassigned-controls').classList.toggle('hidden', tab !== 'unassigned');
+    document.getElementById('admin-modal-body').scrollTop = 0;
+  }
+
+  function updateAdminAssignmentControls() {
+    if (!document.getElementById('admin-assignment-message')) return;
+    const selected = adminTestManager.selectedIds.size;
+    const filtered = filteredAdminUnassignedTests();
+    const selectedFiltered = filtered.filter(test => adminTestManager.selectedIds.has(test.id)).length;
+    const selectAll = document.getElementById('admin-select-all-tests');
+    selectAll.checked = filtered.length > 0 && selectedFiltered === filtered.length;
+    selectAll.indeterminate = selectedFiltered > 0 && selectedFiltered < filtered.length;
+    selectAll.disabled = adminTestManager.busy || filtered.length === 0;
+    document.getElementById('admin-filtered-tests-count').textContent = `Найденные (${filtered.length})`;
+    document.getElementById('admin-selected-tests-count').textContent = `Выбрано: ${selected}`;
+    document.getElementById('admin-clear-selection').disabled = adminTestManager.busy || !selected;
+    const button = document.getElementById('admin-assign-selected');
+    button.disabled = adminTestManager.busy || !selected || !adminTestManager.targetSubjectId;
+    button.textContent = adminTestManager.busy ? 'Привязка…' : 'Привязать';
+    document.getElementById('admin-assign-subject').disabled = adminTestManager.busy || !adminStore.subjects.length;
+    document.getElementById('admin-test-search').disabled = adminTestManager.busy;
+    const message = document.getElementById('admin-assignment-message');
+    message.textContent = adminTestManager.message;
+    message.classList.toggle('hidden', !adminTestManager.message);
+    message.classList.toggle('text-rose-400', adminTestManager.hasError);
+    message.classList.toggle('text-slate-400', !adminTestManager.hasError);
+  }
+
+  function renderAdminUnassignedTests() {
+    const list = document.getElementById('admin-unassigned-panel');
+    if (!list) return;
+    const filtered = filteredAdminUnassignedTests();
+    const pages = Math.max(1, Math.ceil(filtered.length / adminTestManager.pageSize));
+    adminTestManager.page = Math.min(Math.max(1, adminTestManager.page), pages);
+    const start = (adminTestManager.page - 1) * adminTestManager.pageSize;
+    const visible = filtered.slice(start, start + adminTestManager.pageSize);
+    const cards = visible.map(test => {
+      const accessLabel = { public: 'Открытый', code: 'По коду', private: 'Приватный', admin_only: 'Только админ' }[test.access_type || 'public'] || 'Открытый';
+      const selected = adminTestManager.selectedIds.has(test.id);
+      return `
+        <div class="admin-unassigned-row p-3 rounded-lg bg-app-surface border border-app-border space-y-2" data-selected="${selected}">
+          <label class="flex items-start gap-3 cursor-pointer min-w-0">
+            <input type="checkbox" data-admin-test-id="${escapeHtml(test.id)}" onchange="toggleAdminTestSelection(this.dataset.adminTestId, this.checked)" ${selected ? 'checked' : ''} ${adminTestManager.busy ? 'disabled' : ''} class="mt-1 w-4 h-4 shrink-0">
+            <span class="min-w-0 flex-1">
+              <span class="block font-bold text-xs text-white break-words">${escapeHtml(test.title || test.id)}</span>
+              <span class="block text-[10px] text-slate-400 font-mono break-all mt-1">${escapeHtml(test.id)}</span>
+            </span>
+            <span class="text-[10px] text-slate-400 shrink-0">${Number(test.questions_count) || 0} вопр.</span>
+          </label>
+          <button type="button" onclick="openAccessModal(${escapeHtml(JSON.stringify(test.id))})" ${adminTestManager.busy ? 'disabled' : ''} class="text-[11px] text-brand-400 font-semibold">Доступ: ${accessLabel}</button>
+        </div>`;
+    }).join('');
+    let emptyMessage = 'По этому запросу тестов нет.';
+    if (!adminTestManager.tests.length) {
+      emptyMessage = adminTestManager.loaded ? 'Все тесты уже привязаны к дисциплинам.' : 'Не удалось загрузить список непривязанных тестов.';
+    }
+    list.innerHTML = cards ? `
+      <div class="space-y-2">${cards}</div>
+      <div class="flex items-center justify-between gap-2 pt-3 text-xs text-slate-400">
+        <button type="button" onclick="changeAdminTestsPage(-1)" ${adminTestManager.page === 1 || adminTestManager.busy ? 'disabled' : ''} class="admin-page-button px-3 py-2 rounded-lg border border-app-border" aria-label="Предыдущая страница">←</button>
+        <span>${start + 1}-${start + visible.length} из ${filtered.length}</span>
+        <button type="button" onclick="changeAdminTestsPage(1)" ${adminTestManager.page === pages || adminTestManager.busy ? 'disabled' : ''} class="admin-page-button px-3 py-2 rounded-lg border border-app-border" aria-label="Следующая страница">→</button>
+      </div>` : `<div class="py-6 text-center text-xs text-slate-400" role="status">${emptyMessage}</div>`;
+    updateAdminAssignmentControls();
+  }
+
+  function searchAdminUnassignedTests(query) {
+    adminTestManager.query = query;
+    adminTestManager.page = 1;
+    renderAdminUnassignedTests();
+    document.getElementById('admin-modal-body').scrollTop = 0;
+  }
+
+  function changeAdminTestsPage(offset) {
+    adminTestManager.page += offset;
+    renderAdminUnassignedTests();
+    document.getElementById('admin-modal-body').scrollTop = 0;
+  }
+
+  function toggleAdminTestSelection(testId, selected) {
+    if (adminTestManager.busy) return;
+    if (selected) adminTestManager.selectedIds.add(testId);
+    else adminTestManager.selectedIds.delete(testId);
+    const checkbox = [...document.querySelectorAll('[data-admin-test-id]')].find(input => input.dataset.adminTestId === testId);
+    if (checkbox) checkbox.closest('.admin-unassigned-row').dataset.selected = String(selected);
+    updateAdminAssignmentControls();
+  }
+
+  function selectFilteredAdminTests(selected) {
+    if (adminTestManager.busy) return;
+    filteredAdminUnassignedTests().forEach(test => {
+      if (selected) adminTestManager.selectedIds.add(test.id);
+      else adminTestManager.selectedIds.delete(test.id);
+    });
+    renderAdminUnassignedTests();
+  }
+
+  function clearAdminTestSelection() {
+    if (adminTestManager.busy) return;
+    adminTestManager.selectedIds.clear();
+    renderAdminUnassignedTests();
+  }
+
+  function setAdminAssignmentSubject(subjectId) {
+    adminTestManager.targetSubjectId = subjectId;
+    updateAdminAssignmentControls();
+  }
+
   function updateAdminStats() {
     document.getElementById('adm-stat-users').innerText = adminStore.users.length;
     document.getElementById('adm-stat-attempts').innerText = '0';
@@ -41,10 +168,18 @@
     const modal = document.getElementById('modal-admin-action');
     const title = document.getElementById('admin-modal-title');
     const body = document.getElementById('admin-modal-body');
+    const tools = document.getElementById('admin-modal-tools');
+    const isManagement = ['subjects_and_tests', 'tests', 'subjects', 'unassigned'].includes(type);
+    if (!isManagement) {
+      tools.classList.add('hidden');
+      tools.innerHTML = '';
+    }
 
     modal.classList.remove('hidden');
 
-    if (type === 'subjects_and_tests' || type === 'tests' || type === 'subjects' || type === 'unassigned') {
+    if (isManagement) {
+      if (type === 'unassigned' || type === 'tests') adminTestManager.tab = 'unassigned';
+      else if (type === 'subjects') adminTestManager.tab = 'subjects';
       title.innerHTML = 'Управление предметами и тестами';
 
       try {
@@ -172,74 +307,44 @@
         `;
       }).join('');
 
-      let unassignedSection = '';
-      if (unassignedTests.length > 0) {
-        let unassignedCards = unassignedTests.map(t => {
-          const accType = t.access_type || 'public';
-          let accBadge = '<span class="px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-400 border border-brand-500/30 text-[10px] font-bold">Открытый</span>';
-          let accLabel = 'Открытый';
-          if (accType === 'code') {
-            accBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-bold">Код: ${t.access_code || '—'}</span>`;
-            accLabel = 'По коду';
-          } else if (accType === 'private') {
-            accBadge = '<span class="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30 text-[10px] font-bold">Приватный</span>';
-            accLabel = 'Приватный';
-          } else if (accType === 'admin_only') {
-            accBadge = '<span class="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-bold">Только админ</span>';
-            accLabel = 'Только админ';
-          }
-
-          return `
-          <div class="p-3 rounded-xl bg-app-card border border-amber-500/30 space-y-2">
-            <div class="flex items-start justify-between text-xs gap-2">
-              <div class="space-y-0.5 min-w-0 flex-1">
-                <div class="font-bold text-white truncate">${t.title}</div>
-                <div class="text-[10px] text-slate-400 font-mono">${t.id}</div>
-              </div>
-              <div class="flex flex-col items-end gap-1 shrink-0">
-                <span class="font-mono text-[10px] text-amber-400 font-bold">${t.questions_count} вопр.</span>
-                ${accBadge}
-              </div>
-            </div>
-            <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2 flex-wrap">
-              <button onclick="openAccessModal('${t.id}')" class="text-brand-400 hover:underline font-bold flex items-center gap-1">
-                Доступ: ${accLabel}
-              </button>
-            </div>
-            <div class="flex items-center gap-2 pt-1">
-              <select id="u-assign-${t.id}" class="flex-1 px-2 py-1.5 rounded-xl bg-app-surface border border-app-border text-xs text-white">
-                ${adminStore.subjects.map(s => `<option value="${s.id}">${s.title}</option>`).join('')}
-              </select>
-              <button onclick="assignUnassignedTest('${t.id}')" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">
-                Привязать
-              </button>
-            </div>
-          </div>
-          `;
-        }).join('');
-
-        unassignedSection = `
-          <div class="space-y-2 pt-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Непривязанные тесты (${unassignedTests.length})</span>
-            </div>
-            <div class="space-y-2">${unassignedCards}</div>
-          </div>
-        `;
-      } else {
-        unassignedSection = `
-          <div class="space-y-2 pt-2">
-            <div class="text-xs font-bold text-amber-400 uppercase tracking-wider">Непривязанные тесты (0)</div>
-            <div class="p-3 rounded-xl bg-app-card border border-app-border text-xs text-slate-400">
-              ${unassignedListLoaded ? 'Все тесты уже привязаны к дисциплинам.' : 'Не удалось загрузить список. Закройте окно и откройте его снова.'}
-            </div>
-          </div>
-        `;
+      adminTestManager.tests = unassignedTests;
+      adminTestManager.loaded = unassignedListLoaded;
+      adminTestManager.selectedIds = new Set([...adminTestManager.selectedIds].filter(id => unassignedIds.has(id)));
+      if (!adminStore.subjects.some(subject => subject.id === adminTestManager.targetSubjectId)) {
+        adminTestManager.targetSubjectId = '';
       }
+      tools.innerHTML = `
+        <div class="grid grid-cols-2 gap-1 p-1 rounded-lg bg-app-surface border border-app-border" role="tablist" aria-label="Управление тестами">
+          <button type="button" id="admin-tab-subjects" class="admin-management-tab min-w-0 py-2 px-1 text-xs font-bold rounded-lg" role="tab" aria-controls="admin-subjects-panel" onclick="switchAdminManagementTab('subjects')">Дисциплины</button>
+          <button type="button" id="admin-tab-unassigned" class="admin-management-tab min-w-0 py-2 px-1 text-xs font-bold rounded-lg" role="tab" aria-controls="admin-unassigned-panel" onclick="switchAdminManagementTab('unassigned')">Непривязанные · ${unassignedTests.length}</button>
+        </div>
+        <div id="admin-unassigned-controls" class="space-y-2 mt-3">
+          <input id="admin-test-search" type="search" aria-label="Поиск непривязанных тестов" placeholder="Название или ID теста" oninput="searchAdminUnassignedTests(this.value)" class="w-full min-w-0 px-3 py-2 rounded-lg bg-app-surface border border-app-border text-xs text-white">
+          <div class="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+            <label class="flex items-center gap-2 cursor-pointer min-h-[32px]">
+              <input id="admin-select-all-tests" type="checkbox" onchange="selectFilteredAdminTests(this.checked)" class="w-4 h-4">
+              <span id="admin-filtered-tests-count"></span>
+            </label>
+            <div class="flex items-center gap-1 shrink-0">
+              <span id="admin-selected-tests-count" aria-live="polite"></span>
+              <button type="button" id="admin-clear-selection" onclick="clearAdminTestSelection()" class="w-7 h-7 text-base" title="Снять выбор" aria-label="Снять выбор">×</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="admin-assign-subject" aria-label="Дисциплина для выбранных тестов" onchange="setAdminAssignmentSubject(this.value)" class="min-w-0 flex-1 px-2 py-2 rounded-lg bg-app-surface border border-app-border text-xs text-white">
+              <option value="">${adminStore.subjects.length ? 'Выберите дисциплину' : 'Нет дисциплин'}</option>
+              ${adminStore.subjects.map(subject => `<option value="${escapeHtml(subject.id)}">${escapeHtml(subject.title)}</option>`).join('')}
+            </select>
+            <button type="button" id="admin-assign-selected" onclick="assignSelectedAdminTests()" class="shrink-0 px-3 py-2 rounded-lg bg-brand-600 text-white font-bold text-xs">Привязать</button>
+          </div>
+          <p id="admin-assignment-message" class="text-[11px] break-words" role="status" aria-live="polite"></p>
+        </div>`;
+      tools.classList.remove('hidden');
+      document.getElementById('admin-test-search').value = adminTestManager.query;
+      document.getElementById('admin-assign-subject').value = adminTestManager.targetSubjectId;
 
       body.innerHTML = `
-        <div class="space-y-3">
-          ${unassignedSection}
+        <div id="admin-subjects-panel" class="space-y-3" role="tabpanel" aria-labelledby="admin-tab-subjects">
 
           <!-- Add Subject Box -->
           <div class="p-3 rounded-2xl bg-app-surface border border-app-border space-y-2">
@@ -255,7 +360,10 @@
           </div>
 
         </div>
+        <div id="admin-unassigned-panel" role="tabpanel" aria-labelledby="admin-tab-unassigned"></div>
       `;
+      renderAdminUnassignedTests();
+      switchAdminManagementTab(adminTestManager.tab);
     } else if (type === 'upload') {
       title.innerHTML = 'Импортировать тест';
       body.innerHTML = `
@@ -894,50 +1002,63 @@
     }
   }
 
-  async function assignUnassignedTest(testId) {
-    const sel = document.getElementById(`u-assign-${testId}`);
-    if (!sel || !sel.value || sel.value === 'default') {
-      alert('Выберите предмет для привязки теста!');
-      return;
-    }
-    const targetSub = sel.value;
+  async function assignSelectedAdminTests() {
+    if (adminTestManager.busy) return;
+    const targetSub = adminTestManager.targetSubjectId;
+    const subject = adminStore.subjects.find(item => item.id === targetSub);
+    const testIds = adminTestManager.tests
+      .filter(test => adminTestManager.selectedIds.has(test.id))
+      .map(test => test.id);
+    if (!subject || !testIds.length) return;
     triggerHaptic('light');
-
-    const t = adminStore.testsMeta.find(x => x.id === testId);
-    const subObj = adminStore.subjects.find(s => s.id === targetSub);
-    try {
-      const response = await fetch('/api/admin/assign_test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: state.userId, test_id: testId, subject_id: targetSub })
-      });
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        alert(error.error || 'Не удалось привязать тест. Попробуйте ещё раз.');
-        return;
+    adminTestManager.busy = true;
+    adminTestManager.hasError = false;
+    adminTestManager.message = `Привязка: 0 из ${testIds.length}`;
+    renderAdminUnassignedTests();
+    const assigned = new Set();
+    let firstError = '';
+    for (const [index, testId] of testIds.entries()) {
+      try {
+        const response = await fetch('/api/admin/assign_test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: state.userId, test_id: testId, subject_id: targetSub })
+        });
+        const result = await response.json();
+        if (!response.ok || result.success !== true) {
+          throw new Error(result.error || 'Сервер не подтвердил привязку');
+        }
+        assigned.add(testId);
+        adminTestManager.selectedIds.delete(testId);
+        const test = adminStore.testsMeta.find(item => item.id === testId);
+        if (test) {
+          test.subject_id = targetSub;
+          test.subject_title = subject.title;
+        }
+      } catch(error) {
+        if (!firstError) firstError = error.message || 'Ошибка связи с сервером';
       }
-    } catch(e) {
-      alert('Не удалось связаться с сервером. Тест не привязан.');
-      return;
+      adminTestManager.message = `Обработано: ${index + 1} из ${testIds.length}`;
+      updateAdminAssignmentControls();
     }
 
-    if (t) {
-      t.subject_id = targetSub;
-      t.subject_title = subObj ? subObj.title : targetSub;
-    }
     try {
       const unSet = new Set(JSON.parse(localStorage.getItem('ohtest_unassigned_tests') || '[]'));
-      unSet.delete(testId);
+      assigned.forEach(testId => unSet.delete(testId));
       localStorage.setItem('ohtest_unassigned_tests', JSON.stringify([...unSet]));
     } catch(e) {}
-
+    adminTestManager.tests = adminTestManager.tests.filter(test => !assigned.has(test.id));
+    adminTestManager.busy = false;
+    const failed = testIds.length - assigned.size;
+    adminTestManager.hasError = failed > 0;
+    adminTestManager.message = failed
+      ? `Привязано: ${assigned.size}. Не удалось: ${failed}. ${firstError}.`
+      : `Привязано тестов: ${assigned.size}.`;
     updateAdminStats();
     renderHomeSubjects();
-
-    alert('Тест успешно привязан!');
-    await openAdminModal('subjects_and_tests');
-    renderHomeSubjects();
-    updateAdminStats();
+    if (document.getElementById('admin-unassigned-panel') && !document.getElementById('modal-admin-action').classList.contains('hidden')) {
+      await openAdminModal('subjects_and_tests');
+    }
   }
 
   async function unlinkTest(testId) {
