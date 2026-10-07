@@ -34,7 +34,7 @@ from .storage import (
     set_subject_setting,
     set_test_metadata_setting,
     set_user_rating_hidden,
-    toggle_favorite,
+    set_favorite,
     upsert_user,
 )
 
@@ -499,23 +499,78 @@ def register_webapp_routes(app: Any) -> None:
         user_id = authenticated_user_id()
         test_id = request.args.get("test_id")
 
-        if not user_id or not test_id:
-            return jsonify({"error": "user_id and test_id required"}), 400
+        if not user_id:
+            return jsonify({"error": "user_id required"}), 400
 
         try:
             uid = int(user_id)
-            err_indices = get_all_time_error_indices(uid, test_id)
-            # convert 0-based question_index to 1-based question id
-            error_ids = [i + 1 for i in err_indices]
             with db_connect() as conn:
-                fav_rows = conn.execute(
-                    "SELECT question_index FROM favorites WHERE user_id = ? AND test_id = ? AND is_favorite = 1",
-                    (uid, test_id),
+                if test_id:
+                    error_rows = conn.execute(
+                        "SELECT question_index FROM all_time_errors WHERE user_id = ? AND test_id = ? AND COALESCE(is_resolved, 0) = 0 ORDER BY last_wrong_at ASC",
+                        (uid, test_id),
+                    ).fetchall()
+                    favorite_rows = conn.execute(
+                        "SELECT question_index FROM favorites WHERE user_id = ? AND test_id = ?",
+                        (uid, test_id),
+                    ).fetchall()
+                    return jsonify({
+                        "test_id": test_id,
+                        "errors": [int(row["question_index"]) + 1 for row in error_rows],
+                        "favorites": [int(row["question_index"]) + 1 for row in favorite_rows],
+                    })
+
+                error_rows = conn.execute(
+                    "SELECT test_id, question_index FROM all_time_errors WHERE user_id = ? AND COALESCE(is_resolved, 0) = 0 ORDER BY last_wrong_at ASC",
+                    (uid,),
                 ).fetchall()
-            favorite_ids = [r["question_index"] + 1 for r in fav_rows]
-            return jsonify({"test_id": test_id, "errors": error_ids, "favorites": favorite_ids})
+                favorite_rows = conn.execute(
+                    "SELECT test_id, question_index FROM favorites WHERE user_id = ?",
+                    (uid,),
+                ).fetchall()
+                attempt_rows = conn.execute(
+                    "SELECT attempt_id, test_id, mode, answered, correct, duration_seconds, finished_at FROM attempts WHERE user_id = ? AND finished_at IS NOT NULL AND answered > 0 ORDER BY finished_at DESC LIMIT 50",
+                    (uid,),
+                ).fetchall()
+
+            tests_state = {}
+            for row in error_rows:
+                tests_state.setdefault(row["test_id"], {"errors": [], "favorites": []})["errors"].append(int(row["question_index"]) + 1)
+            for row in favorite_rows:
+                tests_state.setdefault(row["test_id"], {"errors": [], "favorites": []})["favorites"].append(int(row["question_index"]) + 1)
+            attempts = [{
+                "attempt_id": int(row["attempt_id"]),
+                "test_id": row["test_id"],
+                "mode": row["mode"],
+                "answered": int(row["answered"] or 0),
+                "correct": int(row["correct"] or 0),
+                "duration": int(row["duration_seconds"] or 0),
+                "finished_at": row["finished_at"],
+            } for row in attempt_rows]
+            return jsonify({"tests": tests_state, "attempts": attempts})
         except Exception as e:
-            return jsonify({"errors": [], "favorites": []})
+            logger.warning("Failed to load profile state for user %s: %s", user_id, e)
+            return jsonify({"tests": {}, "attempts": []})
+
+    @app.route("/api/user/favorite", methods=["POST"])
+    def api_set_user_favorite():
+        payload = request.get_json(silent=True) or {}
+        user_id = authenticated_user_id()
+        test_id = str(payload.get("test_id") or "")
+        question_id = payload.get("question_id")
+        if not user_id:
+            return jsonify({"error": "user_id required"}), 400
+        if test_id not in LOADED_TESTS or question_id is None:
+            return jsonify({"error": "valid test_id and question_id required"}), 400
+        try:
+            question_index = int(question_id) - 1
+            if question_index < 0 or question_index >= len(LOADED_TESTS[test_id]):
+                return jsonify({"error": "question_id out of range"}), 400
+            value = bool(payload.get("is_favorite", False))
+            set_favorite(int(user_id), test_id, question_index, value)
+            return jsonify({"success": True, "is_favorite": value})
+        except (TypeError, ValueError) as e:
+            return jsonify({"error": str(e)}), 400
 
     @app.route("/api/user/toggle_rating_visibility", methods=["POST"])
     def api_toggle_rating_visibility():

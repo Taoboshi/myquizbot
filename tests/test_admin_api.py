@@ -107,6 +107,33 @@ class AdminApiTestCase(unittest.TestCase):
         self.assertEqual(len(data["attempts"]), 1)
         self.assertGreaterEqual(len(data["errors"]), 1)
 
+    def test_user_state_returns_database_profile_data(self):
+        import quiz_bot.storage as storage
+
+        storage.set_favorite(99999, "oziz_1_200", 2, True)
+        response = self.client.get("/api/user/state", headers=self._auth_header(99999))
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["tests"]["oziz_1_200"]["errors"], [2])
+        self.assertEqual(data["tests"]["oziz_1_200"]["favorites"], [3])
+        self.assertEqual(len(data["attempts"]), 1)
+        self.assertEqual(data["attempts"][0]["correct"], 1)
+
+    def test_web_favorite_can_be_saved_and_removed(self):
+        headers = self._auth_header(99999)
+        response = self.client.post("/api/user/favorite", headers=headers, json={
+            "test_id": "oziz_1_200", "question_id": 3, "is_favorite": True,
+        })
+        self.assertEqual(response.status_code, 200)
+        state_response = self.client.get("/api/user/state?test_id=oziz_1_200", headers=headers)
+        self.assertEqual(state_response.get_json()["favorites"], [3])
+
+        removed = self.client.post("/api/user/favorite", headers=headers, json={
+            "test_id": "oziz_1_200", "question_id": 3, "is_favorite": False,
+        })
+        self.assertEqual(removed.status_code, 200)
+        self.assertEqual(self.client.get("/api/user/state?test_id=oziz_1_200", headers=headers).get_json()["favorites"], [])
+
     def test_admin_block_and_unblock_api(self):
         # Block user
         res = self.client.post(

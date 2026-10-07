@@ -1133,6 +1133,11 @@
       localStorage.setItem(`ohtest_favs_${state.activeTestId}`, JSON.stringify([...state.favorites]));
     } catch(e) {}
 
+    fetch('/api/user/favorite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ test_id: state.activeTestId, question_id: qid, is_favorite: !hasFav })
+    }).catch(() => {});
+
     const currentlyFav = isQuestionFavorited(qid);
     updateFavUI(currentlyFav);
 
@@ -1591,4 +1596,3 @@
   }
 
   // ==========================================
-

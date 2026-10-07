@@ -270,6 +270,13 @@ const nativeFetch = window.fetch.bind(window);
     updateHubResumeButton();
     updateHeaderNavState();
 
+    syncProfileNotebookFromServer().then(() => {
+      updateProfileErrorBadge(getAllSavedErrors().length);
+      const profFavsEl = document.getElementById('profile-fav-count');
+      if (profFavsEl) profFavsEl.innerText = getAllSavedFavorites().length;
+      if (state.currentTab === 'profile') updateProfileFullView();
+    });
+
     // Dynamic Header Scroll Shrink & Tap-to-top setup
     setupHeaderScrollObserver();
 
@@ -649,11 +656,16 @@ const nativeFetch = window.fetch.bind(window);
           const hideEl = document.getElementById('set-hide-rating');
           if (hideEl) hideEl.checked = state.isHiddenInRating;
         }
-        if (Array.isArray(data.subjects)) {
+        const subjects = Array.isArray(data.subjects) ? data.subjects : [];
+        const unassignedTests = Array.isArray(data.unassigned_tests) ? data.unassigned_tests : [];
+        const catalogTestCount = subjects.reduce((count, subject) => count + (subject.tests || []).length, 0) + unassignedTests.length;
+        const reportedTestCount = Number(data.total_loaded_tests || 0);
+        const hasCatalogPayload = subjects.length > 0 || unassignedTests.length > 0;
+        const hasCompleteCatalog = hasCatalogPayload && (!reportedTestCount || catalogTestCount >= reportedTestCount);
+        if (hasCompleteCatalog) {
           const delSet = new Set(JSON.parse(localStorage.getItem('ohtest_deleted_subjects') || '[]'));
           const unSet = new Set(JSON.parse(localStorage.getItem('ohtest_unassigned_tests') || '[]'));
 
-          const subjects = data.subjects;
           adminStore.subjects = subjects
             .filter(s => !delSet.has(s.id))
             .map(s => ({
@@ -678,7 +690,7 @@ const nativeFetch = window.fetch.bind(window);
               });
             });
           });
-          (data.unassigned_tests || []).forEach(t => {
+          unassignedTests.forEach(t => {
             loadedMeta.push({
               id: t.id,
               title: t.title,
@@ -702,5 +714,4 @@ const nativeFetch = window.fetch.bind(window);
       document.getElementById('settings-admin-block')?.classList.add('hidden');
     }
   }
-
 
