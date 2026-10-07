@@ -2560,6 +2560,7 @@
       updateHubResumeButton();
       const profFavsEl = document.getElementById('profile-fav-count');
       if (profFavsEl) profFavsEl.innerText = getAllSavedFavorites().length;
+      if (state.currentTab === 'profile') updateProfileFullView();
     });
   });
 
@@ -2929,11 +2930,12 @@
           const hideEl = document.getElementById('set-hide-rating');
           if (hideEl) hideEl.checked = state.isHiddenInRating;
         }
-        if (data.subjects && data.subjects.length > 0) {
+        if (Array.isArray(data.subjects)) {
           const delSet = new Set(JSON.parse(localStorage.getItem('ohtest_deleted_subjects') || '[]'));
           const unSet = new Set(JSON.parse(localStorage.getItem('ohtest_unassigned_tests') || '[]'));
 
-          adminStore.subjects = data.subjects
+          const subjects = data.subjects;
+          adminStore.subjects = subjects
             .filter(s => !delSet.has(s.id))
             .map(s => ({
               id: s.id,
@@ -2943,7 +2945,7 @@
             }));
 
           const loadedMeta = [];
-          data.subjects.forEach(s => {
+          subjects.forEach(s => {
             const isSubDeleted = delSet.has(s.id);
             (s.tests || []).forEach(t => {
               const isUnassigned = isSubDeleted || unSet.has(t.id);
@@ -2967,9 +2969,7 @@
               access_code: t.access_code || ''
             });
           });
-          if (loadedMeta.length > 0) {
-            adminStore.testsMeta = loadedMeta;
-          }
+          adminStore.testsMeta = loadedMeta;
 
           // Persist actual data to localStorage cache
           try {
