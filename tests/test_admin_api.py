@@ -6,6 +6,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlencode
 
 from quiz_bot.webapp import create_webapp
@@ -209,6 +210,29 @@ class AdminApiTestCase(unittest.TestCase):
         )
         self.assertEqual(res_assign.status_code, 200)
         self.assertTrue(res_assign.get_json()["success"])
+
+    def test_admin_unassigned_api_returns_tests_for_linking(self):
+        with (
+            patch("quiz_bot.webapp.get_unassigned_tests", return_value=[
+                ("sample_unassigned", {"file": "sample_unassigned.json"}),
+            ]),
+            patch("quiz_bot.webapp.effective_test_info", return_value={"title": "Новый тест"}),
+            patch("quiz_bot.access.effective_test_access", return_value={"type": "public", "code": ""}),
+        ):
+            response = self.client.get(
+                "/api/admin/unassigned?user_id=12345",
+                headers=self._auth_header(12345),
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["items"], [{
+            "id": "sample_unassigned",
+            "title": "Новый тест",
+            "questions_count": 0,
+            "file": "sample_unassigned.json",
+            "access_type": "public",
+            "access_code": "",
+        }])
 
     def test_admin_delete_subject_api(self):
         res = self.client.post(

@@ -688,14 +688,18 @@ def register_webapp_routes(app: Any) -> None:
         if not is_admin_user(user_id):
             return jsonify({"error": "Forbidden"}), 403
 
+        from .access import effective_test_access
         items = []
         for t_id, t_info in get_unassigned_tests():
             info = effective_test_info(t_id)
+            access = effective_test_access(t_id)
             items.append({
                 "id": t_id,
                 "title": info.get("title", t_id),
                 "questions_count": len(LOADED_TESTS.get(t_id, [])),
                 "file": t_info.get("file", ""),
+                "access_type": access.get("type", "public"),
+                "access_code": access.get("code", ""),
             })
         return jsonify({"items": items})
 

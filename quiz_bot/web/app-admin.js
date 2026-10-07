@@ -65,7 +65,36 @@
         }
       } catch(e) {}
       
-      const unassignedTests = adminStore.testsMeta.filter(t => t.subject_id === 'default' || !t.subject_id);
+      const unassignedById = new Map(
+        adminStore.testsMeta
+          .filter(test => test.subject_id === 'default' || !test.subject_id)
+          .map(test => [test.id, test])
+      );
+      let unassignedListLoaded = false;
+      try {
+        const response = await fetch(`/api/admin/unassigned?user_id=${state.userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          unassignedListLoaded = true;
+          (data.items || []).forEach(test => {
+            const existing = adminStore.testsMeta.find(item => item.id === test.id) || {};
+            unassignedById.set(test.id, {
+              ...existing,
+              ...test,
+              subject_id: 'default',
+              subject_title: 'Не привязан',
+              access_type: test.access_type || existing.access_type || 'public',
+              access_code: test.access_code || existing.access_code || ''
+            });
+          });
+        }
+      } catch(e) {}
+      const unassignedTests = [...unassignedById.values()];
+      const unassignedIds = new Set(unassignedTests.map(test => test.id));
+      adminStore.testsMeta = [
+        ...adminStore.testsMeta.filter(test => !unassignedIds.has(test.id)),
+        ...unassignedTests
+      ];
 
       let subjectsHtml = adminStore.subjects.map(s => {
         const testsInSub = adminStore.testsMeta.filter(t => t.subject_id === s.id);
@@ -195,6 +224,15 @@
               <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Непривязанные тесты (${unassignedTests.length})</span>
             </div>
             <div class="space-y-2">${unassignedCards}</div>
+          </div>
+        `;
+      } else {
+        unassignedSection = `
+          <div class="space-y-2 pt-2">
+            <div class="text-xs font-bold text-amber-400 uppercase tracking-wider">Непривязанные тесты (0)</div>
+            <div class="p-3 rounded-xl bg-app-card border border-app-border text-xs text-slate-400">
+              ${unassignedListLoaded ? 'Все тесты уже привязаны к дисциплинам.' : 'Не удалось загрузить список. Закройте окно и откройте его снова.'}
+            </div>
           </div>
         `;
       }
@@ -867,11 +905,26 @@
 
     const t = adminStore.testsMeta.find(x => x.id === testId);
     const subObj = adminStore.subjects.find(s => s.id === targetSub);
+    try {
+      const response = await fetch('/api/admin/assign_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: state.userId, test_id: testId, subject_id: targetSub })
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        alert(error.error || 'Не удалось привязать тест. Попробуйте ещё раз.');
+        return;
+      }
+    } catch(e) {
+      alert('Не удалось связаться с сервером. Тест не привязан.');
+      return;
+    }
+
     if (t) {
       t.subject_id = targetSub;
       t.subject_title = subObj ? subObj.title : targetSub;
     }
-
     try {
       const unSet = new Set(JSON.parse(localStorage.getItem('ohtest_unassigned_tests') || '[]'));
       unSet.delete(testId);
@@ -880,14 +933,6 @@
 
     updateAdminStats();
     renderHomeSubjects();
-
-    try {
-      await fetch('/api/admin/assign_test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: state.userId, test_id: testId, subject_id: targetSub })
-      });
-    } catch(e) {}
 
     alert('Тест успешно привязан!');
     await openAdminModal('subjects_and_tests');
