@@ -3627,6 +3627,28 @@
   function showCurrentAnswer() {
     triggerHaptic('light');
     const q = state.activeQuestions[state.currentQIndex];
+    if (state.userAnswers[q.id] === undefined && !state.userErrors.has(q.id)) {
+      state.userErrors.add(q.id);
+      try {
+        localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
+        fetch('/api/errors/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: state.userId,
+            test_id: state.activeTestId,
+            question_id: q.id,
+            user_answer: null
+          })
+        }).catch(() => {});
+      } catch(e) {}
+
+      const hubErrors = document.getElementById('hub-q-errors');
+      if (hubErrors) hubErrors.innerText = state.userErrors.size;
+      const hubErrTag = document.getElementById('hub-err-tag');
+      if (hubErrTag) hubErrTag.innerText = state.userErrors.size;
+      updateProfileErrorBadge(getAllSavedErrors().length);
+    }
     state.revealedAnswers.add(q.id);
     renderCurrentQuestion();
   }
@@ -3708,8 +3730,11 @@
         }
       });
 
-      const answeredCount = Object.keys(state.userAnswers).length;
-      const errorsCount = wrongQuestionIds.length;
+      const revealedUnansweredCount = state.activeQuestions.filter(q =>
+        state.userAnswers[q.id] === undefined && state.revealedAnswers.has(q.id)
+      ).length;
+      const answeredCount = Object.keys(state.userAnswers).length + revealedUnansweredCount;
+      const errorsCount = wrongQuestionIds.length + revealedUnansweredCount;
       const skippedCount = Math.max(0, total - answeredCount);
       const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
 
