@@ -3709,6 +3709,13 @@
     const answered = Object.keys(state.userAnswers).length;
     const total = state.activeQuestions.length;
     const unanswered = Math.max(0, total - answered);
+    const allAttempted = state.activeQuestions.every(q =>
+      state.userAnswers[q.id] !== undefined || state.revealedAnswers.has(q.id)
+    );
+    if (state.currentMode === 'errors_solve' && allAttempted) {
+      doFinishQuiz();
+      return;
+    }
     const textEl = document.getElementById('confirm-finish-text');
     if (textEl) {
       if (unanswered > 0) {
@@ -3902,8 +3909,9 @@
           localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
         } catch(e) {}
 
-        const remainingErrors = state.userErrors.size;
-        const remainingAllErrors = getAllSavedErrors().length;
+        const allUnresolvedErrors = getAllSavedErrors();
+        const remainingErrors = allUnresolvedErrors.filter(error => error.testId === state.activeTestId).length;
+        const remainingAllErrors = allUnresolvedErrors.length;
         const remainingOtherTestErrors = Math.max(0, remainingAllErrors - remainingErrors);
         if (msgBanner) {
           msgBanner.classList.remove('hidden');
@@ -3914,9 +3922,9 @@
               btnBox.innerHTML = `
                 ${remainingAllErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Продолжить разбор ошибок (${remainingAllErrors})</button>` : ''}
                 <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти полный тест заново</button>
-                <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button onclick="returnToProfileErrors()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                  <span>В меню теста</span>
+                  <span>К списку ошибок в профиле</span>
                 </button>
               `;
             }
@@ -3928,9 +3936,9 @@
                 <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">Повторить оставшиеся ошибки (${remainingErrors})</button>
                 ${remainingOtherTestErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Перейти к ошибкам других тестов (${remainingOtherTestErrors})</button>` : ''}
                 <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти весь тест заново</button>
-                <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button onclick="returnToProfileErrors()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                  <span>В меню теста</span>
+                  <span>К списку ошибок в профиле</span>
                 </button>
               `;
             }
@@ -5510,6 +5518,11 @@
     startQuizMode('errors_solve');
   }
 
+  function returnToProfileErrors() {
+    switchTab('profile');
+    switchProfileTab('errors');
+  }
+
   function solveOneError(testId, qid) {
     triggerHaptic('light');
     const tData = BUNDLED_TESTS[testId];
@@ -5520,7 +5533,14 @@
     state.activeTestId = testId;
     state.activeTestTitle = tData.title;
     state.activeQuestions = [{...q}];
-    state.currentTestOriginalQuestions = [...state.activeQuestions];
+    state.currentTestOriginalQuestions = [...tData.questions];
+    try {
+      state.userErrors = new Set(JSON.parse(localStorage.getItem(`ohtest_errors_${testId}`) || '[]'));
+      state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${testId}`) || '[]'));
+    } catch(e) {
+      state.userErrors = new Set();
+      state.favorites = new Set();
+    }
     state.currentMode = 'errors_solve';
     state.userAnswers = {};
     state.revealedAnswers = new Set();
