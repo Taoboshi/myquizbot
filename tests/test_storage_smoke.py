@@ -71,8 +71,11 @@ class StorageSmokeTestCase(unittest.TestCase):
             self.assertIn("test_subj", storage.get_deleted_subject_ids())
 
             # Re-creating subject clears deleted mark
-            storage.set_subject_setting("test_subj", "Test Subj", "📚", updated_by=777)
+            storage.set_subject_setting("test_subj", "Test Subj", "📚", icon_key="heart", updated_by=777)
             self.assertFalse(storage.is_subject_deleted("test_subj"))
+            self.assertEqual(storage.get_subject_setting("test_subj")["icon_key"], "heart")
+            storage.set_subject_access_setting("test_subj", "private", updated_by=777)
+            self.assertEqual(storage.get_subject_setting("test_subj")["icon_key"], "heart")
 
             # Test unlinking metadata
             storage.set_test_metadata_setting("sample", subject_id="test_subj", subject_title="Test Subj", subject_emoji="📚")
@@ -97,6 +100,3 @@ class StorageSmokeTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-

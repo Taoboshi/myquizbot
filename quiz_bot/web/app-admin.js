@@ -34,6 +34,10 @@
   // Admin Modals
   async function openAdminModal(type) {
     triggerHaptic('light');
+    if (type === 'subjects_and_tests' || type === 'subjects') {
+      selectedSubjectIconKey = suggestSubjectIcon('');
+      subjectIconWasManuallySelected = false;
+    }
     const modal = document.getElementById('modal-admin-action');
     const title = document.getElementById('admin-modal-title');
     const body = document.getElementById('admin-modal-body');
@@ -119,11 +123,12 @@
           <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
+                <span class="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-app-card border border-app-border text-brand-300">${renderSubjectIcon(s.icon_key || suggestSubjectIcon(s.title || s.id), s.emoji)}</span>
                 <span class="text-xs font-bold text-white">${s.title}</span>
                 <span class="text-[10px] text-slate-400 font-mono">(${testsInSub.length})</span>
               </div>
               <div class="flex items-center gap-1.5 text-xs">
-                <button onclick="editSubjectPrompt('${s.id}', '${s.title.replace(/'/g, "\\'")}', '${s.emoji || ''}')" class="px-2 py-1 rounded-lg bg-app-card border border-app-border text-[10px] text-brand-300 hover:text-white" title="Редактировать предмет">
+                <button onclick="editSubjectPrompt('${s.id}')" class="px-2 py-1 rounded-lg bg-app-card border border-app-border text-[10px] text-brand-300 hover:text-white" title="Редактировать предмет">
                   Изменить
                 </button>
                 <button onclick="deleteSubject('${s.id}')" class="px-2 py-1 rounded-lg bg-app-card border border-app-border text-[10px] text-rose-400 hover:text-white" title="Удалить предмет">
@@ -198,11 +203,11 @@
         <div class="space-y-3">
           <!-- Add Subject Box -->
           <div class="p-3 rounded-2xl bg-app-surface border border-app-border space-y-2">
-            <div class="text-xs font-bold text-white">Добавить новый предмет</div>
-            <div class="flex gap-2">
-              <input id="new-subj-title" placeholder="Название предмета..." class="flex-1 px-3 py-1.5 rounded-xl bg-app-card border border-app-border text-xs text-white">
-              <button onclick="addNewSubject()" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">Создать</button>
-            </div>
+            <div class="text-xs font-bold text-white">Добавить новую дисциплину</div>
+            <input id="new-subj-title" oninput="suggestAndSelectSubjectIcon(this.value)" placeholder="Название дисциплины..." class="w-full px-3 py-2 rounded-xl bg-app-card border border-app-border text-xs text-white">
+            <div class="text-[10px] text-slate-400">Предложенный значок зависит от названия. Его можно заменить.</div>
+            ${renderSubjectIconPicker(suggestSubjectIcon(''), 'new-subj-icon-picker')}
+            <button onclick="addNewSubject()" class="w-full py-2.5 rounded-xl bg-brand-600 text-white font-bold text-xs active:scale-95 transition">Создать</button>
           </div>
 
           <div class="space-y-2.5">
@@ -235,10 +240,9 @@
         <div class="space-y-3">
           <div class="p-3 rounded-2xl bg-app-surface border border-app-border space-y-2">
             <div class="text-xs font-bold text-white">Создать новую дисциплину</div>
-            <div class="flex gap-2">
-              <input id="new-subj-title" placeholder="Название предмета..." class="flex-1 px-3 py-1.5 rounded-xl bg-app-card border border-app-border text-xs text-white">
-              <button onclick="addNewSubject()" class="px-3 py-1.5 rounded-xl bg-brand-600 text-white font-bold text-xs">Создать</button>
-            </div>
+            <input id="new-subj-title" oninput="suggestAndSelectSubjectIcon(this.value)" placeholder="Название дисциплины..." class="w-full px-3 py-2 rounded-xl bg-app-card border border-app-border text-xs text-white">
+            ${renderSubjectIconPicker(suggestSubjectIcon(''), 'new-subj-icon-picker')}
+            <button onclick="addNewSubject()" class="w-full py-2.5 rounded-xl bg-brand-600 text-white font-bold text-xs">Создать</button>
           </div>
           <div class="space-y-2" id="adm-subj-list"></div>
         </div>

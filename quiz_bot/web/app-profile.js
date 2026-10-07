@@ -44,30 +44,27 @@
     }
 
     let xpProgressPct = 100;
-    let nextRankText = "Макс. ранг достигнут!";
-    let levelTitle = `Уровень ${currentLvl.level} • ${userXp} XP`;
+    let levelTitle = `Уровень ${currentLvl.level}`;
+    let xpProgressText = "Макс. уровень";
 
     if (currentLvl.nextXp !== null) {
-      const neededForNext = currentLvl.nextXp - userXp;
       const levelSpan = currentLvl.nextXp - currentLvl.minXp;
       const currentSpanXp = userXp - currentLvl.minXp;
       xpProgressPct = Math.min(100, Math.max(5, Math.round((currentSpanXp / levelSpan) * 100)));
-      nextRankText = `До след. ранга: ${neededForNext} XP`;
-      levelTitle = `Уровень ${currentLvl.level} • ${userXp} / ${currentLvl.nextXp} XP`;
+      xpProgressText = `${userXp} / ${currentLvl.nextXp} XP`;
     }
 
     document.getElementById('profile-name').innerText = state.userName || 'Студент';
     document.getElementById('profile-username').innerText = state.userUsername || 'Telegram User';
     document.getElementById('profile-id').innerText = state.userId ? `ID: ${state.userId}` : 'Локальный режим';
     renderProfileAvatarElement(document.getElementById('profile-avatar'), state.userAvatar, state.userName);
-    document.getElementById('profile-xp-text').innerText = `${userXp} XP`;
     document.getElementById('profile-level-title').innerText = levelTitle;
-    document.getElementById('profile-next-rank-text').innerText = nextRankText;
+    document.getElementById('profile-xp-progress').innerText = xpProgressText;
     document.getElementById('profile-xp-bar').style.width = `${xpProgressPct}%`;
 
     const rankBadgeEl = document.getElementById('profile-rank-badge');
     if (rankBadgeEl) {
-      rankBadgeEl.innerHTML = `<span class="opacity-75 font-mono mr-1">Ур.${currentLvl.level}</span> ${currentLvl.title}`;
+      rankBadgeEl.textContent = currentLvl.title;
       rankBadgeEl.className = `px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${currentLvl.badgeClass}`;
     }
 
@@ -115,7 +112,8 @@
           subjects.push({
             id: sId,
             title: t.subject_title || (sId === 'default' ? 'Общие тесты' : sId),
-            emoji: t.subject_emoji || '📚'
+            emoji: t.subject_emoji || '📚',
+            icon_key: t.subject_icon_key || suggestSubjectIcon(t.subject_title || sId)
           });
         }
       });
@@ -172,9 +170,9 @@
 
       item.innerHTML = `
         <div class="flex items-center justify-between text-xs">
-          <div class="flex items-center space-x-2">
-            <span class="text-base">${escapeHtml(sub.emoji || '📚')}</span>
-            <span class="font-bold text-white">${escapeHtml(sub.title || 'Дисциплина')}</span>
+          <div class="min-w-0 flex items-center space-x-2">
+            <span class="w-10 h-10 shrink-0 flex items-center justify-center text-brand-300 rounded-2xl bg-app-surface border border-app-border">${renderSubjectIcon(sub.icon_key || suggestSubjectIcon(sub.title || sub.id), sub.emoji || '📚')}</span>
+            <span class="min-w-0 truncate font-bold text-white">${escapeHtml(sub.title || 'Дисциплина')}</span>
           </div>
           <span class="text-[11px] font-mono font-semibold text-brand-300">${totalTestsCount > 0 ? `${doneTestsCount}/${totalTestsCount} тестов` : 'Нет тестов'}</span>
         </div>
@@ -828,7 +826,7 @@
     if (!el) return;
     const c = (count !== undefined && count !== null) ? Number(count) : getAllSavedErrors().length;
     el.innerText = c;
-    el.className = `text-xs font-bold font-mono ${c > 0 ? 'text-rose-400 !text-rose-400' : 'text-slate-400'}`;
+    el.className = `text-xs font-bold font-mono ${c > 0 ? 'text-rose-400' : 'text-slate-300'}`;
   }
 
   function getResolvedErrors() {

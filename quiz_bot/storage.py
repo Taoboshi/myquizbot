@@ -345,6 +345,7 @@ def _ensure_subject_settings_columns(conn) -> None:
 
     for column_name, column_sql in [
         ("emoji", "TEXT DEFAULT ''"),
+        ("icon_key", "TEXT DEFAULT ''"),
         ("access_type", "TEXT NOT NULL DEFAULT 'public'"),
         ("code", "TEXT"),
     ]:
@@ -520,6 +521,7 @@ def _init_postgres_db() -> None:
                 subject_id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 emoji TEXT NOT NULL DEFAULT '',
+                icon_key TEXT NOT NULL DEFAULT '',
                 access_type TEXT NOT NULL DEFAULT 'public',
                 code TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -671,6 +673,7 @@ def _init_sqlite_db() -> None:
                 subject_id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 emoji TEXT NOT NULL DEFAULT '',
+                icon_key TEXT NOT NULL DEFAULT '',
                 access_type TEXT NOT NULL DEFAULT 'public',
                 code TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -864,7 +867,7 @@ def list_subject_settings() -> list[dict[str, Any]]:
         _ensure_subject_settings_columns(conn)
         rows = conn.execute(
             """
-            SELECT subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by
+            SELECT subject_id, title, emoji, icon_key, access_type, code, created_at, updated_at, updated_by
             FROM subject_settings
             ORDER BY LOWER(title)
             """
@@ -875,6 +878,7 @@ def list_subject_settings() -> list[dict[str, Any]]:
             "id": row["subject_id"],
             "title": row["title"],
             "emoji": row["emoji"] or "",
+            "icon_key": row["icon_key"] or "",
             "access_type": row["access_type"] or "public",
             "code": row["code"] or "",
             "created_at": row["created_at"],
@@ -935,7 +939,7 @@ def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
         _ensure_subject_settings_columns(conn)
         row = conn.execute(
             """
-            SELECT subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by
+            SELECT subject_id, title, emoji, icon_key, access_type, code, created_at, updated_at, updated_by
             FROM subject_settings
             WHERE subject_id = ?
             """,
@@ -949,6 +953,7 @@ def get_subject_setting(subject_id: str) -> dict[str, Any] | None:
         "id": row["subject_id"],
         "title": row["title"],
         "emoji": row["emoji"] or "",
+        "icon_key": row["icon_key"] or "",
         "access_type": row["access_type"] or "public",
         "code": row["code"] or "",
         "created_at": row["created_at"],
@@ -961,6 +966,7 @@ def set_subject_setting(
     subject_id: str,
     title: str,
     emoji: str = "",
+    icon_key: str | None = None,
     access_type: str | None = None,
     code: str | None = None,
     updated_by: int | None = None,
@@ -968,6 +974,7 @@ def set_subject_setting(
     subject_id = str(subject_id or "").strip()
     title = str(title or "").strip()
     emoji = str(emoji or "").strip()
+    icon_key_value = str(icon_key if icon_key is not None else "").strip()
 
     if not subject_id or not title:
         return
@@ -985,18 +992,19 @@ def set_subject_setting(
             conn.execute("DELETE FROM deleted_subjects WHERE subject_id = ?", (subject_id,))
         conn.execute(
             """
-            INSERT INTO subject_settings (subject_id, title, emoji, access_type, code, created_at, updated_at, updated_by)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+            INSERT INTO subject_settings (subject_id, title, emoji, icon_key, access_type, code, created_at, updated_at, updated_by)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(subject_id)
             DO UPDATE SET
                 title = excluded.title,
                 emoji = excluded.emoji,
+                icon_key = CASE WHEN excluded.icon_key = '' THEN subject_settings.icon_key ELSE excluded.icon_key END,
                 access_type = excluded.access_type,
                 code = excluded.code,
                 updated_at = CURRENT_TIMESTAMP,
                 updated_by = excluded.updated_by
             """,
-            (subject_id, title, emoji, access_type_value, code_value, updated_by),
+            (subject_id, title, emoji, icon_key_value, access_type_value, code_value, updated_by),
         )
         conn.commit()
     clear_cache()

@@ -192,6 +192,7 @@ def register_webapp_routes(app: Any) -> None:
                 "id": s_id,
                 "title": s_info.get("title", s_id),
                 "emoji": s_info.get("emoji", "📚"),
+                "icon_key": s_info.get("icon_key", ""),
                 "tests": tests_list,
                 "tests_count": len(tests_list),
             })
@@ -755,12 +756,17 @@ def register_webapp_routes(app: Any) -> None:
         sub_id = data.get("id") or data.get("title", "").strip().lower().replace(" ", "_")
         title = data.get("title", "").strip()
         emoji = data.get("emoji", "📚").strip()
+        icon_key = data.get("icon_key", "").strip() or "stethoscope"
 
         if not sub_id or not title:
             return jsonify({"error": "id and title required"}), 400
 
-        set_subject_setting(sub_id, title=title, emoji=emoji, updated_by=int(user_id or 0))
-        return jsonify({"success": True, "subject_id": sub_id, "title": title})
+        from .subject_icons import SUBJECT_ICON_KEYS
+        if icon_key not in SUBJECT_ICON_KEYS:
+            return jsonify({"error": "Неизвестный значок дисциплины"}), 400
+
+        set_subject_setting(sub_id, title=title, emoji=emoji, icon_key=icon_key, updated_by=int(user_id or 0))
+        return jsonify({"success": True, "subject_id": sub_id, "title": title, "icon_key": icon_key})
 
     @app.route("/api/admin/edit_subject", methods=["POST"])
     def api_admin_edit_subject():
@@ -772,12 +778,17 @@ def register_webapp_routes(app: Any) -> None:
         sub_id = data.get("id")
         title = data.get("title", "").strip()
         emoji = data.get("emoji", "📚").strip()
+        icon_key = data.get("icon_key", "").strip() or "stethoscope"
 
         if not sub_id or not title:
             return jsonify({"error": "id and title required"}), 400
 
-        set_subject_setting(sub_id, title=title, emoji=emoji, updated_by=int(user_id or 0))
-        return jsonify({"success": True, "subject_id": sub_id, "title": title, "emoji": emoji})
+        from .subject_icons import SUBJECT_ICON_KEYS
+        if icon_key not in SUBJECT_ICON_KEYS:
+            return jsonify({"error": "Неизвестный значок дисциплины"}), 400
+
+        set_subject_setting(sub_id, title=title, emoji=emoji, icon_key=icon_key, updated_by=int(user_id or 0))
+        return jsonify({"success": True, "subject_id": sub_id, "title": title, "emoji": emoji, "icon_key": icon_key})
 
     @app.route("/api/admin/delete_subject", methods=["POST"])
     def api_admin_delete_subject():

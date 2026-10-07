@@ -48,6 +48,32 @@ def _clean_title(value: str) -> str:
     return str(value or "").replace("_", " ").strip().title() or "Тесты"
 
 
+def _suggest_subject_icon(subject_id: str, title: str = "") -> str:
+    text = f"{subject_id} {title}".casefold()
+    suggestions = (
+        (("лучев", "radiolog", "рентген", "radiology", "imaging"), "scan"),
+        (("озиз", "здравоохран", "public health", "healthcare"), "hospital"),
+        (("серд", "карди", "heart", "cardio"), "heart"),
+        (("мозг", "невр", "brain", "neuro"), "brain"),
+        (("кост", "анатом", "bone", "anatomy"), "bone"),
+        (("легк", "пульмон", "lung", "pulmon"), "lungs"),
+        (("лекар", "фармак", "фармац", "drug", "pharma"), "pill"),
+        (("микроб", "бактер", "microb", "bacter"), "microscope"),
+        (("генет", "днк", "genetic", "dna"), "dna"),
+        (("глаз", "офтальм", "eye", "ophthalm"), "eye"),
+        (("зуб", "стомат", "tooth", "dental"), "tooth"),
+        (("кров", "гемат", "blood", "hemat"), "blood"),
+        (("дет", "педиатр", "ребен", "child", "pediatr"), "baby"),
+        (("кож", "дермат", "skin", "dermat"), "skin"),
+        (("иммун", "вирус", "вакцин", "immun", "virus"), "shield"),
+        (("лаборат", "хими", "лабо", "lab", "chem"), "flask"),
+    )
+    for keywords, icon_key in suggestions:
+        if any(keyword in text for keyword in keywords):
+            return icon_key
+    return "stethoscope"
+
+
 UNASSIGNED_SUBJECT_IDS = {"", "default", "unassigned", "none", "no_subject"}
 
 
@@ -60,6 +86,7 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
         subject_id = _slug(subject.get("id") or subject.get("slug") or subject.get("title") or "default")
         title = str(subject.get("title") or _clean_title(subject_id)).strip()
         emoji = str(subject.get("emoji") or "").strip()
+        icon_key = str(subject.get("icon_key") or "").strip()
         order = int(subject.get("order") or 100)
     else:
         subject_id = _slug(subject or "")
@@ -67,6 +94,7 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
             subject_id = _slug(path.parent.name)
         title = _clean_title(subject or subject_id)
         emoji = ""
+        icon_key = ""
         order = 100
 
     if path is not None and (not subject_id or subject_id == "default"):
@@ -103,6 +131,7 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
         "id": subject_id,
         "title": title,
         "emoji": emoji,
+        "icon_key": icon_key or _suggest_subject_icon(subject_id, title),
         "order": order,
     }
 
@@ -117,6 +146,7 @@ def _register_subject(subject: dict[str, Any]) -> None:
     SUBJECTS[subject_id] = {
         "title": existing.get("title") or subject.get("title") or _clean_title(subject_id),
         "emoji": existing.get("emoji") or subject.get("emoji") or "",
+        "icon_key": existing.get("icon_key") or subject.get("icon_key") or "",
         "order": existing.get("order", subject.get("order", 100)),
     }
 
@@ -439,6 +469,7 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
         subjects[subject_id] = {
             "title": info.get("subject_title") or SUBJECTS.get(subject_id, {}).get("title") or _clean_title(subject_id),
             "emoji": info.get("subject_emoji") or SUBJECTS.get(subject_id, {}).get("emoji") or "",
+            "icon_key": SUBJECTS.get(subject_id, {}).get("icon_key") or _suggest_subject_icon(subject_id, info.get("subject_title", "")),
             "order": SUBJECTS.get(subject_id, {}).get("order", 100),
         }
 
@@ -453,7 +484,9 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
             if (effective_test_info(t_id).get("subject_id") or "default") == subject_id
         ]
         if len(tests_in_s) > 0:
-            subjects.setdefault(subject_id, info)
+            subject_info = dict(info)
+            subject_info.setdefault("icon_key", _suggest_subject_icon(subject_id, subject_info.get("title", "")))
+            subjects.setdefault(subject_id, subject_info)
 
     if list_subject_settings is not None:
         try:
@@ -464,6 +497,7 @@ def get_subjects() -> list[tuple[str, dict[str, Any]]]:
                 subjects[s_id] = {
                     "title": subject.get("title") or _clean_title(s_id),
                     "emoji": subject.get("emoji") or "",
+                    "icon_key": subject.get("icon_key") or _suggest_subject_icon(s_id, subject.get("title", "")),
                     "order": 100,
                 }
         except Exception:

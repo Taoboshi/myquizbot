@@ -15,9 +15,11 @@ class MiniAppAssetTestCase(unittest.TestCase):
         modules = (
             "app-data.js",
             "app-core.js",
+            "app-subject-icons.js",
             "app-quiz.js",
             "app-profile.js",
             "app-admin.js",
+            "app-subject-admin.js",
             "app-settings.js",
         )
         positions = []
@@ -31,9 +33,11 @@ class MiniAppAssetTestCase(unittest.TestCase):
         for module in (
             "app-data.js",
             "app-core.js",
+            "app-subject-icons.js",
             "app-quiz.js",
             "app-profile.js",
             "app-admin.js",
+            "app-subject-admin.js",
             "app-settings.js",
         ):
             with self.subTest(module=module):
