@@ -166,6 +166,45 @@ class AdminApiTestCase(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 200)
 
+    def test_revealed_answer_is_not_double_counted_at_attempt_finish(self):
+        error_response = self.client.post(
+            "/api/errors/record",
+            headers=self._auth_header(99999),
+            json={
+                "user_id": 99999,
+                "test_id": "oziz_1_200",
+                "question_id": 1,
+                "user_answer": None,
+            },
+        )
+        self.assertEqual(error_response.status_code, 200)
+
+        attempt_response = self.client.post(
+            "/api/attempts/record",
+            headers=self._auth_header(99999),
+            json={
+                "user_id": 99999,
+                "test_id": "oziz_1_200",
+                "correct": 0,
+                "answered": 1,
+                "duration": 10,
+                "mode": "normal",
+                # Older clients sent this list; errors are already recorded immediately.
+                "wrong_questions": [1],
+            },
+        )
+        self.assertEqual(attempt_response.status_code, 200)
+
+        import quiz_bot.storage as storage
+
+        with storage.db_connect() as conn:
+            row = conn.execute(
+                "SELECT wrong_count FROM all_time_errors WHERE user_id = ? AND test_id = ? AND question_index = ?",
+                (99999, "oziz_1_200", 0),
+            ).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["wrong_count"], 1)
+
     def test_user_rating_visibility_and_reset_api(self):
         # Initial rating shows student 99999
         res_r1 = self.client.get(

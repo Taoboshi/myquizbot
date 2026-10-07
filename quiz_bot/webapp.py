@@ -26,7 +26,6 @@ from .storage import (
     clear_all_time_errors,
     db_connect,
     delete_subject_setting,
-    ensure_user_stats,
     get_all_time_error_indices,
     is_user_rating_hidden,
     mark_all_time_error_resolved,
@@ -414,7 +413,10 @@ def register_webapp_routes(app: Any) -> None:
                 )
                 attempt_id = cur.lastrowid
 
-            ensure_user_stats(uid, test_id)
+            conn.execute(
+                "INSERT INTO user_stats (user_id, test_id) VALUES (?, ?) ON CONFLICT(user_id, test_id) DO NOTHING",
+                (uid, test_id),
+            )
             conn.execute(
                 """
                 UPDATE user_stats

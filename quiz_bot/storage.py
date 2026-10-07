@@ -247,6 +247,14 @@ class PgConnectionWrapper:
 
 
 
+class SQLiteConnection(sqlite3.Connection):
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            return super().__exit__(exc_type, exc, tb)
+        finally:
+            self.close()
+
+
 def _configure_sqlite_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -264,7 +272,7 @@ def db_connect():
         return PgConnectionWrapper()
 
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, factory=SQLiteConnection)
     return _configure_sqlite_connection(conn)
 
 
@@ -1893,4 +1901,3 @@ def list_support_feedback(limit: int = 50) -> list[dict[str, Any]]:
             (limit,)
         ).fetchall()
         return [dict(r) for r in rows]
-
