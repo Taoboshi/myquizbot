@@ -651,29 +651,59 @@
       color: #be123c !important;
     }
 
-    /* Dynamic Floating Header Styling & Transitions */
+    /* Permanent Fixed Top Clear Glass Header */
     #app-header {
-      position: sticky !important;
+      position: fixed !important;
       top: 0 !important;
-      z-index: 40 !important;
-      background: var(--header-glass) !important;
-      backdrop-filter: var(--glass-blur) !important;
-      -webkit-backdrop-filter: var(--glass-blur) !important;
-      border-bottom: 1px solid var(--glass-border) !important;
-      box-shadow: var(--glass-shadow) !important;
-      transition: padding 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                  background 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                  box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                  border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      left: 0 !important;
+      right: 0 !important;
+      max-width: 448px !important;
+      margin: 0 auto !important;
+      z-index: 45 !important;
+      background: rgba(13, 17, 26, 0.72) !important;
+      backdrop-filter: blur(24px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
+      box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.04), 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+      padding-left: 14px !important;
+      padding-right: 14px !important;
+      padding-top: max(env(safe-area-inset-top, 0px), 12px) !important;
+      padding-bottom: 12px !important;
+      box-sizing: border-box !important;
+      transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
     }
     #app-header.header-scrolled {
-      padding-top: max(env(safe-area-inset-top), 8px) !important;
-      padding-bottom: 7px !important;
-      background: var(--nav-glass) !important;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), var(--glass-highlight) !important;
-      border-bottom-color: var(--glass-border-hover) !important;
+      background: rgba(11, 15, 23, 0.88) !important;
+      box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.08), 0 12px 36px rgba(0, 0, 0, 0.45) !important;
+      border-bottom-color: rgba(255, 255, 255, 0.14) !important;
     }
-    /* Uniform icon buttons (Back, Logo, Search) */
+    body.light-theme #app-header {
+      background: rgba(255, 255, 255, 0.76) !important;
+      backdrop-filter: blur(24px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+      box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.8), 0 6px 20px rgba(0, 0, 0, 0.05) !important;
+    }
+    body.light-theme #app-header.header-scrolled {
+      background: rgba(255, 255, 255, 0.90) !important;
+      box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.9), 0 10px 28px rgba(0, 0, 0, 0.08) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.12) !important;
+    }
+
+    /* Fixed Header Spacing for Scrollable Content */
+    #app-body {
+      padding-top: calc(max(env(safe-area-inset-top, 0px), 12px) + 58px) !important;
+    }
+
+    #header-title {
+      color: var(--text-main) !important;
+      font-size: 15px !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.02em !important;
+      line-height: 1.2 !important;
+    }
+
+    /* Uniform Clear Glass Icon Buttons (Back, Logo, Search) */
     .header-icon-btn {
       width: 36px !important;
       min-width: 36px !important;
@@ -686,30 +716,59 @@
       align-items: center !important;
       justify-content: center !important;
       box-sizing: border-box !important;
-      background: var(--glass-surface) !important;
-      border: 1px solid var(--glass-border) !important;
-      box-shadow: var(--glass-highlight) !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.10) !important;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12) !important;
       color: #94a3b8 !important;
-      transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
       cursor: pointer !important;
       padding: 0 !important;
+      margin: 0 !important;
       outline: none !important;
       -webkit-tap-highlight-color: transparent !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
     }
-    .header-icon-btn:hover {
-      border-color: var(--glass-border-hover) !important;
-      color: #e2e8f0 !important;
+    body.light-theme .header-icon-btn {
+      background: rgba(0, 0, 0, 0.04) !important;
+      border: 1px solid rgba(0, 0, 0, 0.08) !important;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+      color: #475569 !important;
     }
     .header-icon-btn:active {
       transform: scale(0.92) !important;
     }
+    /* Strictly suppress sticky glowing borders/outlines on focus and active */
     .header-icon-btn:focus,
     .header-icon-btn:focus-visible {
       outline: none !important;
-      box-shadow: var(--glass-highlight) !important;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12) !important;
+      border-color: rgba(255, 255, 255, 0.10) !important;
+      color: #94a3b8 !important;
+    }
+    body.light-theme .header-icon-btn:focus,
+    body.light-theme .header-icon-btn:focus-visible {
+      outline: none !important;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.08) !important;
+      color: #475569 !important;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .header-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.09) !important;
+        border-color: rgba(255, 255, 255, 0.20) !important;
+        color: #f1f5f9 !important;
+      }
+      body.light-theme .header-icon-btn:hover {
+        background: rgba(0, 0, 0, 0.07) !important;
+        border-color: rgba(0, 0, 0, 0.14) !important;
+        color: #0f172a !important;
+      }
     }
     #header-logo-icon.header-icon-btn {
-      padding: 3px !important;
+      padding: 4px !important;
       overflow: hidden !important;
     }
     #header-logo-icon.header-icon-btn img {
@@ -717,10 +776,6 @@
       height: 100% !important;
       object-fit: contain !important;
       border-radius: 8px !important;
-    }
-    body.light-theme #app-header.header-scrolled {
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
-      border-bottom-color: rgba(0, 0, 0, 0.08) !important;
     }
   </style>
 </head>
@@ -733,14 +788,14 @@
   </div>
 
   <!-- Mobile App Wrapper -->
-  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col app-wrapper relative shadow-2xl overflow-hidden">
+  <div class="w-full max-w-md mx-auto min-h-screen flex flex-col app-wrapper relative shadow-2xl">
 
     <!-- Top App Bar / Header -->
-    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3.5 py-2.5 flex items-center justify-between safe-top">
+    <header id="app-header" class="glass px-3.5 py-2.5 flex items-center justify-between safe-top">
       <div class="flex items-center space-x-2.5 min-w-0 flex-1 mr-2">
         <!-- Upgraded Ergonomic Back Button (identical 36x36 size and style to search button) -->
         <button id="nav-back-btn" class="header-icon-btn hidden" onclick="goBack()" title="Назад">
-          <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <!-- Logo (Tap 5 times for secret Admin Unlock) - shown on 3 main tabs -->
         <div id="header-logo-icon" onclick="handleLogoTap()" class="header-icon-btn" title="ohTest">
@@ -748,7 +803,7 @@
         </div>
         <!-- Title & Subtitle with Tap-to-Scroll-Top (only visible on 3 main tabs) -->
         <div id="header-title-container" class="min-w-0 flex-1 cursor-pointer select-none" onclick="scrollToAppTop()" title="Нажмите, чтобы вернуться наверх">
-          <h1 id="header-title" class="text-sm font-extrabold text-white tracking-tight leading-tight truncate">Главная</h1>
+          <h1 id="header-title" class="text-sm font-extrabold tracking-tight leading-tight truncate">Главная</h1>
           <span id="header-subtitle" class="hidden text-[10px] sm:text-[11px] text-slate-400 font-medium leading-tight truncate"></span>
         </div>
       </div>
@@ -757,7 +812,7 @@
       <div class="flex items-center space-x-1.5 shrink-0">
         <!-- Quick Search Button in Header (identical 36x36 size and style to back button) -->
         <button id="header-search-btn" class="header-icon-btn" onclick="handleHeaderSearchClick()" title="Поиск">
-          <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </button>
         <!-- Matrix / Grid view in solver -->
         <button id="btn-grid-modal" class="hidden h-8 px-2.5 py-1 rounded-xl bg-brand-950/40 border border-brand-500/40 text-[11px] font-bold text-brand-300 hover:bg-brand-900/50 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm shrink-0" onclick="toggleMatrixModal()">
@@ -2473,12 +2528,36 @@
     if (bodyEl) {
       bodyEl.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Detect which view is currently active in the DOM
+  function getCurrentActiveView() {
+    // Nested views where Back button replaces Logo
+    const nestedViews = [
+      'view-tests', 'view-hub', 'view-solver', 'view-result',
+      'view-flashcards', 'view-search', 'view-admin'
+    ];
+    for (const v of nestedViews) {
+      const el = document.getElementById(v);
+      if (el && !el.classList.contains('hidden')) return v;
+    }
+    // Main tab views where Logo and title are present
+    if (state.currentTab === 'profile') {
+      const el = document.getElementById('view-tab-profile');
+      if (el && !el.classList.contains('hidden')) return 'view-tab-profile';
+    }
+    if (state.currentTab === 'settings') {
+      const el = document.getElementById('view-tab-settings');
+      if (el && !el.classList.contains('hidden')) return 'view-tab-settings';
+    }
+    return 'view-home';
   }
 
   // Header Title & Logo/Back state manager:
-  // - Main 3 tabs: Shows Logo, hides Back btn, shows text ("Главная", "Профиль", "Настройки")
+  // - Main 3 tabs (Главная, Профиль, Настройки): Shows Logo, hides Back btn, shows text ("Главная", "Профиль", "Настройки")
   // - Subpages / Nested views: Hides Logo, shows Back btn (replacing logo in same 36x36 slot), hides text completely!
-  function updateHeaderNavState(tabName = null) {
+  function updateHeaderNavState() {
     const logoEl = document.getElementById('header-logo-icon');
     const backEl = document.getElementById('nav-back-btn');
     const titleContainer = document.getElementById('header-title-container');
@@ -2486,45 +2565,52 @@
     const subEl = document.getElementById('header-subtitle');
     const searchBtn = document.getElementById('header-search-btn');
 
-    const currentTab = tabName || state.currentTab;
-    const isMainTabRoot = (currentTab === 'home' && (!state.homeActiveView || state.homeActiveView === 'home')) ||
-                          (currentTab === 'profile') ||
-                          (currentTab === 'settings');
+    const activeView = getCurrentActiveView();
+    const isMainTabRoot = (activeView === 'view-home') ||
+                          (activeView === 'view-tab-profile') ||
+                          (activeView === 'view-tab-settings');
 
     if (isMainTabRoot) {
-      // Show Logo, hide Back
+      // 1. Root main screen: Show Logo, Hide Back button
       if (logoEl) logoEl.classList.remove('hidden');
       if (backEl) backEl.classList.add('hidden');
-      // Show Text
+
+      // 2. Show Title text strictly for the 3 main screens
       if (titleContainer) titleContainer.classList.remove('hidden');
       if (titleEl) {
-        if (currentTab === 'home') titleEl.innerText = "Главная";
-        else if (currentTab === 'profile') titleEl.innerText = "Профиль";
-        else if (currentTab === 'settings') titleEl.innerText = "Настройки";
+        if (activeView === 'view-home') titleEl.innerText = "Главная";
+        else if (activeView === 'view-tab-profile') titleEl.innerText = "Профиль";
+        else if (activeView === 'view-tab-settings') titleEl.innerText = "Настройки";
       }
       if (subEl) {
         subEl.innerText = '';
         subEl.classList.add('hidden');
       }
-      // Show search only on home catalog, hide on profile & settings
+
+      // 3. Search button (лупа): ONLY on Home catalog; strictly hidden on Profile & Settings
       if (searchBtn) {
-        if (currentTab === 'home') searchBtn.classList.remove('hidden');
-        else searchBtn.classList.add('hidden');
+        if (activeView === 'view-home') {
+          searchBtn.classList.remove('hidden');
+        } else {
+          searchBtn.classList.add('hidden');
+        }
       }
     } else {
-      // Nested screen: Logo is replaced by Back button (same 36x36 slot)
+      // Nested screen: Logo is hidden, Back button replaces Logo in exact 36x36 slot
       if (logoEl) logoEl.classList.add('hidden');
       if (backEl) backEl.classList.remove('hidden');
-      // Text is completely hidden on nested views
+
+      // Title text completely hidden on all nested screens
       if (titleContainer) titleContainer.classList.add('hidden');
       if (titleEl) titleEl.innerText = '';
       if (subEl) {
         subEl.innerText = '';
         subEl.classList.add('hidden');
       }
-      // Search button visibility on nested views
+
+      // Search button (лупа) only on screens with contextual list search:
       if (searchBtn) {
-        if (state.homeActiveView === 'tests' || state.homeActiveView === 'hub' || state.homeActiveView === 'solver') {
+        if (activeView === 'view-tests' || activeView === 'view-hub' || activeView === 'view-solver') {
           searchBtn.classList.remove('hidden');
         } else {
           searchBtn.classList.add('hidden');
@@ -2533,18 +2619,21 @@
     }
   }
 
-  // Setup scroll listener for app-body to toggle header-scrolled class
+  // Setup scroll listener for app-body and window to toggle header-scrolled class
   function setupHeaderScrollObserver() {
     const bodyEl = document.getElementById('app-body');
     const headerEl = document.getElementById('app-header');
-    if (!bodyEl || !headerEl) return;
-    bodyEl.addEventListener('scroll', () => {
-      if (bodyEl.scrollTop > 18) {
+    if (!headerEl) return;
+    const onScroll = () => {
+      const scrollY = (bodyEl ? bodyEl.scrollTop : 0) || window.scrollY || 0;
+      if (scrollY > 12) {
         headerEl.classList.add('header-scrolled');
       } else {
         headerEl.classList.remove('header-scrolled');
       }
-    }, { passive: true });
+    };
+    if (bodyEl) bodyEl.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
 
   // Context-aware Search Button: searches info strictly on the CURRENT page!
@@ -2553,32 +2642,34 @@
     const btn = document.getElementById('header-search-btn');
     if (btn) btn.blur(); // Remove focus so it never stays glowing
 
+    const activeView = getCurrentActiveView();
     // 1. Inside Solver, Flashcards, or Hub: search questions of this specific test
-    if (state.homeActiveView === 'solver' || state.homeActiveView === 'hub' || state.homeActiveView === 'flashcards' || state.homeActiveView === 'search') {
-      if (state.homeActiveView !== 'search') {
-        openLiveSearch();
-      } else {
-        const inp = document.getElementById('live-search-input');
-        if (inp) inp.focus();
-      }
+    if (activeView === 'view-solver' || activeView === 'view-hub' || activeView === 'view-flashcards') {
+      openLiveSearch();
       return;
     }
 
     // 2. On Subject Tests list: search tests within this specific subject
-    if (state.homeActiveView === 'tests') {
-      const q = prompt(`Поиск тестов по предмету «${state.activeSubjectTitle}»:`);
-      if (q !== null) {
-        filterSubjectTestsByQuery(q.trim().toLowerCase());
-      }
+    if (activeView === 'view-tests') {
+      setTimeout(() => {
+        const q = prompt(`Поиск тестов по предмету «${state.activeSubjectTitle || 'предмету'}»:`);
+        if (btn) btn.blur();
+        if (q !== null) {
+          filterSubjectTestsByQuery(q.trim().toLowerCase());
+        }
+      }, 50);
       return;
     }
 
     // 3. On Home Catalog: search subjects on the catalog page
-    if (state.currentTab === 'home') {
-      const q = prompt('Поиск предмета в каталоге:');
-      if (q !== null) {
-        filterCatalogByQuery(q.trim().toLowerCase());
-      }
+    if (activeView === 'view-home') {
+      setTimeout(() => {
+        const q = prompt('Поиск предмета в каталоге:');
+        if (btn) btn.blur();
+        if (q !== null) {
+          filterCatalogByQuery(q.trim().toLowerCase());
+        }
+      }, 50);
       return;
     }
   }
@@ -2947,7 +3038,6 @@
     hideAllViews();
     state.homeActiveView = 'solver';
     document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
     document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
@@ -3332,7 +3422,6 @@
 
     hideAllViews();
     document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
     updateTelegramBackButton();
@@ -3564,6 +3653,7 @@
       state.homeActiveView = 'result';
       const resultView = document.getElementById('view-result');
       if (resultView) resultView.classList.remove('hidden');
+      updateHeaderNavState();
       updateTelegramBackButton();
 
       let correct = 0;
@@ -3789,6 +3879,7 @@
       hideAllViews();
       const resView = document.getElementById('view-result');
       if (resView) resView.classList.remove('hidden');
+      updateHeaderNavState();
     }
   }
 
@@ -5186,12 +5277,10 @@
     hideAllViews();
     state.homeActiveView = 'solver';
     document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
     document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
-    document.getElementById('header-title').innerText = "Разбор ошибок";
-    document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
+    updateHeaderNavState();
     renderCurrentQuestion();
     updateTelegramBackButton();
   }
@@ -5218,12 +5307,10 @@
     hideAllViews();
     state.homeActiveView = 'solver';
     document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
     document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
-    document.getElementById('header-title').innerText = "Решение ошибки";
-    document.getElementById('header-subtitle').innerText = `Вопрос #${qid}`;
+    updateHeaderNavState();
     renderCurrentQuestion();
     updateTelegramBackButton();
   }
@@ -5382,12 +5469,10 @@
     hideAllViews();
     state.homeActiveView = 'solver';
     document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
     document.getElementById('btn-grid-modal').classList.remove('hidden');
     document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
     document.getElementById('btn-finish-early').classList.remove('hidden');
-    document.getElementById('header-title').innerText = "Тренировка избранного";
-    document.getElementById('header-subtitle').innerText = `${state.activeQuestions.length} вопросов`;
+    updateHeaderNavState();
     renderCurrentQuestion();
     updateTelegramBackButton();
   }
@@ -5645,11 +5730,10 @@
 
   async function openAdminDashboard() {
     triggerHaptic('light');
+    state.homeActiveView = 'admin';
     hideAllViews();
     document.getElementById('view-admin').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
-    document.getElementById('header-title').innerText = "Админ-панель";
-    document.getElementById('header-subtitle').innerText = "Управление системой";
+    updateHeaderNavState();
     updateTelegramBackButton();
 
     updateAdminStats();
@@ -7110,8 +7194,7 @@
       return;
     }
 
-    // Double tap on Home: reset back to root catalog
-    if (tabId === 'home' && state.currentTab === 'home') {
+    if (tabId === 'home') {
       state.homeActiveView = 'home';
       viewStack = ['home'];
     }
@@ -7133,46 +7216,18 @@
     });
 
     hideAllViews();
-    document.getElementById('nav-back-btn').classList.add('hidden');
-    document.getElementById('btn-grid-modal').classList.add('hidden');
-    document.getElementById('btn-fav-toggle')?.classList.add('hidden');
-    document.getElementById('btn-finish-early').classList.add('hidden');
 
     if (tabId === 'home') {
-      const targetView = state.homeActiveView || 'home';
-      if (targetView === 'solver') {
-        document.getElementById('view-solver').classList.remove('hidden');
-        document.getElementById('btn-grid-modal').classList.remove('hidden');
-        document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
-        document.getElementById('btn-finish-early').classList.remove('hidden');
-        updateHeaderNavState();
-        renderCurrentQuestion();
-      } else if (targetView === 'hub') {
-        openTestHub();
-      } else if (targetView === 'tests') {
-        document.getElementById('view-tests').classList.remove('hidden');
-        updateHeaderNavState();
-      } else if (targetView === 'result') {
-        document.getElementById('view-result').classList.remove('hidden');
-        updateHeaderNavState();
-      } else if (targetView === 'flashcards') {
-        openFlashcards();
-      } else if (targetView === 'search') {
-        openLiveSearch();
-      } else {
-        document.getElementById('view-home').classList.remove('hidden');
-        updateHeaderNavState('home');
-        renderActiveAttemptBanner();
-      }
+      document.getElementById('view-home').classList.remove('hidden');
+      renderActiveAttemptBanner();
     } else if (tabId === 'profile') {
       document.getElementById('view-tab-profile').classList.remove('hidden');
-      updateHeaderNavState('profile');
       updateProfileFullView();
     } else if (tabId === 'settings') {
       document.getElementById('view-tab-settings').classList.remove('hidden');
-      updateHeaderNavState('settings');
     }
 
+    updateHeaderNavState();
     updateTelegramBackButton();
   }
 
@@ -7194,9 +7249,9 @@
   function updateTelegramBackButton() {
     const tg = window.Telegram?.WebApp;
     if (tg?.BackButton) {
-      if (state.currentTab === 'home' && state.homeActiveView !== 'home') {
-        tg.BackButton.show();
-      } else if (viewStack.length > 1) {
+      const activeView = getCurrentActiveView();
+      const isRoot = (activeView === 'view-home' || activeView === 'view-tab-profile' || activeView === 'view-tab-settings');
+      if (!isRoot) {
         tg.BackButton.show();
       } else {
         tg.BackButton.hide();
@@ -7206,15 +7261,26 @@
 
   function goBack() {
     triggerHaptic('light');
-    if (state.homeActiveView === 'solver' || state.homeActiveView === 'flashcards' || state.homeActiveView === 'search') {
-      openTestHub();
+    const activeView = getCurrentActiveView();
+    if (activeView === 'view-solver' || activeView === 'view-flashcards' || activeView === 'view-search' || activeView === 'view-result') {
+      if (state.activeTestId) {
+        openTestHub();
+      } else {
+        state.homeActiveView = 'home';
+        switchTab('home');
+      }
       return;
     }
-    if (state.homeActiveView === 'hub') {
-      openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
+    if (activeView === 'view-hub') {
+      if (state.activeSubjectId) {
+        openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
+      } else {
+        state.homeActiveView = 'home';
+        switchTab('home');
+      }
       return;
     }
-    if (state.homeActiveView === 'tests') {
+    if (activeView === 'view-tests' || activeView === 'view-admin') {
       state.homeActiveView = 'home';
       viewStack = ['home'];
       switchTab('home');
@@ -7223,27 +7289,11 @@
     if (viewStack.length > 1) {
       viewStack.pop();
       const prev = viewStack[viewStack.length - 1];
-      hideAllViews();
-      document.getElementById('btn-grid-modal').classList.add('hidden');
-      document.getElementById('btn-fav-toggle')?.classList.add('hidden');
-      document.getElementById('btn-finish-early').classList.add('hidden');
-
-      if (prev === 'home') {
-        state.homeActiveView = 'home';
-        document.getElementById('view-home').classList.remove('hidden');
-        updateHeaderNavState('home');
-        renderActiveAttemptBanner();
-      } else if (prev === 'tests') {
-        state.homeActiveView = 'tests';
-        document.getElementById('view-tests').classList.remove('hidden');
-        updateHeaderNavState();
-      } else if (prev === 'hub') {
-        openTestHub();
-      } else if (prev === 'admin') {
-        openAdminDashboard();
-      }
+      if (prev === 'hub') openTestHub();
+      else if (prev === 'tests') openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
+      else if (prev === 'admin') openAdminDashboard();
+      else switchTab('home');
     } else {
-      state.homeActiveView = 'home';
       switchTab('home');
     }
     updateTelegramBackButton();
