@@ -2996,6 +2996,7 @@
       qIndex: state.currentQIndex,
       total: state.activeQuestions.length,
       userAnswers: state.userAnswers,
+      revealedAnswers: [...state.revealedAnswers],
       timerSeconds: state.timerSeconds,
       timestamp: Date.now()
     };
@@ -3068,6 +3069,7 @@
     state.currentMode = state.activeAttempt.mode;
     state.currentQIndex = state.activeAttempt.qIndex;
     state.userAnswers = state.activeAttempt.userAnswers || {};
+    state.revealedAnswers = new Set(state.activeAttempt.revealedAnswers || []);
     state.timerSeconds = state.activeAttempt.timerSeconds || 0;
 
     hideAllViews();
@@ -3524,9 +3526,17 @@
 
     const showBtnText = document.getElementById('solver-btn-show-text');
     if (isRevealed || ans !== undefined) {
-      showBtnText.innerText = '✓ Ответ показан';
+      showBtnText.innerText = isRevealed ? '✓ Ответ открыт' : '✓ Вы ответили';
     } else {
       showBtnText.innerText = 'Показать ответ';
+    }
+    const answerNote = document.getElementById('solver-answer-note');
+    if (answerNote) {
+      answerNote.innerText = isRevealed
+        ? 'Вопрос добавлен в «Ошибки» для повторения.'
+        : 'Неверный ответ или открытый ответ попадёт в «Ошибки» для повторения.';
+      answerNote.classList.toggle('text-amber-300', isRevealed);
+      answerNote.classList.toggle('text-slate-400', !isRevealed);
     }
 
     // Render Options with unmistakable Green/Red Feedback. ZERO EXPLANATION BOX!
@@ -3987,19 +3997,35 @@
       state.activeQuestions.forEach((q, idx) => {
         const item = document.createElement('button');
         const ans = state.userAnswers[q.id];
+        const isRevealed = state.revealedAnswers.has(q.id);
         let color = "bg-app-surface border-app-border text-slate-300";
+        let marker = '';
+        let status = 'не отвечен';
 
         if (ans !== undefined) {
-          if (ans === q.correct) color = "bg-emerald-600 border-emerald-500 text-white font-bold";
-          else color = "bg-rose-600 border-rose-500 text-white font-bold";
+          if (Number(ans) === Number(getCorrectIndex(q))) {
+            color = "bg-emerald-600 border-emerald-500 text-white font-bold";
+            marker = '✓';
+            status = 'верно';
+          } else {
+            color = "bg-rose-600 border-rose-500 text-white font-bold";
+            marker = '×';
+            status = 'ошибка';
+          }
+        } else if (isRevealed) {
+          color = "bg-amber-500/20 border-amber-400 text-amber-200 font-bold";
+          marker = '!';
+          status = 'ответ открыт, добавлен в ошибки';
         }
 
         if (idx === state.currentQIndex) {
           color += " ring-2 ring-brand-400 ring-offset-2 ring-offset-app-card";
         }
 
-        item.className = `p-3 rounded-xl border text-xs font-mono font-bold transition active:scale-95 ${color}`;
-        item.innerText = idx + 1;
+        item.className = `relative p-3 rounded-xl border text-xs font-mono font-bold transition active:scale-95 ${color}`;
+        item.setAttribute('aria-label', `Вопрос ${idx + 1}: ${status}`);
+        item.title = `Вопрос ${idx + 1}: ${status}`;
+        item.innerHTML = `${idx + 1}${marker ? `<span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-app-card border border-current text-[10px] leading-[14px]">${marker}</span>` : ''}`;
         item.onclick = () => {
           state.currentQIndex = idx;
           renderCurrentQuestion();
