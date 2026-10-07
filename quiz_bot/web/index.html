@@ -1181,7 +1181,7 @@
 
         <!-- Four Core Quiz Modes (2x2 Grid) -->
         <div id="hub-quiz-modes" class="space-y-2">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Режимы прохождения</span>
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Режимы прохождения теста</span>
           
           <div class="grid grid-cols-2 gap-2.5">
             <!-- Normal Mode -->
@@ -1279,15 +1279,18 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 gap-2">
-            <button onclick="openLiveSearch()" class="p-3 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 text-left active:scale-95 transition">
-              <div class="text-brand-400 mb-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <button onclick="openLiveSearch()" class="w-full p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center group-hover:scale-110 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               </div>
-              <div class="text-xs font-bold text-white">Поиск вопроса</div>
-              <div class="text-[10px] text-slate-400">По тексту и номеру</div>
-            </button>
-          </div>
+              <div>
+                <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">Поиск вопроса</h4>
+                <p class="text-[11px] text-slate-400">По тексту и номеру</p>
+              </div>
+            </div>
+            <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
+          </button>
 
           <button id="hub-reset-errors" onclick="confirmResetErrors()" class="w-full py-2.5 rounded-xl bg-white/[0.035] hover:bg-rose-500/10 border border-white/[0.08] hover:border-rose-500/30 text-slate-300 hover:text-rose-300 text-xs font-medium active:scale-95 transition flex items-center justify-center gap-2 shadow-sm">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
