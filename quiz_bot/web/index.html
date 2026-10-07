@@ -1183,6 +1183,7 @@
             Далее →
           </button>
         </div>
+        <p id="solver-answer-note" class="px-2 text-center text-[10px] leading-relaxed text-slate-400">Неверный ответ или открытый ответ попадёт в «Ошибки» для повторения.</p>
       </section>
 
       <!-- ========================================== -->
@@ -1309,7 +1310,7 @@
         <!-- Quizlet Round Summary Screen (Shown when all cards in round are finished) -->
         <div id="fc-finish-screen" class="hidden space-y-4">
           <div class="p-6 rounded-3xl bg-app-card border border-app-border text-center space-y-4 shadow-xl">
-            <div class="text-4xl mx-auto">🎉</div>
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
             <h3 class="text-base font-extrabold text-white">Раунд завершён!</h3>
             <p class="text-xs text-slate-300">Вы прошли текущий набор карточек</p>
 
@@ -1775,6 +1776,12 @@
         </div>
         <div id="matrix-grid-box" class="flex-1 overflow-y-auto grid grid-cols-5 gap-2 p-1 hide-scrollbar max-h-[55vh]">
           <!-- Filled dynamically -->
+        </div>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400" aria-label="Обозначения сетки вопросов">
+          <span><b class="text-slate-300">1</b> Не отвечен</span>
+          <span><b class="text-emerald-400">✓</b> Верно</span>
+          <span><b class="text-rose-400">×</b> Ошибка</span>
+          <span><b class="text-amber-300">!</b> Ответ открыт</span>
         </div>
         <button onclick="toggleMatrixModal()" class="w-full py-2.5 rounded-xl bg-app-surface border border-app-border text-xs font-semibold text-slate-300 hover:text-white">
           Закрыть
@@ -3503,7 +3510,7 @@
 
     const nextBtn = document.getElementById('solver-next-btn');
     if (state.currentQIndex === total - 1) {
-      nextBtn.innerHTML = 'Завершить 🎯';
+      nextBtn.innerHTML = 'Завершить';
       nextBtn.className = "px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-bold text-white active:scale-95 transition shadow-lg shadow-brand-600/30";
     } else {
       nextBtn.innerHTML = 'Далее →';
@@ -3832,7 +3839,7 @@
         if (resTitle) resTitle.innerText = 'Тренировка избранного завершена!';
         const resSub = document.getElementById('result-subtitle');
         if (resSub) resSub.innerText = 'Вопросы из избранного';
-        if (iconBox) iconBox.innerText = '⭐';
+        if (iconBox) iconBox.innerHTML = `<svg class="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>`;
         if (msgBanner) {
           msgBanner.classList.remove('hidden');
           msgBanner.className = 'p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs';
@@ -3842,15 +3849,15 @@
         }
         if (btnBox) {
           btnBox.innerHTML = remainingFavorites > 0
-            ? `<button onclick="startNextFavoriteGroup()" class="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2"><span>▶</span> Следующая группа (${remainingFavorites})</button>`
+            ? `<button onclick="startNextFavoriteGroup()" class="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Следующая группа (${remainingFavorites})</button>`
             : `<button onclick="finishFavoriteReview()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition">К избранному</button>`;
         }
       } else if (state.currentMode === 'errors_solve') {
         const resTitle = document.getElementById('result-title');
-        if (resTitle) resTitle.innerText = "Разбор ошибок завершен! 🎯";
+        if (resTitle) resTitle.innerText = "Разбор ошибок завершен!";
         const resSub = document.getElementById('result-subtitle');
         if (resSub) resSub.innerText = "Работа над ошибками";
-        if (iconBox) iconBox.innerText = "🎯";
+        if (iconBox) iconBox.innerHTML = `<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
 
         // Mark resolved errors
         state.activeQuestions.forEach(q => {
@@ -3884,11 +3891,11 @@
           msgBanner.classList.remove('hidden');
           if (remainingErrors === 0) {
             msgBanner.className = "p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs space-y-1";
-            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>🎉</span> Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Ошибки этого теста успешно разобраны и усвоены.${remainingAllErrors > 0 ? ` Осталось ошибок в других тестах: ${remainingAllErrors}.` : ''}</p>`;
+            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><svg class="w-4 h-4 text-emerald-400 shrink-0 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Ошибки этого теста успешно разобраны и усвоены.${remainingAllErrors > 0 ? ` Осталось ошибок в других тестах: ${remainingAllErrors}.` : ''}</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
-                ${remainingAllErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2"><span>🔁</span> Продолжить разбор ошибок (${remainingAllErrors})</button>` : ''}
-                <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти полный тест заново</button>
+                ${remainingAllErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Продолжить разбор ошибок (${remainingAllErrors})</button>` : ''}
+                <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти полный тест заново</button>
                 <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                   <span>В меню теста</span>
@@ -3897,12 +3904,12 @@
             }
           } else {
             msgBanner.className = "p-3.5 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1";
-            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>⚠️</span> Остались нерешенные вопросы</div><p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. Осталось ${remainingErrors} ошибок в этом тесте.${remainingOtherTestErrors > 0 ? ` В других тестах: ${remainingOtherTestErrors}.` : ''}</p>`;
+            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><svg class="w-4 h-4 text-amber-400 shrink-0 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>Остались нерешенные вопросы</div><p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. Осталось ${remainingErrors} ошибок в этом тесте.${remainingOtherTestErrors > 0 ? ` В других тестах: ${remainingOtherTestErrors}.` : ''}</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
-                <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🔁</span> Повторить оставшиеся ошибки (${remainingErrors})</button>
-                ${remainingOtherTestErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2"><span>↪</span> Перейти к ошибкам других тестов (${remainingOtherTestErrors})</button>` : ''}
-                <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти весь тест заново</button>
+                <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">Повторить оставшиеся ошибки (${remainingErrors})</button>
+                ${remainingOtherTestErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Перейти к ошибкам других тестов (${remainingOtherTestErrors})</button>` : ''}
+                <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти весь тест заново</button>
                 <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                   <span>В меню теста</span>
@@ -3919,39 +3926,39 @@
 
         if (isPerfect) {
           const resTitle = document.getElementById('result-title');
-          if (resTitle) resTitle.innerText = "Идеальный результат! 🏆";
+          if (resTitle) resTitle.innerText = "Идеальный результат!";
           const resSub = document.getElementById('result-subtitle');
           if (resSub) resSub.innerText = "100% правильных ответов";
-          if (iconBox) iconBox.innerText = "🏆";
+          if (iconBox) iconBox.innerHTML = `<svg class="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>`;
           if (btnBox) {
             btnBox.innerHTML = `
-              <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти ещё раз</button>
+              <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти ещё раз</button>
               <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                 <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 <span>В меню теста</span>
               </button>
-              <button onclick="switchTab('home')" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs transition">🏠 На главную</button>
+              <button onclick="switchTab('home')" class="w-full py-2.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs transition">На главную</button>
             `;
           }
         } else {
           const resTitle = document.getElementById('result-title');
-          if (resTitle) resTitle.innerText = "Тест завершен! 🎯";
+          if (resTitle) resTitle.innerText = "Тест завершен!";
           const resSub = document.getElementById('result-subtitle');
           if (resSub) resSub.innerText = "Контрольный результат";
-          if (iconBox) iconBox.innerText = "📊";
+          if (iconBox) iconBox.innerHTML = `<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`;
           if (btnBox) {
             let errorButtonHtml = '';
             if (testErrorsCount > 0) {
               errorButtonHtml = `
                 <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">
-                  <span>🧠</span> Разобрать ошибки (${testErrorsCount})
+                  Разобрать ошибки (${testErrorsCount})
                 </button>
               `;
             }
             btnBox.innerHTML = `
               ${errorButtonHtml}
               <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">
-                <span>🔄</span> Пройти заново
+                Пройти заново
               </button>
               <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                 <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>

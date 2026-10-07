@@ -1,9 +1,26 @@
+import hashlib
+import hmac
+import json
 import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from urllib.parse import urlencode
 
 from quiz_bot.webapp import create_webapp
+
+
+def _make_init_data(user_id: int, bot_token: str = "test_bot_token") -> str:
+    user = {"id": user_id, "first_name": "TestUser", "username": "test_user"}
+    fields = {
+        "auth_date": str(int(time.time())),
+        "user": json.dumps(user, separators=(",", ":")),
+    }
+    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+    secret_key = hmac.new(b"WebAppData", bot_token.encode("utf-8"), hashlib.sha256).digest()
+    fields["hash"] = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    return urlencode(fields)
 
 
 class AdminApiTestCase(unittest.TestCase):
@@ -11,6 +28,7 @@ class AdminApiTestCase(unittest.TestCase):
         self.tmp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.db_path = Path(self.tmp_dir.name) / "quiz.sqlite3"
         os.environ["DB_PATH"] = str(self.db_path)
+        os.environ["TELEGRAM_BOT_TOKEN"] = "test_bot_token"
         if "DATABASE_URL" in os.environ:
             del os.environ["DATABASE_URL"]
 
@@ -18,6 +36,7 @@ class AdminApiTestCase(unittest.TestCase):
         import quiz_bot.storage as storage
 
         config.DB_PATH = self.db_path
+        config.BOT_TOKEN = "test_bot_token"
         storage.DB_PATH = self.db_path
         storage.DATABASE_URL = None
         storage.init_db()
@@ -48,13 +67,22 @@ class AdminApiTestCase(unittest.TestCase):
     def tearDown(self):
         self.tmp_dir.cleanup()
 
+    def _auth_header(self, user_id: int) -> dict[str, str]:
+        return {"X-Telegram-Init-Data": _make_init_data(user_id)}
+
     def test_admin_users_api(self):
         # Unauthorized access
-        res = self.client.get("/api/admin/users?user_id=99999")
+        res = self.client.get(
+            "/api/admin/users?user_id=99999",
+            headers=self._auth_header(99999),
+        )
         self.assertEqual(res.status_code, 403)
 
         # Authorized access
-        res = self.client.get("/api/admin/users?user_id=12345")
+        res = self.client.get(
+            "/api/admin/users?user_id=12345",
+            headers=self._auth_header(12345),
+        )
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertTrue(data["success"])
@@ -68,7 +96,10 @@ class AdminApiTestCase(unittest.TestCase):
         self.assertEqual(student["accuracy"], 50)
 
     def test_admin_user_detail_api(self):
-        res = self.client.get("/api/admin/user/detail?user_id=12345&target_user_id=99999")
+        res = self.client.get(
+            "/api/admin/user/detail?user_id=12345&target_user_id=99999",
+            headers=self._auth_header(12345),
+        )
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertTrue(data["success"])
@@ -80,30 +111,39 @@ class AdminApiTestCase(unittest.TestCase):
         # Block user
         res = self.client.post(
             "/api/admin/user/block",
+            headers=self._auth_header(12345),
             json={"user_id": 12345, "target_user_id": 99999, "reason": "Test block"},
         )
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.get_json()["success"])
 
         # Check detail shows blocked
-        res_det = self.client.get("/api/admin/user/detail?user_id=12345&target_user_id=99999")
+        res_det = self.client.get(
+            "/api/admin/user/detail?user_id=12345&target_user_id=99999",
+            headers=self._auth_header(12345),
+        )
         self.assertTrue(res_det.get_json()["user"]["is_blocked"])
 
         # Unblock user
         res_unblock = self.client.post(
             "/api/admin/user/unblock",
+            headers=self._auth_header(12345),
             json={"user_id": 12345, "target_user_id": 99999},
         )
         self.assertEqual(res_unblock.status_code, 200)
         self.assertTrue(res_unblock.get_json()["success"])
 
-        res_det2 = self.client.get("/api/admin/user/detail?user_id=12345&target_user_id=99999")
+        res_det2 = self.client.get(
+            "/api/admin/user/detail?user_id=12345&target_user_id=99999",
+            headers=self._auth_header(12345),
+        )
         self.assertFalse(res_det2.get_json()["user"]["is_blocked"])
 
     def test_admin_unlink_and_assign_api(self):
         # Unlink test
         res_unlink = self.client.post(
             "/api/admin/unlink_test",
+            headers=self._auth_header(12345),
             json={"user_id": 12345, "test_id": "oziz_1_200"},
         )
         self.assertEqual(res_unlink.status_code, 200)
@@ -112,6 +152,7 @@ class AdminApiTestCase(unittest.TestCase):
         # Assign test
         res_assign = self.client.post(
             "/api/admin/assign_test",
+            headers=self._auth_header(12345),
             json={"user_id": 12345, "test_id": "oziz_1_200", "subject_id": "oziz"},
         )
         self.assertEqual(res_assign.status_code, 200)
@@ -120,41 +161,57 @@ class AdminApiTestCase(unittest.TestCase):
     def test_admin_delete_subject_api(self):
         res = self.client.post(
             "/api/admin/delete_subject",
+            headers=self._auth_header(12345),
             json={"user_id": 12345, "id": "oziz"},
         )
         self.assertEqual(res.status_code, 200)
+
     def test_user_rating_visibility_and_reset_api(self):
         # Initial rating shows student 99999
-        res_r1 = self.client.get("/api/rating?test_id=oziz_1_200")
+        res_r1 = self.client.get(
+            "/api/rating?test_id=oziz_1_200",
+            headers=self._auth_header(99999),
+        )
         self.assertEqual(res_r1.status_code, 200)
         items1 = res_r1.get_json()["items"]
         self.assertTrue(any(it["user_id"] == 99999 for it in items1))
 
         # Bootstrap shows not hidden
-        res_b1 = self.client.get("/api/bootstrap?user_id=99999")
+        res_b1 = self.client.get(
+            "/api/bootstrap?user_id=99999",
+            headers=self._auth_header(99999),
+        )
         self.assertEqual(res_b1.status_code, 200)
         self.assertFalse(res_b1.get_json()["is_hidden_in_rating"])
 
         # Hide user 99999
         res_tog = self.client.post(
             "/api/user/toggle_rating_visibility",
+            headers=self._auth_header(99999),
             json={"user_id": 99999, "is_hidden": True},
         )
         self.assertEqual(res_tog.status_code, 200)
         self.assertTrue(res_tog.get_json()["is_hidden"])
 
         # Bootstrap now shows hidden
-        res_b2 = self.client.get("/api/bootstrap?user_id=99999")
+        res_b2 = self.client.get(
+            "/api/bootstrap?user_id=99999",
+            headers=self._auth_header(99999),
+        )
         self.assertTrue(res_b2.get_json()["is_hidden_in_rating"])
 
         # Rating query no longer includes user 99999
-        res_r2 = self.client.get("/api/rating?test_id=oziz_1_200")
+        res_r2 = self.client.get(
+            "/api/rating?test_id=oziz_1_200",
+            headers=self._auth_header(99999),
+        )
         items2 = res_r2.get_json()["items"]
         self.assertFalse(any(it["user_id"] == 99999 for it in items2))
 
         # Reset rating for user 99999
         res_reset = self.client.post(
             "/api/user/reset_rating",
+            headers=self._auth_header(99999),
             json={"user_id": 99999},
         )
         self.assertEqual(res_reset.status_code, 200)
@@ -162,8 +219,15 @@ class AdminApiTestCase(unittest.TestCase):
         self.assertGreaterEqual(res_reset.get_json()["deleted_attempts"], 1)
 
         # Unhide user, rating should still have no attempts because they were reset
-        self.client.post("/api/user/toggle_rating_visibility", json={"user_id": 99999, "is_hidden": False})
-        res_r3 = self.client.get("/api/rating?test_id=oziz_1_200")
+        self.client.post(
+            "/api/user/toggle_rating_visibility",
+            headers=self._auth_header(99999),
+            json={"user_id": 99999, "is_hidden": False},
+        )
+        res_r3 = self.client.get(
+            "/api/rating?test_id=oziz_1_200",
+            headers=self._auth_header(99999),
+        )
         items3 = res_r3.get_json()["items"]
         self.assertFalse(any(it["user_id"] == 99999 for it in items3))
 
