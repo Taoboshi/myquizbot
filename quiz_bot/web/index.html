@@ -73,6 +73,17 @@
       --header-scrolled-glass: rgba(11, 15, 23, 0.88);
       --nav-glass: rgba(13, 17, 26, 0.62);
       --nav-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+      --bar-fill: rgba(7, 9, 13, 0.46);
+      --bar-fill-scrolled: rgba(7, 9, 13, 0.58);
+      --bar-fallback: rgba(7, 9, 13, 0.96);
+      --bar-backdrop: blur(18px) saturate(135%);
+      --bar-rim: rgba(255, 255, 255, 0.14);
+      --bar-edge-top: rgba(255, 255, 255, 0.24);
+      --bar-edge-bottom: rgba(255, 255, 255, 0.05);
+      --bar-sheen: rgba(255, 255, 255, 0.065);
+      --bar-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+      --bar-active-fill: rgba(255, 255, 255, 0.18);
+      --bar-active-rim: rgba(255, 255, 255, 0.12);
       --modal-glass: rgba(13, 17, 26, 0.95);
 
       --text-main: #f8fafc;
@@ -179,6 +190,17 @@
       --header-scrolled-glass: rgba(255, 255, 255, 0.90);
       --nav-glass: rgba(255, 255, 255, 0.68);
       --nav-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+      --bar-fill: rgba(255, 255, 255, 0.58);
+      --bar-fill-scrolled: rgba(255, 255, 255, 0.70);
+      --bar-fallback: rgba(255, 255, 255, 0.96);
+      --bar-backdrop: blur(18px) saturate(120%);
+      --bar-rim: rgba(15, 23, 42, 0.10);
+      --bar-edge-top: rgba(255, 255, 255, 0.90);
+      --bar-edge-bottom: rgba(15, 23, 42, 0.04);
+      --bar-sheen: rgba(255, 255, 255, 0.28);
+      --bar-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+      --bar-active-fill: rgba(15, 23, 42, 0.085);
+      --bar-active-rim: rgba(255, 255, 255, 0.50);
       --modal-glass: rgba(255, 255, 255, 0.97);
 
       --text-main: #0f172a;
@@ -280,11 +302,10 @@
 
     /* True Clear Glass Panels */
     header.glass {
-      background: var(--header-glass) !important;
-      backdrop-filter: var(--glass-blur) !important;
-      -webkit-backdrop-filter: var(--glass-blur) !important;
-      border-bottom: 1px solid var(--glass-border) !important;
-      box-shadow: var(--glass-shadow) !important;
+      background: var(--bar-fill) !important;
+      backdrop-filter: var(--bar-backdrop) !important;
+      -webkit-backdrop-filter: var(--bar-backdrop) !important;
+      border-bottom: 1px solid var(--bar-rim) !important;
     }
     .glass {
       background: var(--glass-panel) !important;
@@ -337,29 +358,56 @@
       right: 14px !important;
       max-width: 420px !important;
       margin: 0 auto !important;
-      border-radius: 24px !important;
-      background: var(--nav-glass) !important;
-      backdrop-filter: var(--glass-blur) !important;
-      -webkit-backdrop-filter: var(--glass-blur) !important;
-      border: 1px solid var(--glass-border) !important;
-      box-shadow: var(--glass-highlight), var(--nav-shadow) !important;
-      padding: 9px 14px !important;
+      border-radius: 28px !important;
+      background: var(--bar-fill) !important;
+      backdrop-filter: var(--bar-backdrop) !important;
+      -webkit-backdrop-filter: var(--bar-backdrop) !important;
+      border: 1px solid var(--bar-rim) !important;
+      box-shadow: inset 0 1px 0 var(--bar-edge-top), inset 0 -1px 0 var(--bar-edge-bottom), var(--bar-shadow) !important;
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px;
+      padding: 5px !important;
       overflow: visible !important;
       z-index: 50 !important;
+      transition: background-color 0.25s ease !important;
     }
+    #app-header::before, nav.glass::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(115deg, var(--bar-sheen), transparent 32%, transparent 68%, var(--bar-sheen));
+      pointer-events: none;
+    }
+    #app-header > div, nav.glass > button { position: relative; z-index: 1; }
+    nav.glass::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      bottom: 6px;
+      width: calc((100% - 20px) / 3);
+      border-radius: 23px;
+      background: var(--bar-active-fill);
+      box-shadow: inset 0 1px 0 var(--bar-active-rim), inset 0 0 0 1px var(--bar-active-rim), 0 3px 10px rgba(0, 0, 0, 0.06);
+      transform: translateX(calc(var(--nav-active-index, 0) * (100% + 4px)));
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s ease;
+      pointer-events: none;
+    }
+    nav.glass.nav-scrolled { background: var(--bar-fill-scrolled) !important; }
     nav.glass button {
-      min-width: 82px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+      width: 100%;
+      min-width: 0;
+      height: 62px;
+      padding: 8px 6px;
+      border-radius: 23px;
+      background: transparent !important;
+      transition: color 0.2s ease, transform 0.15s ease;
     }
-    nav.glass button.text-brand-400 {
-      background: rgba(255, 255, 255, 0.14) !important;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-    body.light-theme nav.glass button.text-brand-400 {
-      background: rgba(15, 23, 42, 0.09) !important;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 10px rgba(15, 23, 42, 0.08);
+    nav.glass button:focus-visible {
+      outline: 2px solid var(--accent-color);
+      outline-offset: -3px;
     }
     nav.glass button.text-brand-400 svg,
     nav.glass button.text-brand-400 span {
@@ -791,11 +839,11 @@
       max-width: 448px !important;
       margin: 0 auto !important;
       z-index: 45 !important;
-      background: var(--header-glass) !important;
-      backdrop-filter: var(--glass-blur) !important;
-      -webkit-backdrop-filter: var(--glass-blur) !important;
-      border-bottom: 1px solid var(--glass-border) !important;
-      box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
+      background: var(--bar-fill) !important;
+      backdrop-filter: var(--bar-backdrop) !important;
+      -webkit-backdrop-filter: var(--bar-backdrop) !important;
+      border-color: var(--bar-rim) !important;
+      box-shadow: inset 0 1px 0 var(--bar-edge-top), inset 0 -1px 0 var(--bar-edge-bottom), var(--bar-shadow) !important;
       padding-left: 14px !important;
       padding-right: 14px !important;
       padding-top: max(env(safe-area-inset-top, 0px), 12px) !important;
@@ -804,19 +852,15 @@
       transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
     }
     #app-header.header-scrolled {
-      background: var(--header-scrolled-glass) !important;
-      box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
-      border-bottom-color: var(--glass-border-hover) !important;
+      background: var(--bar-fill-scrolled) !important;
     }
-    body.light-theme #app-header {
-      background: var(--header-glass) !important;
-      border-bottom: 1px solid var(--glass-border) !important;
-      box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      #app-header, #app-header.header-scrolled, nav.glass, nav.glass.nav-scrolled {
+        background: var(--bar-fallback) !important;
+      }
     }
-    body.light-theme #app-header.header-scrolled {
-      background: var(--header-scrolled-glass) !important;
-      box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
-      border-bottom-color: var(--glass-border-hover) !important;
+    @media (prefers-reduced-motion: reduce) {
+      nav.glass::after, nav.glass, nav.glass button, #app-header { transition: none !important; }
     }
 
     /* Fixed Header Spacing for Scrollable Content */
@@ -2392,8 +2436,8 @@
     </div>
 
     <!-- Bottom Navigation Bar (3 Buttons: Главная, Профиль, Настройки) -->
-    <nav class="glass flex items-center justify-around">
-      <button id="tab-home" onclick="switchTab('home')" class="flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition">
+    <nav class="glass flex items-center justify-around" aria-label="Основная навигация">
+      <button id="tab-home" onclick="switchTab('home')" aria-current="page" class="flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         <span class="text-[11px] font-bold">Главная</span>
       </button>

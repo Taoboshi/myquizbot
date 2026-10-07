@@ -321,9 +321,14 @@
     state.homeActiveView = 'home';
     viewStack = ['home'];
 
-    ['home', 'profile', 'settings'].forEach(t => {
+    const tabs = ['home', 'profile', 'settings'];
+    document.querySelector('nav.glass').style.setProperty('--nav-active-index', String(Math.max(0, tabs.indexOf(tabId))));
+
+    tabs.forEach(t => {
       const btn = document.getElementById('tab-' + t);
       if (!btn) return;
+      if (t === tabId) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
       if (t === tabId) {
         btn.className = "flex flex-col items-center space-y-1 text-brand-400 active:scale-95 transition";
         const sp = btn.querySelector('span');

@@ -439,9 +439,11 @@ const nativeFetch = window.fetch.bind(window);
   function setupHeaderScrollObserver() {
     const bodyEl = document.getElementById('app-body');
     const headerEl = document.getElementById('app-header');
+    const navEl = document.querySelector('nav.glass');
     if (!headerEl) return;
     const onScroll = () => {
       const scrollY = (bodyEl ? bodyEl.scrollTop : 0) || window.scrollY || 0;
+      if (navEl) navEl.classList.toggle('nav-scrolled', scrollY > 12);
       if (scrollY > 12) {
         headerEl.classList.add('header-scrolled');
       } else {
