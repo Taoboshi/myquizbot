@@ -3857,13 +3857,16 @@
         } catch(e) {}
 
         const remainingErrors = state.userErrors.size;
+        const remainingAllErrors = getAllSavedErrors().length;
+        const remainingOtherTestErrors = Math.max(0, remainingAllErrors - remainingErrors);
         if (msgBanner) {
           msgBanner.classList.remove('hidden');
           if (remainingErrors === 0) {
             msgBanner.className = "p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs space-y-1";
-            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>🎉</span> Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Все ошибки в этом тесте успешно разобраны и усвоены!</p>`;
+            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>🎉</span> Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Ошибки этого теста успешно разобраны и усвоены.${remainingAllErrors > 0 ? ` Осталось ошибок в других тестах: ${remainingAllErrors}.` : ''}</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
+                ${remainingAllErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2"><span>🔁</span> Продолжить разбор ошибок (${remainingAllErrors})</button>` : ''}
                 <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти полный тест заново</button>
                 <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -3873,10 +3876,11 @@
             }
           } else {
             msgBanner.className = "p-3.5 rounded-2xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs space-y-1";
-            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>⚠️</span> Остались нерешенные вопросы</div><p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. Осталось ${remainingErrors} ошибок.</p>`;
+            msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><span>⚠️</span> Остались нерешенные вопросы</div><p class="text-[11px] text-amber-200/90 leading-relaxed">Исправлено: ${correct} из ${total}. Осталось ${remainingErrors} ошибок в этом тесте.${remainingOtherTestErrors > 0 ? ` В других тестах: ${remainingOtherTestErrors}.` : ''}</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
                 <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2"><span>🔁</span> Повторить оставшиеся ошибки (${remainingErrors})</button>
+                ${remainingOtherTestErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2"><span>↪</span> Перейти к ошибкам других тестов (${remainingOtherTestErrors})</button>` : ''}
                 <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"><span>🔄</span> Пройти весь тест заново</button>
                 <button onclick="openTestHub()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -5334,26 +5338,21 @@
     const errors = getAllSavedErrors();
     if (errors.length === 0) return;
 
-    state.activeQuestions = errors.map(e => ({...e.question}));
-    state.currentTestOriginalQuestions = [...state.activeQuestions];
-    state.activeTestTitle = `Разбор всех ошибок (${errors.length})`;
-    state.currentMode = 'errors_solve';
-    state.userAnswers = {};
-    state.revealedAnswers = new Set();
-    state.currentQIndex = 0;
-    state.timerSeconds = 0;
-    clearInterval(state.timerInterval);
-    state.timerInterval = setInterval(() => { state.timerSeconds++; }, 1000);
+    const nextError = errors.find(error => error.testId !== state.activeTestId) || errors[0];
+    const test = BUNDLED_TESTS[nextError.testId];
+    if (!test) return;
 
-    hideAllViews();
-    state.homeActiveView = 'solver';
-    document.getElementById('view-solver').classList.remove('hidden');
-    document.getElementById('btn-grid-modal').classList.remove('hidden');
-    document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
-    document.getElementById('btn-finish-early').classList.remove('hidden');
-    updateHeaderNavState();
-    renderCurrentQuestion();
-    updateTelegramBackButton();
+    state.activeTestId = nextError.testId;
+    state.activeTestTitle = test.title;
+    state.currentTestOriginalQuestions = [...test.questions];
+    try {
+      state.userErrors = new Set(JSON.parse(localStorage.getItem(`ohtest_errors_${state.activeTestId}`) || '[]'));
+      state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${state.activeTestId}`) || '[]'));
+    } catch(e) {
+      state.userErrors = new Set();
+      state.favorites = new Set();
+    }
+    startQuizMode('errors_solve');
   }
 
   function solveOneError(testId, qid) {
