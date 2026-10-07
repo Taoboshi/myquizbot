@@ -4,6 +4,11 @@
   state.ratingActiveSubject = 'all';
   state.ratingActiveTest = 'all';
 
+  function escapeHtml(value) {
+    const replacements = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(value ?? '').replace(/[&<>"']/g, character => replacements[character]);
+  }
+
   function updateProfileFullView() {
     if (!Array.isArray(state.historyAttempts)) state.historyAttempts = [];
     state.historyAttempts = state.historyAttempts.filter(attempt => attempt && typeof attempt === 'object');
