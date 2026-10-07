@@ -1054,7 +1054,7 @@
 
   function addNewSubject() {
     const title = document.getElementById('new-subj-title').value.trim();
-    const emoji = document.getElementById('new-subj-emoji').value.trim() || '📚';
+    const emoji = document.getElementById('new-subj-emoji')?.value.trim() || '📚';
     if (!title) return alert('Введите название предмета!');
 
     const newId = title.toLowerCase().replace(/[^a-zа-я0-9]/gi, '_');
@@ -1257,5 +1257,4 @@
       st.innerText = '✓ Сообщение отправлено!';
     });
   }
-
 
