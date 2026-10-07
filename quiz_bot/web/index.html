@@ -653,6 +653,14 @@
 
     /* Dynamic Floating Header Styling & Transitions */
     #app-header {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 40 !important;
+      background: var(--header-glass) !important;
+      backdrop-filter: var(--glass-blur) !important;
+      -webkit-backdrop-filter: var(--glass-blur) !important;
+      border-bottom: 1px solid var(--glass-border) !important;
+      box-shadow: var(--glass-shadow) !important;
       transition: padding 0.25s cubic-bezier(0.16, 1, 0.3, 1),
                   background 0.25s cubic-bezier(0.16, 1, 0.3, 1),
                   box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -662,15 +670,53 @@
       padding-top: max(env(safe-area-inset-top), 8px) !important;
       padding-bottom: 7px !important;
       background: var(--nav-glass) !important;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), var(--glass-highlight) !important;
-      border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), var(--glass-highlight) !important;
+      border-bottom-color: var(--glass-border-hover) !important;
     }
-    #app-header.header-scrolled #header-logo-icon {
-      width: 28px !important;
-      height: 28px !important;
+    /* Uniform icon buttons (Back, Logo, Search) */
+    .header-icon-btn {
+      width: 36px !important;
+      min-width: 36px !important;
+      max-width: 36px !important;
+      height: 36px !important;
+      min-height: 36px !important;
+      max-height: 36px !important;
+      border-radius: 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+      background: var(--glass-surface) !important;
+      border: 1px solid var(--glass-border) !important;
+      box-shadow: var(--glass-highlight) !important;
+      color: #94a3b8 !important;
+      transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+      outline: none !important;
+      -webkit-tap-highlight-color: transparent !important;
     }
-    #app-header.header-scrolled #nav-back-btn {
-      padding: 5px 8px !important;
+    .header-icon-btn:hover {
+      border-color: var(--glass-border-hover) !important;
+      color: #e2e8f0 !important;
+    }
+    .header-icon-btn:active {
+      transform: scale(0.92) !important;
+    }
+    .header-icon-btn:focus,
+    .header-icon-btn:focus-visible {
+      outline: none !important;
+      box-shadow: var(--glass-highlight) !important;
+    }
+    #header-logo-icon.header-icon-btn {
+      padding: 3px !important;
+      overflow: hidden !important;
+    }
+    #header-logo-icon.header-icon-btn img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      border-radius: 8px !important;
     }
     body.light-theme #app-header.header-scrolled {
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
@@ -690,29 +736,28 @@
   <div class="w-full max-w-md mx-auto min-h-screen flex flex-col app-wrapper relative shadow-2xl overflow-hidden">
 
     <!-- Top App Bar / Header -->
-    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3 py-2 flex items-center justify-between safe-top">
-      <div class="flex items-center space-x-2 min-w-0 flex-1 mr-2">
-        <!-- Upgraded Ergonomic Back Button -->
-        <button id="nav-back-btn" class="hidden px-2.5 py-1 rounded-xl bg-app-surface border border-app-border text-slate-300 hover:text-white active:scale-95 transition flex items-center gap-1 shrink-0 shadow-sm" onclick="goBack()" title="Назад">
-          <svg class="w-4 h-4 shrink-0 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
-          <span class="text-[11px] font-bold">Назад</span>
+    <header id="app-header" class="sticky top-0 z-40 glass border-b border-app-border px-3.5 py-2.5 flex items-center justify-between safe-top">
+      <div class="flex items-center space-x-2.5 min-w-0 flex-1 mr-2">
+        <!-- Upgraded Ergonomic Back Button (identical 36x36 size and style to search button) -->
+        <button id="nav-back-btn" class="header-icon-btn hidden" onclick="goBack()" title="Назад">
+          <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
         </button>
-        <!-- Logo (Tap 5 times for secret Admin Unlock) -->
-        <div id="header-logo-icon" onclick="handleLogoTap()" class="w-8 h-8 rounded-xl overflow-hidden bg-black/60 border border-brand-400/35 flex items-center justify-center shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer active:scale-95 transition p-0.5" title="ohTest">
+        <!-- Logo (Tap 5 times for secret Admin Unlock) - shown on 3 main tabs -->
+        <div id="header-logo-icon" onclick="handleLogoTap()" class="header-icon-btn" title="ohTest">
           <img src="/logo.png" alt="Logo" class="w-full h-full object-contain rounded-lg" onerror="this.onerror=null; this.src='logo.png'">
         </div>
-        <!-- Title & Subtitle with Tap-to-Scroll-Top -->
-        <div class="min-w-0 flex-1 cursor-pointer select-none" onclick="scrollToAppTop()" title="Нажмите, чтобы вернуться наверх">
-          <h1 id="header-title" class="text-xs sm:text-sm font-extrabold text-white tracking-tight leading-tight truncate">ohTest</h1>
-          <span id="header-subtitle" class="block text-[10px] sm:text-[11px] text-slate-400 font-medium leading-tight truncate">Медицинские тесты</span>
+        <!-- Title & Subtitle with Tap-to-Scroll-Top (only visible on 3 main tabs) -->
+        <div id="header-title-container" class="min-w-0 flex-1 cursor-pointer select-none" onclick="scrollToAppTop()" title="Нажмите, чтобы вернуться наверх">
+          <h1 id="header-title" class="text-sm font-extrabold text-white tracking-tight leading-tight truncate">Главная</h1>
+          <span id="header-subtitle" class="hidden text-[10px] sm:text-[11px] text-slate-400 font-medium leading-tight truncate"></span>
         </div>
       </div>
 
       <!-- Action Buttons Right -->
       <div class="flex items-center space-x-1.5 shrink-0">
-        <!-- Quick Search Button in Header -->
-        <button id="header-search-btn" class="w-8 h-8 rounded-xl bg-app-surface border border-app-border text-slate-400 hover:text-brand-400 hover:border-brand-500/40 active:scale-95 transition flex items-center justify-center shadow-sm shrink-0" onclick="handleHeaderSearchClick()" title="Поиск">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <!-- Quick Search Button in Header (identical 36x36 size and style to back button) -->
+        <button id="header-search-btn" class="header-icon-btn" onclick="handleHeaderSearchClick()" title="Поиск">
+          <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </button>
         <!-- Matrix / Grid view in solver -->
         <button id="btn-grid-modal" class="hidden h-8 px-2.5 py-1 rounded-xl bg-brand-950/40 border border-brand-500/40 text-[11px] font-bold text-brand-300 hover:bg-brand-900/50 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm shrink-0" onclick="toggleMatrixModal()">
@@ -2407,6 +2452,7 @@
     renderHomeSubjects();
     renderActiveAttemptBanner();
     updateHubResumeButton();
+    updateHeaderNavState('home');
 
     // Dynamic Header Scroll Shrink & Tap-to-top setup
     setupHeaderScrollObserver();
@@ -2429,19 +2475,61 @@
     }
   }
 
-  // Dynamic Header title helper (with modern breadcrumbs / badges instead of plain text)
-  function setDynamicHeaderTitle(title, subtitle, badge = null) {
+  // Header Title & Logo/Back state manager:
+  // - Main 3 tabs: Shows Logo, hides Back btn, shows text ("Главная", "Профиль", "Настройки")
+  // - Subpages / Nested views: Hides Logo, shows Back btn (replacing logo in same 36x36 slot), hides text completely!
+  function updateHeaderNavState(tabName = null) {
+    const logoEl = document.getElementById('header-logo-icon');
+    const backEl = document.getElementById('nav-back-btn');
+    const titleContainer = document.getElementById('header-title-container');
     const titleEl = document.getElementById('header-title');
     const subEl = document.getElementById('header-subtitle');
-    if (titleEl) {
-      if (badge) {
-        titleEl.innerHTML = `<span class="inline-flex items-center gap-1.5 truncate"><span class="px-1.5 py-0.5 rounded-md bg-brand-500/20 text-brand-300 text-[9px] font-bold uppercase tracking-wider">${badge}</span><span class="truncate">${title}</span></span>`;
-      } else {
-        titleEl.innerText = title;
+    const searchBtn = document.getElementById('header-search-btn');
+
+    const currentTab = tabName || state.currentTab;
+    const isMainTabRoot = (currentTab === 'home' && (!state.homeActiveView || state.homeActiveView === 'home')) ||
+                          (currentTab === 'profile') ||
+                          (currentTab === 'settings');
+
+    if (isMainTabRoot) {
+      // Show Logo, hide Back
+      if (logoEl) logoEl.classList.remove('hidden');
+      if (backEl) backEl.classList.add('hidden');
+      // Show Text
+      if (titleContainer) titleContainer.classList.remove('hidden');
+      if (titleEl) {
+        if (currentTab === 'home') titleEl.innerText = "Главная";
+        else if (currentTab === 'profile') titleEl.innerText = "Профиль";
+        else if (currentTab === 'settings') titleEl.innerText = "Настройки";
       }
-    }
-    if (subEl) {
-      subEl.innerText = subtitle || '';
+      if (subEl) {
+        subEl.innerText = '';
+        subEl.classList.add('hidden');
+      }
+      // Show search only on home catalog, hide on profile & settings
+      if (searchBtn) {
+        if (currentTab === 'home') searchBtn.classList.remove('hidden');
+        else searchBtn.classList.add('hidden');
+      }
+    } else {
+      // Nested screen: Logo is replaced by Back button (same 36x36 slot)
+      if (logoEl) logoEl.classList.add('hidden');
+      if (backEl) backEl.classList.remove('hidden');
+      // Text is completely hidden on nested views
+      if (titleContainer) titleContainer.classList.add('hidden');
+      if (titleEl) titleEl.innerText = '';
+      if (subEl) {
+        subEl.innerText = '';
+        subEl.classList.add('hidden');
+      }
+      // Search button visibility on nested views
+      if (searchBtn) {
+        if (state.homeActiveView === 'tests' || state.homeActiveView === 'hub' || state.homeActiveView === 'solver') {
+          searchBtn.classList.remove('hidden');
+        } else {
+          searchBtn.classList.add('hidden');
+        }
+      }
     }
   }
 
@@ -2459,26 +2547,63 @@
     }, { passive: true });
   }
 
-  // Header quick search button handler
+  // Context-aware Search Button: searches info strictly on the CURRENT page!
   function handleHeaderSearchClick() {
     triggerHaptic('light');
-    // If inside a test or test hub with questions, open live search for this test
-    if (state.activeTestId && (state.currentTestOriginalQuestions?.length || state.activeQuestions?.length)) {
-      openLiveSearch();
+    const btn = document.getElementById('header-search-btn');
+    if (btn) btn.blur(); // Remove focus so it never stays glowing
+
+    // 1. Inside Solver, Flashcards, or Hub: search questions of this specific test
+    if (state.homeActiveView === 'solver' || state.homeActiveView === 'hub' || state.homeActiveView === 'flashcards' || state.homeActiveView === 'search') {
+      if (state.homeActiveView !== 'search') {
+        openLiveSearch();
+      } else {
+        const inp = document.getElementById('live-search-input');
+        if (inp) inp.focus();
+      }
       return;
     }
-    // If on home/catalog screen, switch to home and focus the subject or scroll to top
-    if (state.currentTab !== 'home') {
-      switchTab('home');
+
+    // 2. On Subject Tests list: search tests within this specific subject
+    if (state.homeActiveView === 'tests') {
+      const q = prompt(`Поиск тестов по предмету «${state.activeSubjectTitle}»:`);
+      if (q !== null) {
+        filterSubjectTestsByQuery(q.trim().toLowerCase());
+      }
+      return;
     }
-    scrollToAppTop();
-    // Quick prompt for search
-    const query = prompt('Быстрый поиск предмета или теста:');
-    if (query && query.trim()) {
-      filterCatalogByQuery(query.trim().toLowerCase());
+
+    // 3. On Home Catalog: search subjects on the catalog page
+    if (state.currentTab === 'home') {
+      const q = prompt('Поиск предмета в каталоге:');
+      if (q !== null) {
+        filterCatalogByQuery(q.trim().toLowerCase());
+      }
+      return;
     }
   }
 
+  // Filter tests inside view-tests for the current subject
+  function filterSubjectTestsByQuery(q) {
+    const container = document.getElementById('tests-items-container');
+    if (!container) return;
+    const cards = container.querySelectorAll('.p-4');
+    let matched = 0;
+    cards.forEach(card => {
+      const txt = card.innerText.toLowerCase();
+      if (!q || txt.includes(q)) {
+        card.style.display = '';
+        matched++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    if (q) {
+      showToast(matched > 0 ? `Найдено тестов: ${matched}` : 'Ничего не найдено');
+    }
+  }
+
+  // Filter subjects inside view-home for the catalog page
   function filterCatalogByQuery(q) {
     const list = document.getElementById('home-subjects-list');
     if (!list) return;
@@ -2486,18 +2611,15 @@
     let matchedCount = 0;
     cards.forEach(card => {
       const txt = card.innerText.toLowerCase();
-      if (txt.includes(q)) {
+      if (!q || txt.includes(q)) {
         card.style.display = '';
         matchedCount++;
       } else {
         card.style.display = 'none';
       }
     });
-    showToast(matchedCount > 0 ? `Найдено разделов: ${matchedCount}` : 'Ничего не найдено, сброс фильтра');
-    if (matchedCount === 0) {
-      setTimeout(() => {
-        cards.forEach(c => c.style.display = '');
-      }, 1500);
+    if (q) {
+      showToast(matchedCount > 0 ? `Найдено разделов: ${matchedCount}` : 'Ничего не найдено');
     }
   }
 
@@ -2839,8 +2961,7 @@
       errors_solve: 'Разбор ошибок'
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[state.currentMode] || 'Контрольный тест';
-    document.getElementById('header-logo-icon')?.classList.add('hidden');
-    setDynamicHeaderTitle("Решение теста", `${state.activeQuestions.length} вопросов`, 'ТЕСТ');
+    updateHeaderNavState();
 
     renderCurrentQuestion();
     viewStack.push('solver');
@@ -2929,8 +3050,7 @@
 
     hideAllViews();
     document.getElementById('view-tests').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
-    setDynamicHeaderTitle(subjectTitle, "Список тестов", 'РАЗДЕЛ');
+    updateHeaderNavState();
     updateTelegramBackButton();
 
     document.getElementById('tests-subj-title').innerText = subjectTitle;
@@ -3090,8 +3210,7 @@
     state.homeActiveView = 'hub';
     hideAllViews();
     document.getElementById('view-hub').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
-    setDynamicHeaderTitle(state.activeTestTitle, "Хаб дисциплины", 'ТЕСТ');
+    updateHeaderNavState();
     updateTelegramBackButton();
 
     document.getElementById('hub-test-title').innerText = state.activeTestTitle;
@@ -3227,8 +3346,7 @@
       errors_solve: 'Разбор ошибок'
     };
     document.getElementById('solver-mode-tag').innerText = modeNames[mode] || 'Контрольный тест';
-    document.getElementById('header-logo-icon')?.classList.add('hidden');
-    setDynamicHeaderTitle("Решение теста", `${state.activeQuestions.length} вопросов`, 'ТЕСТ');
+    updateHeaderNavState();
 
     // Start timer
     state.timerSeconds = 0;
@@ -3903,8 +4021,7 @@
     state.homeActiveView = 'flashcards';
     hideAllViews();
     document.getElementById('view-flashcards').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
-    setDynamicHeaderTitle("Флеш-карточки", state.activeTestTitle, 'КАРТОЧКИ');
+    updateHeaderNavState();
     updateTelegramBackButton();
 
     // Prepare Questions Deck
@@ -4186,8 +4303,7 @@
     state.homeActiveView = 'search';
     hideAllViews();
     document.getElementById('view-search').classList.remove('hidden');
-    document.getElementById('nav-back-btn').classList.remove('hidden');
-    setDynamicHeaderTitle("Поиск вопроса", state.activeTestTitle, 'ПОИСК');
+    updateHeaderNavState();
     updateTelegramBackButton();
     document.getElementById('live-search-input').value = '';
     handleLiveSearch();
@@ -7026,38 +7142,35 @@
       const targetView = state.homeActiveView || 'home';
       if (targetView === 'solver') {
         document.getElementById('view-solver').classList.remove('hidden');
-        document.getElementById('nav-back-btn').classList.remove('hidden');
         document.getElementById('btn-grid-modal').classList.remove('hidden');
         document.getElementById('btn-fav-toggle')?.classList.remove('hidden');
         document.getElementById('btn-finish-early').classList.remove('hidden');
-        document.getElementById('header-logo-icon')?.classList.add('hidden');
-        setDynamicHeaderTitle("Решение теста", `${state.activeQuestions.length} вопросов`, 'ТЕСТ');
+        updateHeaderNavState();
         renderCurrentQuestion();
       } else if (targetView === 'hub') {
         openTestHub();
       } else if (targetView === 'tests') {
         document.getElementById('view-tests').classList.remove('hidden');
-        document.getElementById('nav-back-btn').classList.remove('hidden');
-        setDynamicHeaderTitle(state.activeSubjectTitle, "Список тестов", 'РАЗДЕЛ');
+        updateHeaderNavState();
       } else if (targetView === 'result') {
         document.getElementById('view-result').classList.remove('hidden');
-        setDynamicHeaderTitle("Результат", state.activeTestTitle, 'ИТОГ');
+        updateHeaderNavState();
       } else if (targetView === 'flashcards') {
         openFlashcards();
       } else if (targetView === 'search') {
         openLiveSearch();
       } else {
         document.getElementById('view-home').classList.remove('hidden');
-        setDynamicHeaderTitle("ohTest", "Медицинские тесты");
+        updateHeaderNavState('home');
         renderActiveAttemptBanner();
       }
     } else if (tabId === 'profile') {
       document.getElementById('view-tab-profile').classList.remove('hidden');
-      setDynamicHeaderTitle("Профиль", "Кабинет студента");
+      updateHeaderNavState('profile');
       updateProfileFullView();
     } else if (tabId === 'settings') {
       document.getElementById('view-tab-settings').classList.remove('hidden');
-      setDynamicHeaderTitle("Настройки", "Параметры и управление");
+      updateHeaderNavState('settings');
     }
 
     updateTelegramBackButton();
@@ -7070,7 +7183,6 @@
       if (el) el.classList.add('hidden');
     });
     // NEVER leak solver header buttons onto other views!
-    document.getElementById('header-logo-icon')?.classList.remove('hidden');
     const finishBtn = document.getElementById('btn-finish-early');
     if (finishBtn) finishBtn.classList.add('hidden');
     const gridBtn = document.getElementById('btn-grid-modal');
@@ -7119,13 +7231,12 @@
       if (prev === 'home') {
         state.homeActiveView = 'home';
         document.getElementById('view-home').classList.remove('hidden');
-        document.getElementById('nav-back-btn').classList.add('hidden');
-        setDynamicHeaderTitle("ohTest", "Медицинские тесты");
+        updateHeaderNavState('home');
         renderActiveAttemptBanner();
       } else if (prev === 'tests') {
         state.homeActiveView = 'tests';
         document.getElementById('view-tests').classList.remove('hidden');
-        setDynamicHeaderTitle(state.activeSubjectTitle, "Список тестов", 'РАЗДЕЛ');
+        updateHeaderNavState();
       } else if (prev === 'hub') {
         openTestHub();
       } else if (prev === 'admin') {
