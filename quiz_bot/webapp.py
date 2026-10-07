@@ -97,7 +97,7 @@ def register_webapp_routes(app: Any) -> None:
     if not hasattr(app, "route"):
         return
 
-    from flask import jsonify, request
+    from flask import jsonify, request, send_from_directory
 
     @app.before_request
     def require_telegram_identity():
@@ -130,6 +130,13 @@ def register_webapp_routes(app: Any) -> None:
                     "Expires": "0"
                 }
         return "ohTest Mini App is starting up...", 200
+
+    @app.route("/app-assets/<path:filename>")
+    def serve_mini_app_asset(filename: str):
+        web_dir = Path(__file__).resolve().parent / "web"
+        response = send_from_directory(web_dir, filename)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        return response
 
     @app.route("/api/bootstrap", methods=["GET", "POST"])
     def api_bootstrap():
