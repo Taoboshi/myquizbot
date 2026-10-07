@@ -201,11 +201,13 @@ def normalize_question(raw: dict[str, Any], index: int) -> dict[str, Any]:
     if correct < 0 or correct >= len(options):
         raise ValueError(f"Вопрос #{index + 1}: correct_index вне диапазона")
 
-    return {
+    normalized = {
         "question": str(question).strip(),
         "options": [str(option).strip() for option in options],
         "correct_index": correct,
     }
+    normalized["explanation"] = str(raw.get("explanation") or "").strip()
+    return normalized
 
 
 def _read_json(path: Path) -> Any:

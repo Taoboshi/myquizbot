@@ -805,7 +805,7 @@
           <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <!-- Logo (Tap 5 times for secret Admin Unlock) - shown on 3 main tabs -->
-        <div id="header-logo-icon" onclick="handleLogoTap()" class="header-icon-btn" title="ohTest">
+        <div id="header-logo-icon" class="header-icon-btn" title="ohTest">
           <img src="/logo.png" alt="Logo" class="w-full h-full object-contain rounded-lg" onerror="this.onerror=null; this.src='logo.png'">
         </div>
         <!-- Title & Subtitle with Tap-to-Scroll-Top (only visible on 3 main tabs) -->
@@ -1602,7 +1602,7 @@
         </div>
 
         <!-- ADMIN PANEL ENTRY BLOCK -->
-        <div id="settings-admin-block" class="pt-2">
+        <div id="settings-admin-block" class="hidden pt-2">
           <div class="p-4 rounded-3xl bg-app-card border border-app-border shadow-lg space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.06] text-brand-300 border border-brand-500/30">ДОСТУП АДМИНИСТРАТОРА</span>
@@ -1617,13 +1617,6 @@
           </div>
         </div>
 
-        <!-- Fallback Admin Login Button if ever needed -->
-        <div id="settings-admin-login-block" class="hidden pt-1">
-          <button onclick="promptAdminLogin()" class="w-full py-2.5 rounded-2xl bg-app-surface border border-app-border text-slate-400 hover:text-white font-medium text-xs flex items-center justify-center gap-2 active:scale-95 transition">
-            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            <span>Вход для администратора (PIN)</span>
-          </button>
-        </div>
       </section>
 
       <!-- ========================================== -->
@@ -2266,6 +2259,17 @@
 
   <!-- APPLICATION JAVASCRIPT ENGINE -->
   <script>
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input.url;
+      if (!url.startsWith('/api/')) return nativeFetch(input, init);
+      const headers = new Headers(input instanceof Request ? input.headers : undefined);
+      new Headers(init.headers || {}).forEach((value, key) => headers.set(key, value));
+      const initData = window.Telegram?.WebApp?.initData;
+      if (initData) headers.set('X-Telegram-Init-Data', initData);
+      return nativeFetch(input, { ...init, headers });
+    };
+
     // Early Theme & Accent Restore (defaults to Dark Green Clear Glass)
   try {
     document.body.classList.remove('light-theme');
@@ -2354,14 +2358,13 @@
     timerSeconds: 0,
     timerInterval: null,
     activeAttempt: null,
-    isAdmin: localStorage.getItem('ohtest_is_admin') === 'true',
+    isAdmin: false,
     userId: null,
     userName: 'Студент',
     userUsername: '',
     userAvatar: '',
     historyAttempts: [],
     isHiddenInRating: localStorage.getItem('ohtest_hide_rating') === 'true',
-    logoTaps: 0
   };
 
   let pinnedSubjects = new Set(JSON.parse(localStorage.getItem('ohtest_pinned_subjects') || '[]'));
@@ -2870,15 +2873,7 @@
 
   // Admin Access Verification
   async function checkBootstrapAndAdmin() {
-    // Enable admin UI if admin is true in state
-    if (state.isAdmin) {
-      /* header-admin-pill hidden */
-      document.getElementById('settings-admin-block').classList.remove('hidden');
-      document.getElementById('settings-admin-login-block').classList.add('hidden');
-    } else {
-      document.getElementById('settings-admin-block').classList.add('hidden');
-      document.getElementById('settings-admin-login-block').classList.remove('hidden');
-    }
+    document.getElementById('settings-admin-block').classList.add('hidden');
 
     try {
       const bParams = new URLSearchParams();
@@ -2894,15 +2889,11 @@
         const data = await res.json();
         if (data.is_admin) {
           state.isAdmin = true;
-          localStorage.setItem('ohtest_is_admin', 'true');
           /* header-admin-pill hidden */
           document.getElementById('settings-admin-block')?.classList.remove('hidden');
-          document.getElementById('settings-admin-login-block')?.classList.add('hidden');
         } else {
           state.isAdmin = false;
-          localStorage.removeItem('ohtest_is_admin');
           document.getElementById('settings-admin-block')?.classList.add('hidden');
-          document.getElementById('settings-admin-login-block')?.classList.remove('hidden');
         }
         if (data.is_hidden_in_rating !== undefined) {
           state.isHiddenInRating = Boolean(data.is_hidden_in_rating);
@@ -2959,30 +2950,9 @@
           } catch(e) {}
         }
       }
-    } catch(e) {}
-  }
-
-  function handleLogoTap() {
-    state.logoTaps++;
-    if (state.logoTaps >= 5) {
-      state.logoTaps = 0;
-      promptAdminLogin();
-    }
-  }
-
-  function promptAdminLogin() {
-    const code = prompt('Введите PIN-код администратора:');
-    if (code === '7890' || code === 'med_admin_2025') {
-      state.isAdmin = true;
-      localStorage.setItem('ohtest_is_admin', 'true');
-      /* header-admin-pill hidden */
-      document.getElementById('settings-admin-block')?.classList.remove('hidden');
-      document.getElementById('settings-admin-login-block')?.classList.add('hidden');
-      triggerHaptic('success');
-      alert('✓ Режим администратора успешно активирован!');
-    } else if (code) {
-      triggerHaptic('error');
-      alert('Неверный PIN-код администратора');
+    } catch(e) {
+      state.isAdmin = false;
+      document.getElementById('settings-admin-block')?.classList.add('hidden');
     }
   }
 
@@ -5987,19 +5957,20 @@
         </div>
       `;
     } else if (type === 'upload') {
-      title.innerHTML = 'Загрузить JSON-тест';
+      title.innerHTML = 'Импортировать тест';
       body.innerHTML = `
         <div class="space-y-3">
-          <p class="text-xs text-slate-300">Файл сохранится в папку tests/ без привязки к предмету:</p>
+          <p class="text-xs text-slate-300">Выберите JSON-файл, проверьте вопросы и правильные ответы, затем сохраните тест.</p>
           <label class="border-2 border-dashed border-app-border hover:border-brand-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition bg-app-surface/40">
             <div class="w-12 h-12 mb-2 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
             </div>
-            <span class="text-xs font-bold text-white">Выбрать JSON файл</span>
-            <span class="text-[10px] text-slate-400 mt-1">Поддерживается выбор из "Файлы" на iPhone</span>
-            <input type="file" accept=".json" class="hidden" onchange="uploadJsonFile(event)">
+            <span class="text-xs font-bold text-white">Выбрать JSON-файл</span>
+            <span class="text-[10px] text-slate-400 mt-1">Можно выбрать файл из памяти устройства</span>
+            <input type="file" accept=".json,application/json" class="hidden" onchange="uploadJsonFile(event)">
           </label>
           <div id="adm-upload-msg" class="hidden p-3 rounded-xl bg-brand-950/40 border border-brand-500/30 text-xs text-brand-300"></div>
+          <div id="adm-upload-preview" class="hidden space-y-2"></div>
         </div>
       `;
     } else if (type === 'subjects') {
@@ -6885,37 +6856,128 @@
     renderHomeSubjects();
   }
 
+  let pendingJsonTest = null;
+
   function uploadJsonFile(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     const r = new FileReader();
-    r.onload = function(evt) {
+    r.onload = async function(evt) {
       try {
         const parsed = JSON.parse(evt.target.result);
         const msg = document.getElementById('adm-upload-msg');
+        msg.className = 'hidden p-3 rounded-xl bg-brand-950/40 border border-brand-500/30 text-xs text-brand-300';
+        msg.classList.add('hidden');
+        msg.innerText = '';
         msg.classList.remove('hidden');
-        msg.innerText = `✓ Файл "${file.name}" успешно загружен (${parsed.questions ? parsed.questions.length : 0} вопросов). Тест сохранен как непривязанный.`;
-        
-        const testId = file.name.replace('.json', '');
-        adminStore.testsMeta.push({
-          id: testId,
-          title: parsed.title || testId,
-          subject_id: 'default',
-          questions_count: parsed.questions ? parsed.questions.length : 0
-        });
-        updateAdminStats();
-
-        fetch('/api/admin/upload_test', {
+        msg.innerText = 'Проверяю вопросы и ответы...';
+        const res = await fetch('/api/admin/preview_test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: state.userId, filename: file.name, data: parsed })
-        }).catch(() => {});
+        });
+        const result = await res.json();
+        if (!res.ok) {
+          const details = (result.details || []).join('\n');
+          throw new Error([result.error || 'Не удалось проверить файл', details].filter(Boolean).join('\n'));
+        }
+        pendingJsonTest = { filename: file.name, data: parsed, preview: result };
+        renderJsonTestPreview();
+        msg.innerText = `Проверено вопросов: ${result.questions.length}. Тест пока не сохранён.`;
       } catch(err) {
-        alert('Ошибка формата JSON: ' + err.message);
+        const msg = document.getElementById('adm-upload-msg');
+        if (msg) {
+          msg.classList.remove('hidden');
+          msg.innerText = err.message;
+          msg.className = 'p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 whitespace-pre-line';
+        }
       }
     };
     r.readAsText(file);
+  }
+
+  function renderJsonTestPreview() {
+    const preview = document.getElementById('adm-upload-preview');
+    if (!preview || !pendingJsonTest) return;
+    preview.replaceChildren();
+    preview.classList.remove('hidden');
+
+    const titleLabel = document.createElement('label');
+    titleLabel.className = 'block text-xs font-semibold text-slate-300';
+    titleLabel.textContent = 'Название теста';
+    const titleInput = document.createElement('input');
+    titleInput.className = 'mt-1 w-full px-3 py-2 rounded-xl bg-app-card border border-app-border text-sm text-white';
+    titleInput.value = pendingJsonTest.preview.title || pendingJsonTest.filename.replace(/\.json$/i, '');
+    titleInput.addEventListener('input', () => { pendingJsonTest.data.title = titleInput.value; });
+    titleLabel.append(titleInput);
+    preview.append(titleLabel);
+
+    const list = document.createElement('div');
+    list.className = 'max-h-72 overflow-y-auto space-y-2 pr-1';
+    pendingJsonTest.preview.questions.forEach((question, index) => {
+      const item = document.createElement('div');
+      item.className = 'p-3 rounded-xl bg-app-card border border-app-border text-xs space-y-1';
+      const prompt = document.createElement('div');
+      prompt.className = 'font-semibold text-white';
+      prompt.textContent = `${index + 1}. ${question.question}`;
+      const answer = document.createElement('div');
+      answer.className = 'text-emerald-300';
+      answer.textContent = `Ответ: ${question.options[question.correct_index]}`;
+      const choices = document.createElement('div');
+      choices.className = 'text-slate-400';
+      choices.textContent = question.options.map((option, optionIndex) => `${optionIndex + 1}) ${option}`).join(' · ');
+      item.append(prompt, answer, choices);
+      if (question.explanation) {
+        const explanation = document.createElement('div');
+        explanation.className = 'text-slate-400';
+        explanation.textContent = `Пояснение: ${question.explanation}`;
+        item.append(explanation);
+      }
+      list.append(item);
+    });
+    preview.append(list);
+
+    const saveButton = document.createElement('button');
+    saveButton.type = 'button';
+    saveButton.className = 'w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs';
+    saveButton.textContent = 'Сохранить тест';
+    saveButton.addEventListener('click', saveJsonTest);
+    preview.append(saveButton);
+  }
+
+  async function saveJsonTest() {
+    if (!pendingJsonTest) return;
+    const msg = document.getElementById('adm-upload-msg');
+    const preview = document.getElementById('adm-upload-preview');
+    const saveButton = preview?.querySelector('button');
+    if (saveButton) saveButton.disabled = true;
+    try {
+      const res = await fetch('/api/admin/upload_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: state.userId, filename: pendingJsonTest.filename, data: pendingJsonTest.data })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Не удалось сохранить тест');
+      const item = {
+        id: result.test_id,
+        title: result.title,
+        subject_id: 'default',
+        questions_count: result.questions_count
+      };
+      adminStore.testsMeta = adminStore.testsMeta.filter(test => test.id !== item.id);
+      adminStore.testsMeta.push(item);
+      updateAdminStats();
+      msg.className = 'p-3 rounded-xl bg-brand-950/40 border border-brand-500/30 text-xs text-brand-300';
+      msg.innerText = `Тест «${result.title}» сохранён. Вопросов: ${result.questions_count}.`;
+      pendingJsonTest = null;
+      preview.classList.add('hidden');
+    } catch(err) {
+      msg.className = 'p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300';
+      msg.innerText = err.message;
+      if (saveButton) saveButton.disabled = false;
+    }
   }
 
   function sendBroadcast() {

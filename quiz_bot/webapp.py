@@ -1,10 +1,14 @@
 """Flask web application and REST API for ohTest Telegram Mini App."""
 
 import json
+import hashlib
+import hmac
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl
 
 from .config import ADMIN_IDS, BASE_DIR, TESTS, get_bot_token, get_env_admin_ids
 from .loader import (
@@ -38,18 +42,47 @@ from .storage import (
 logger = logging.getLogger(__name__)
 
 
-def is_admin_user(user_id: Any) -> bool:
+def is_admin_user(user_id: Any = None) -> bool:
     admin_ids = get_env_admin_ids() or ADMIN_IDS
     if not admin_ids:
-        # If no admin IDs configured yet in environment, allow access so the project owner is not locked out
-        return True
-    if not user_id:
         return False
     try:
-        uid = int(user_id)
-    except (ValueError, TypeError):
+        from flask import g
+        uid = int(g.telegram_user["id"])
+    except (ImportError, AttributeError, KeyError, TypeError, ValueError):
         return False
     return uid in admin_ids
+
+
+def _verified_telegram_data(init_data: str) -> dict[str, Any] | None:
+    bot_token = get_bot_token()
+    if not bot_token or not init_data:
+        return None
+    try:
+        fields = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=True))
+        received_hash = fields.pop("hash")
+        auth_date = int(fields["auth_date"])
+        user = json.loads(fields["user"])
+        user_id = int(user["id"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+    now = int(time.time())
+    if auth_date > now + 60 or now - auth_date > 86400:
+        return None
+
+    data_check_string = "\n".join(f"{key}={value}" for key, value in sorted(fields.items()))
+    secret_key = hmac.new(b"WebAppData", bot_token.encode("utf-8"), hashlib.sha256).digest()
+    expected_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(received_hash, expected_hash):
+        return None
+    user["id"] = user_id
+    return user
+
+
+def authenticated_user_id() -> int:
+    from flask import g
+    return int(g.telegram_user["id"])
 
 
 def create_webapp() -> Any:
@@ -67,6 +100,24 @@ def register_webapp_routes(app: Any) -> None:
 
     from flask import jsonify, request
 
+    @app.before_request
+    def require_telegram_identity():
+        if not request.path.startswith("/api/"):
+            return None
+        from flask import g
+        user = _verified_telegram_data(request.headers.get("X-Telegram-Init-Data", ""))
+        if not user:
+            return jsonify({"error": "Valid Telegram Mini App data required"}), 401
+        g.telegram_user = user
+        supplied_ids = [request.args.get("user_id"), request.headers.get("X-Telegram-User-Id")]
+        payload = request.get_json(silent=True)
+        if isinstance(payload, dict):
+            supplied_ids.append(payload.get("user_id"))
+        verified_id = str(user["id"])
+        if any(value not in (None, "") and str(value) != verified_id for value in supplied_ids):
+            return jsonify({"error": "user_id does not match authenticated Telegram user"}), 403
+        return None
+
     @app.route("/app")
     @app.route("/ohtest")
     def serve_mini_app():
@@ -83,25 +134,25 @@ def register_webapp_routes(app: Any) -> None:
 
     @app.route("/api/bootstrap", methods=["GET", "POST"])
     def api_bootstrap():
-        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
-        if user_id:
-            try:
-                uid = int(user_id)
-                u_name = request.args.get("name") or ""
-                u_uname = request.args.get("username") or ""
-                u_fname = request.args.get("first_name") or u_name or f"User {uid}"
-                u_lname = request.args.get("last_name") or ""
+        from flask import g
+        user = g.telegram_user
+        user_id = authenticated_user_id()
+        try:
+            uid = user_id
+            u_uname = user.get("username", "")
+            u_fname = user.get("first_name") or f"User {uid}"
+            u_lname = user.get("last_name", "")
 
-                class _WebUser:
-                    def __init__(self, u_id, uname, fname, lname):
-                        self.id = u_id
-                        self.username = uname
-                        self.first_name = fname
-                        self.last_name = lname
+            class _WebUser:
+                def __init__(self, u_id, uname, fname, lname):
+                    self.id = u_id
+                    self.username = uname
+                    self.first_name = fname
+                    self.last_name = lname
 
-                upsert_user(_WebUser(uid, u_uname, u_fname, u_lname))
-            except Exception as e:
-                logger.warning("Failed to auto-upsert web user %s: %s", user_id, e)
+            upsert_user(_WebUser(uid, u_uname, u_fname, u_lname))
+        except Exception as e:
+            logger.warning("Failed to auto-upsert verified web user %s: %s", user_id, e)
 
         is_admin = is_admin_user(user_id)
 
@@ -318,7 +369,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/attempts/record", methods=["POST"])
     def api_record_attempt():
         data = request.get_json(force=True) or {}
-        user_id = data.get("user_id") or 9990001
+        user_id = authenticated_user_id()
         test_id = data.get("test_id")
         correct = int(data.get("correct", 0))
         answered = int(data.get("answered", 0))
@@ -389,7 +440,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/errors/record", methods=["POST"])
     def api_record_single_error():
         data = request.get_json(force=True) or {}
-        user_id = data.get("user_id") or 9990001
+        user_id = authenticated_user_id()
         test_id = data.get("test_id")
         question_id = data.get("question_id")
         user_answer = data.get("user_answer")
@@ -409,7 +460,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/errors/resolve", methods=["POST"])
     def api_resolve_error():
         data = request.get_json(force=True) or {}
-        user_id = data.get("user_id")
+        user_id = authenticated_user_id()
         test_id = data.get("test_id")
         question_id = data.get("question_id")
 
@@ -428,7 +479,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/errors/clear", methods=["POST"])
     def api_clear_errors():
         data = request.get_json(force=True) or {}
-        user_id = data.get("user_id")
+        user_id = authenticated_user_id()
         test_id = data.get("test_id")
 
         if not user_id or not test_id:
@@ -444,7 +495,7 @@ def register_webapp_routes(app: Any) -> None:
 
     @app.route("/api/user/state", methods=["GET"])
     def api_user_state():
-        user_id = request.args.get("user_id")
+        user_id = authenticated_user_id()
         test_id = request.args.get("test_id")
 
         if not user_id or not test_id:
@@ -468,7 +519,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/user/toggle_rating_visibility", methods=["POST"])
     def api_toggle_rating_visibility():
         payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        user_id = authenticated_user_id()
         if not user_id:
             return jsonify({"error": "user_id required"}), 400
         try:
@@ -483,7 +534,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/user/reset_rating", methods=["POST"])
     def api_reset_rating():
         payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or request.headers.get("X-Telegram-User-Id")
+        user_id = authenticated_user_id()
         if not user_id:
             return jsonify({"error": "user_id required"}), 400
         try:
@@ -997,48 +1048,87 @@ def register_webapp_routes(app: Any) -> None:
         sent_count = asyncio.run(_send_all())
         return jsonify({"success": True, "sent_count": sent_count})
 
-    @app.route("/api/admin/upload_test", methods=["POST"])
-    def api_admin_upload_test():
-        user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
-        if not is_admin_user(user_id):
-            return jsonify({"error": "Forbidden"}), 403
-
-        filename = None
-        data = None
-
+    def _prepare_uploaded_test():
         if "file" in request.files:
             file = request.files["file"]
             filename = file.filename
-            data = json.load(file)
+            try:
+                data = json.load(file)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                return None, None, None, (jsonify({"error": "Invalid JSON file"}), 400)
         elif request.is_json:
-            json_body = request.get_json()
-            filename = json_body.get("filename")
-            data = json_body.get("data")
+            payload = request.get_json(silent=True) or {}
+            filename = payload.get("filename")
+            data = payload.get("data")
+        else:
+            return None, None, None, (jsonify({"error": "JSON file or JSON payload required"}), 400)
 
-        if not filename or not data:
-            return jsonify({"error": "No file or data provided"}), 400
+        if not isinstance(filename, str) or not filename.strip() or Path(filename).suffix.lower() != ".json":
+            return None, None, None, (jsonify({"error": "Choose a .json file"}), 400)
+        if isinstance(data, list):
+            data = {"questions": data}
+        if not isinstance(data, dict):
+            return None, None, None, (jsonify({"error": "Expected a list of questions or an object with questions"}), 400)
 
-        # Validate structure
         questions = data.get("questions")
-        if not isinstance(questions, list) or len(questions) == 0:
-            return jsonify({"error": "JSON must contain non-empty 'questions' list"}), 400
+        if not isinstance(questions, list) or not questions:
+            return None, None, None, (jsonify({"error": "Questions list is empty"}), 400)
 
-        # Rule: Do not assign subject automatically, keep unassigned!
+        from .loader import normalize_question, _slug
+        normalized = []
+        errors = []
+        for index, raw in enumerate(questions):
+            if not isinstance(raw, dict):
+                errors.append(f"Вопрос #{index + 1}: ожидается объект")
+                continue
+            try:
+                question = normalize_question(raw, index)
+                explanation = raw.get("explanation")
+                if explanation:
+                    question["explanation"] = str(explanation).strip()
+                normalized.append(question)
+            except (TypeError, ValueError) as exc:
+                errors.append(str(exc))
+        if errors:
+            return None, None, None, (jsonify({"error": "Проверьте вопросы и правильные ответы", "details": errors[:20]}), 400)
+
+        data["questions"] = normalized
         data.pop("subject", None)
         data.pop("subject_id", None)
+        test_id = _slug(Path(filename).stem)
+        data["title"] = str(data.get("title") or Path(filename).stem).strip()
+        return test_id, data, normalized, None
 
-        safe_name = Path(filename).stem.strip().lower().replace(" ", "_")
-        target_path = BASE_DIR / "tests" / f"{safe_name}.json"
-        with open(target_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        # Reload tests in memory
-        load_tests()
-
+    @app.route("/api/admin/preview_test", methods=["POST"])
+    def api_admin_preview_test():
+        if not is_admin_user():
+            return jsonify({"error": "Forbidden"}), 403
+        test_id, data, questions, error = _prepare_uploaded_test()
+        if error:
+            return error
         return jsonify({
             "success": True,
-            "test_id": safe_name,
-            "title": data.get("title", safe_name),
+            "test_id": test_id,
+            "title": data["title"],
+            "questions": questions,
+        })
+
+    @app.route("/api/admin/upload_test", methods=["POST"])
+    def api_admin_upload_test():
+        if not is_admin_user():
+            return jsonify({"error": "Forbidden"}), 403
+        test_id, data, questions, error = _prepare_uploaded_test()
+        if error:
+            return error
+
+        target_path = BASE_DIR / "tests" / f"{test_id}.json"
+        with target_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        load_tests()
+        return jsonify({
+            "success": True,
+            "test_id": test_id,
+            "title": data["title"],
             "questions_count": len(questions),
         })
 
@@ -1249,6 +1339,3 @@ def register_webapp_routes(app: Any) -> None:
 
         from .storage import list_support_feedback
         return jsonify({"items": list_support_feedback(limit=50)})
-
-
-
