@@ -186,14 +186,21 @@ def _normalize_access(raw: Any) -> dict[str, Any]:
     return result
 
 
-def normalize_question(raw: dict[str, Any], index: int) -> dict[str, Any]:
+def normalize_question(raw: dict[str, Any], index: int, study_mode: str = "test") -> dict[str, Any]:
     question = raw.get("question") or raw.get("text") or raw.get("q") or raw.get("title")
     options = raw.get("options") or raw.get("answers") or raw.get("variants")
 
     if not question:
         raise ValueError(f"Вопрос #{index + 1}: нет текста вопроса")
-    if not isinstance(options, list) or len(options) < 2:
-        raise ValueError(f"Вопрос #{index + 1}: options должен быть списком минимум из 2 вариантов")
+    if study_mode == "quizlet" and not options:
+        answer = raw.get("answer")
+        if not isinstance(answer, str) or not answer.strip():
+            raise ValueError(f"Вопрос #{index + 1}: нет текста ответа")
+        return {"question": str(question).strip(), "options": [answer.strip()], "correct_index": 0,
+                "explanation": str(raw.get("explanation") or "").strip()}
+    minimum_options = 1 if study_mode == "quizlet" else 2
+    if not isinstance(options, list) or len(options) < minimum_options:
+        raise ValueError(f"Вопрос #{index + 1}: options должен быть списком минимум из {minimum_options} вариантов")
 
     correct = raw.get("correct_index")
     if correct is None:
@@ -249,7 +256,8 @@ def _questions_from_data(data: Any, path: Path) -> list[dict[str, Any]]:
     questions = data.get("questions") if isinstance(data, dict) else data
     if not isinstance(questions, list):
         raise ValueError(f"{path}: нужен список вопросов или объект с questions")
-    return [normalize_question(item, i) for i, item in enumerate(questions)]
+    study_mode = data.get("study_mode", "test") if isinstance(data, dict) else "test"
+    return [normalize_question(item, i, study_mode) for i, item in enumerate(questions)]
 
 
 def _metadata_from_data(path: Path, data: Any, explicit_test_id: str | None = None, explicit_info: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -291,6 +299,7 @@ def _metadata_from_data(path: Path, data: Any, explicit_test_id: str | None = No
         "subject_emoji": subject_info["emoji"],
         "access": _normalize_access(access),
         "description": description or "",
+        "study_mode": data.get("study_mode", "test") if isinstance(data, dict) else "test",
     }
 
 
@@ -377,6 +386,8 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
 
     if setting.get("title"):
         info["title"] = setting["title"]
+    if setting.get("study_mode"):
+        info["study_mode"] = setting["study_mode"]
     if setting.get("subject_id"):
         info["subject_id"] = setting["subject_id"]
         if is_unassigned_subject_id(setting["subject_id"]):
@@ -400,6 +411,15 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
             info["subject_emoji"] = subject_setting.get("emoji") or info.get("subject_emoji") or ""
 
     return info
+
+
+def get_test_study_mode(test_id: str) -> str:
+    questions = LOADED_TESTS.get(test_id, [])
+    if test_id in TESTS and effective_test_info(test_id).get("study_mode") == "quizlet":
+        return "quizlet"
+    if any(len(question.get("options", [])) < 2 for question in questions):
+        return "quizlet"
+    return "test"
 
 
 def apply_test_metadata_override(

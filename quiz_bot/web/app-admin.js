@@ -265,6 +265,13 @@
                   ${accBadge}
                 </div>
               </div>
+              <label class="flex items-center gap-2 text-[11px] text-slate-400">
+                <span class="shrink-0">Формат</span>
+                <select aria-label="Формат материала" onchange="setTestStudyMode('${t.id}', this)" class="min-w-0 flex-1 p-2 rounded-lg bg-app-surface border border-app-border text-white">
+                  <option value="test" ${t.study_mode !== 'quizlet' ? 'selected' : ''}>Тест и квизлет</option>
+                  <option value="quizlet" ${t.study_mode === 'quizlet' ? 'selected' : ''}>Только квизлет</option>
+                </select>
+              </label>
               <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2 flex-wrap">
                 <button onclick="openAccessModal('${t.id}')" class="text-brand-400 hover:underline font-bold flex items-center gap-1">
                   Доступ: ${accLabel}
@@ -1113,6 +1120,32 @@
     }
   }
 
+  async function setTestStudyMode(testId, select) {
+    const test = adminStore.testsMeta.find(item => item.id === testId);
+    if (!test) return;
+    const previous = test.study_mode || 'test';
+    select.disabled = true;
+    try {
+      const response = await fetch('/api/admin/set_test_study_mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: state.userId, test_id: testId, study_mode: select.value })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Не удалось сохранить формат');
+      test.study_mode = result.study_mode;
+      if (BUNDLED_TESTS[testId]) BUNDLED_TESTS[testId].study_mode = result.study_mode;
+      try { localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta)); } catch(e) {}
+      showToast('Формат сохранён');
+      if (state.activeTestId === testId) updateHubStudyMode();
+    } catch(error) {
+      select.value = previous;
+      showToast(error.message);
+    } finally {
+      select.disabled = false;
+    }
+  }
+
   function renameTestPrompt(testId, oldTitle) {
     const newTitle = prompt('Введите новое название теста:', oldTitle);
     if (newTitle && newTitle.trim()) {
@@ -1339,6 +1372,10 @@
     titleInput.addEventListener('input', () => { pendingJsonTest.data.title = titleInput.value; });
     titleLabel.append(titleInput);
     preview.append(titleLabel);
+    const format = document.createElement('div');
+    format.className = 'text-xs text-brand-300 font-semibold';
+    format.textContent = pendingJsonTest.preview.study_mode === 'quizlet' ? 'Только квизлет' : 'Тест и квизлет';
+    preview.append(format);
 
     const list = document.createElement('div');
     list.className = 'max-h-72 overflow-y-auto space-y-2 pr-1';
@@ -1391,7 +1428,8 @@
         id: result.test_id,
         title: result.title,
         subject_id: 'default',
-        questions_count: result.questions_count
+        questions_count: result.questions_count,
+        study_mode: result.study_mode || 'test'
       };
       adminStore.testsMeta = adminStore.testsMeta.filter(test => test.id !== item.id);
       adminStore.testsMeta.push(item);

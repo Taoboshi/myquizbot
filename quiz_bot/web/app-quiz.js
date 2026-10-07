@@ -76,10 +76,16 @@
     renderActiveAttemptBanner();
   }
 
-  function resumeActiveAttempt() {
+  async function resumeActiveAttempt() {
     if (!state.activeAttempt) return;
     triggerHaptic('light');
-    selectTest(state.activeAttempt.testId);
+    const attempt = state.activeAttempt;
+    await selectTest(attempt.testId);
+    if (state.activeAttempt !== attempt || state.activeTestId !== attempt.testId || !state.currentTestOriginalQuestions.length) return;
+    if (isQuizletOnly()) {
+      showToast('Этот материал доступен только в квизлете');
+      return;
+    }
     state.currentMode = state.activeAttempt.mode;
     state.currentQIndex = state.activeAttempt.qIndex;
     state.userAnswers = state.activeAttempt.userAnswers || {};
@@ -190,6 +196,35 @@
     if (searchInput?.value) filterCatalogByQuery(searchInput.value);
   }
 
+  function isQuizletOnly(testId = state.activeTestId) {
+    const meta = adminStore.testsMeta.find(test => test.id === testId);
+    const bundled = BUNDLED_TESTS[testId];
+    const questions = testId === state.activeTestId ? state.currentTestOriginalQuestions : bundled?.questions;
+    return meta?.study_mode === 'quizlet' || bundled?.study_mode === 'quizlet' ||
+      (questions || []).some(question => !Array.isArray(question.options) || question.options.length < 2);
+  }
+
+  function updateHubStudyMode() {
+    const onlyQuizlet = isQuizletOnly();
+    const count = state.currentTestOriginalQuestions.length;
+    ['hub-quiz-modes', 'hub-quiz-tools', 'hub-reset-errors'].forEach(id => {
+      document.getElementById(id)?.classList.toggle('hidden', onlyQuizlet);
+    });
+    document.getElementById('hub-format-label').innerText = onlyQuizlet ? 'Только квизлет' : 'Тест и квизлет';
+    document.getElementById('hub-count-label').innerText = onlyQuizlet ? 'Карточек' : 'Вопросов';
+    document.getElementById('hub-errors-stat').classList.toggle('hidden', onlyQuizlet);
+    document.getElementById('hub-stats').classList.toggle('grid-cols-2', onlyQuizlet);
+    document.getElementById('hub-stats').classList.toggle('grid-cols-3', !onlyQuizlet);
+    const word = count % 10 === 1 && count % 100 !== 11 ? 'карточка'
+      : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'карточки' : 'карточек';
+    document.getElementById('hub-quizlet-count').innerText = count ? `${count} ${word}` : 'Загрузка карточек...';
+    document.getElementById('hub-quizlet-open').disabled = !count;
+    document.querySelectorAll('#hub-quiz-modes button, #hub-quiz-tools button').forEach(button => {
+      button.disabled = !count;
+    });
+    if (onlyQuizlet) document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
+  }
+
   // Subject Tests View
   function openSubjectTests(subjectId, subjectTitle) {
     triggerHaptic('light');
@@ -255,15 +290,16 @@
         btn.onclick = () => selectTest(t.id);
         attachLongPress(btn, () => showPinActionModal('test', t.id, t.title));
         btn.innerHTML = `
-          <div class="space-y-1">
+          <div class="space-y-1 min-w-0 flex-1">
             <div class="flex items-center gap-1.5">
-              <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-brand-300 transition">${t.title}</h4>
+              <h4 class="text-xs sm:text-sm font-bold text-white group-hover:text-brand-300 transition break-words">${t.title}</h4>
               ${isPinned ? '<span class="text-xs" title="Закреплено">📌</span>' : ''}
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 font-bold">${t.questions_count} вопросов</span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 font-bold">${t.questions_count} ${isQuizletOnly(t.id) ? 'карточек' : 'вопросов'}</span>
               ${badgeHtml}
             </div>
+            <div class="text-[10px] text-brand-300 font-semibold">${isQuizletOnly(t.id) ? 'Только квизлет' : 'Тест и квизлет'}</div>
           </div>
           <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
         `;
@@ -326,7 +362,7 @@
 
     state.activeTestId = testId;
     const testData = BUNDLED_TESTS[testId];
-    state.activeTestTitle = testData ? testData.title : testId;
+    state.activeTestTitle = testMeta?.title || testData?.title || testId;
 
     // Load original questions
     state.currentTestOriginalQuestions = testData ? [...testData.questions] : [];
@@ -347,19 +383,26 @@
       const res = await fetch(`/api/tests/${testId}`);
       if (res.ok) {
         const liveData = await res.json();
+        if (state.activeTestId !== testId) return;
         if (liveData && liveData.questions && liveData.questions.length > 0) {
           BUNDLED_TESTS[testId] = {
             title: liveData.title,
-            questions: liveData.questions
+            questions: liveData.questions,
+            study_mode: liveData.study_mode || 'test'
           };
           state.activeTestTitle = liveData.title;
           state.currentTestOriginalQuestions = [...liveData.questions];
-          state.activeQuestions = [...liveData.questions];
+          if (state.homeActiveView === 'hub') state.activeQuestions = [...liveData.questions];
+          if (testMeta) testMeta.study_mode = liveData.study_mode || 'test';
           document.getElementById('hub-test-title').innerText = state.activeTestTitle;
           document.getElementById('hub-q-count').innerText = state.currentTestOriginalQuestions.length;
+          updateHubStudyMode();
         }
       }
     } catch(e) {}
+    if (state.activeTestId === testId && !state.currentTestOriginalQuestions.length) {
+      document.getElementById('hub-quizlet-count').innerText = 'Не удалось загрузить карточки';
+    }
   }
 
   function openTestHub() {
@@ -403,6 +446,7 @@
     }
 
     updateHubResumeButton();
+    updateHubStudyMode();
     viewStack.push('hub');
   }
 
@@ -445,6 +489,14 @@
   }
 
   function startQuizMode(mode) {
+    if (isQuizletOnly()) {
+      showToast('Этот материал доступен только в квизлете');
+      return;
+    }
+    if (!state.currentTestOriginalQuestions.length) {
+      showToast('Подождите загрузки вопросов');
+      return;
+    }
     // If starting a new mode and an unfinished attempt exists for this test: prompt confirmation!
     if (mode !== 'errors_solve' && state.activeAttempt && state.activeAttempt.testId === state.activeTestId) {
       const qNum = (state.activeAttempt.qIndex || 0) + 1;
@@ -1268,6 +1320,10 @@
   }
 
   function openFlashcards() {
+    if (!state.currentTestOriginalQuestions.length) {
+      showToast('Подождите загрузки карточек');
+      return;
+    }
     triggerHaptic('light');
     state.homeActiveView = 'flashcards';
     hideAllViews();

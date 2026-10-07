@@ -20,6 +20,7 @@ from .loader import (
     get_subjects,
     get_tests_for_subject,
     get_unassigned_tests,
+    get_test_study_mode,
     load_tests,
 )
 from .storage import (
@@ -184,6 +185,7 @@ def register_webapp_routes(app: Any) -> None:
                     "id": t_id,
                     "title": info.get("title", t_id),
                     "questions_count": len(LOADED_TESTS.get(t_id, [])),
+                    "study_mode": get_test_study_mode(t_id),
                     "description": info.get("description", ""),
                     "access_type": acc_type,
                     "access_code": acc_code if is_admin else "",
@@ -208,6 +210,7 @@ def register_webapp_routes(app: Any) -> None:
                 "title": info.get("title", t_id),
                 "questions_count": len(LOADED_TESTS.get(t_id, [])),
                 "file": t_info.get("file", ""),
+                "study_mode": get_test_study_mode(t_id),
                 "access_type": acc_type,
                 "access_code": acc_code if is_admin else "",
             })
@@ -316,6 +319,7 @@ def register_webapp_routes(app: Any) -> None:
             "subject_title": info.get("subject_title", ""),
             "questions_count": len(clean_qs),
             "questions": clean_qs,
+            "study_mode": get_test_study_mode(test_id),
             "access_type": acc.get("type", "public"),
         })
 
@@ -698,6 +702,7 @@ def register_webapp_routes(app: Any) -> None:
                 "title": info.get("title", t_id),
                 "questions_count": len(LOADED_TESTS.get(t_id, [])),
                 "file": t_info.get("file", ""),
+                "study_mode": get_test_study_mode(t_id),
                 "access_type": access.get("type", "public"),
                 "access_code": access.get("code", ""),
             })
@@ -1203,6 +1208,10 @@ def register_webapp_routes(app: Any) -> None:
         if not isinstance(questions, list) or not questions:
             return None, None, None, (jsonify({"error": "Questions list is empty"}), 400)
 
+        study_mode = data.get("study_mode", "test")
+        if not isinstance(study_mode, str) or study_mode not in {"test", "quizlet"}:
+            return None, None, None, (jsonify({"error": "Invalid study_mode"}), 400)
+
         from .loader import normalize_question, _slug
         normalized = []
         errors = []
@@ -1211,7 +1220,7 @@ def register_webapp_routes(app: Any) -> None:
                 errors.append(f"Вопрос #{index + 1}: ожидается объект")
                 continue
             try:
-                question = normalize_question(raw, index)
+                question = normalize_question(raw, index, study_mode)
                 explanation = raw.get("explanation")
                 if explanation:
                     question["explanation"] = str(explanation).strip()
@@ -1240,6 +1249,7 @@ def register_webapp_routes(app: Any) -> None:
             "test_id": test_id,
             "title": data["title"],
             "questions": questions,
+            "study_mode": data.get("study_mode", "test"),
         })
 
     @app.route("/api/admin/upload_test", methods=["POST"])
@@ -1253,12 +1263,15 @@ def register_webapp_routes(app: Any) -> None:
         target_path = BASE_DIR / "tests" / f"{test_id}.json"
         with target_path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        load_tests()
+        loaded = load_tests()
+        LOADED_TESTS.clear()
+        LOADED_TESTS.update(loaded)
         return jsonify({
             "success": True,
             "test_id": test_id,
             "title": data["title"],
             "questions_count": len(questions),
+            "study_mode": get_test_study_mode(test_id),
         })
 
     @app.route("/api/admin/tests", methods=["GET"])
@@ -1278,11 +1291,30 @@ def register_webapp_routes(app: Any) -> None:
                 "subject_id": info.get("subject_id", "default"),
                 "subject_title": info.get("subject_title", "Не привязан"),
                 "questions_count": len(qs),
+                "study_mode": get_test_study_mode(t_id),
                 "file": TESTS.get(t_id, {}).get("file", ""),
                 "access_type": acc.get("type", "public"),
                 "access_code": acc.get("code", ""),
             })
         return jsonify({"items": items})
+
+    @app.route("/api/admin/set_test_study_mode", methods=["POST"])
+    def api_admin_set_test_study_mode():
+        if not is_admin_user():
+            return jsonify({"error": "Forbidden"}), 403
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({"error": "Expected a JSON object"}), 400
+        test_id = data.get("test_id")
+        study_mode = data.get("study_mode")
+        if not isinstance(test_id, str) or test_id not in LOADED_TESTS:
+            return jsonify({"error": "Test not found"}), 404
+        if not isinstance(study_mode, str) or study_mode not in {"test", "quizlet"}:
+            return jsonify({"error": "Invalid study mode"}), 400
+        if study_mode == "test" and any(len(q.get("options", [])) < 2 for q in LOADED_TESTS[test_id]):
+            return jsonify({"error": "У этого материала нет вариантов ответа. Доступен только квизлет."}), 400
+        set_test_metadata_setting(test_id, study_mode=study_mode, updated_by=authenticated_user_id())
+        return jsonify({"success": True, "test_id": test_id, "study_mode": get_test_study_mode(test_id)})
 
     @app.route("/api/admin/rename_test", methods=["POST"])
     def api_admin_rename_test():

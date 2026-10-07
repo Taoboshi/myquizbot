@@ -773,6 +773,7 @@ const nativeFetch = window.fetch.bind(window);
                 subject_id: isUnassigned ? 'default' : s.id,
                 subject_emoji: s.emoji || '📚',
                 questions_count: t.questions_count,
+                study_mode: t.study_mode || 'test',
                 access_type: t.access_type || 'public',
                 access_code: t.access_code || ''
               });
@@ -784,6 +785,7 @@ const nativeFetch = window.fetch.bind(window);
               title: t.title,
               subject_id: 'default',
               questions_count: t.questions_count,
+              study_mode: t.study_mode || 'test',
               access_type: t.access_type || 'public',
               access_code: t.access_code || ''
             });

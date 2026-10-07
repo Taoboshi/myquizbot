@@ -1147,17 +1147,17 @@
         <!-- Test Info Card -->
         <div class="p-5 rounded-3xl hero-glass-banner shadow-xl space-y-3">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20 uppercase">Карточка теста</span>
+            <span id="hub-format-label" class="px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20 uppercase">Тест и квизлет</span>
             <span id="hub-test-badge" class="text-xs px-2.5 py-0.5 rounded-full status-positive border font-medium">Доступен</span>
           </div>
           <h2 class="text-base font-bold text-white tracking-tight" id="hub-test-title">Название теста</h2>
           
-          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.08]">
+          <div id="hub-stats" class="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.08]">
             <div class="text-center p-2.5 rounded-xl bg-white/[0.035] border border-white/[0.07]">
-              <span class="block text-[10px] text-slate-400 font-medium">Вопросов</span>
+              <span id="hub-count-label" class="block text-[10px] text-slate-400 font-medium">Вопросов</span>
               <span class="text-xs font-bold text-white font-mono" id="hub-q-count">0</span>
             </div>
-            <div class="text-center p-2.5 rounded-xl bg-white/[0.035] border border-white/[0.07]">
+            <div id="hub-errors-stat" class="text-center p-2.5 rounded-xl bg-white/[0.035] border border-white/[0.07]">
               <span class="block text-[10px] text-slate-400 font-medium">Ошибок</span>
               <span class="text-xs font-bold text-slate-300 font-mono" id="hub-q-errors">0</span>
             </div>
@@ -1168,8 +1168,19 @@
           </div>
         </div>
 
+        <button id="hub-quizlet-open" onclick="openFlashcards()" class="w-full p-4 rounded-2xl bg-brand-500/10 border border-brand-500/30 hover:border-brand-500 flex items-center gap-3 text-left active:scale-[0.98] transition group disabled:opacity-50 disabled:pointer-events-none">
+          <div class="w-11 h-11 shrink-0 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          </div>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-bold text-white">Квизлет</span>
+            <span id="hub-quizlet-count" class="block text-[11px] text-slate-400 mt-0.5">0 карточек</span>
+          </span>
+          <svg class="w-4 h-4 shrink-0 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>
+        </button>
+
         <!-- Four Core Quiz Modes (2x2 Grid) -->
-        <div class="space-y-2">
+        <div id="hub-quiz-modes" class="space-y-2">
           <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Режимы прохождения</span>
           
           <div class="grid grid-cols-2 gap-2.5">
@@ -1235,7 +1246,7 @@
         <div class="space-y-2.5 pt-1">
           <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Инструменты</span>
           
-          <div class="grid grid-cols-1 gap-2.5">
+          <div id="hub-quiz-tools" class="grid grid-cols-1 gap-2.5">
             <!-- Training Mode -->
             <button onclick="openTrainingSelectorModal()" class="p-3.5 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 flex items-center justify-between text-left active:scale-[0.98] transition group">
               <div class="flex items-center space-x-3">
@@ -1268,7 +1279,7 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-1 gap-2">
             <button onclick="openLiveSearch()" class="p-3 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 text-left active:scale-95 transition">
               <div class="text-brand-400 mb-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -1276,16 +1287,9 @@
               <div class="text-xs font-bold text-white">Поиск вопроса</div>
               <div class="text-[10px] text-slate-400">По тексту и номеру</div>
             </button>
-            <button onclick="openFlashcards()" class="p-3 rounded-2xl bg-app-card border border-app-border hover:border-brand-500 text-left active:scale-95 transition">
-              <div class="text-brand-400 mb-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-              </div>
-              <div class="text-xs font-bold text-white">Флеш-карточки</div>
-              <div class="text-[10px] text-slate-400">Быстрое запоминание</div>
-            </button>
           </div>
 
-          <button onclick="confirmResetErrors()" class="w-full py-2.5 rounded-xl bg-white/[0.035] hover:bg-rose-500/10 border border-white/[0.08] hover:border-rose-500/30 text-slate-300 hover:text-rose-300 text-xs font-medium active:scale-95 transition flex items-center justify-center gap-2 shadow-sm">
+          <button id="hub-reset-errors" onclick="confirmResetErrors()" class="w-full py-2.5 rounded-xl bg-white/[0.035] hover:bg-rose-500/10 border border-white/[0.08] hover:border-rose-500/30 text-slate-300 hover:text-rose-300 text-xs font-medium active:scale-95 transition flex items-center justify-center gap-2 shadow-sm">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             <span>Сбросить ошибки этого теста</span>
           </button>
@@ -1398,6 +1402,7 @@
       <!-- VIEW 6: FLASHCARDS (3D КАРТОЧКИ С СИСТЕМОЙ QUIZLET) -->
       <!-- ========================================== -->
       <section id="view-flashcards" class="hidden space-y-4">
+        <h2 class="text-sm font-bold text-white">Квизлет</h2>
         <!-- Active Deck Section -->
         <div id="fc-active-deck" class="space-y-4">
           <!-- Quizlet Top Header: [X], Progress Counter, [Gear Options] -->
@@ -1406,7 +1411,7 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
             <span id="fc-counter" class="text-sm font-bold text-white font-mono">1 / N</span>
-            <button onclick="openFCOptionsModal()" class="w-10 h-10 rounded-full bg-app-surface border border-app-border flex items-center justify-center text-slate-300 hover:text-white active:scale-90 transition" title="Настройки карточек">
+            <button onclick="openFCOptionsModal()" class="w-10 h-10 rounded-full bg-app-surface border border-app-border flex items-center justify-center text-slate-300 hover:text-white active:scale-90 transition" title="Настройки квизлета">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </button>
           </div>

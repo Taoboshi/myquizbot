@@ -552,6 +552,7 @@ def _init_postgres_db() -> None:
             conn.execute(stmt)
 
         _ensure_subject_settings_columns(conn)
+        _add_column_if_missing(conn, "test_metadata_settings", "study_mode TEXT")
         _create_common_indexes(conn)
         conn.commit()
 
@@ -707,6 +708,7 @@ def _init_sqlite_db() -> None:
                 pass
 
         _ensure_subject_settings_columns(conn)
+        _add_column_if_missing(conn, "test_metadata_settings", "study_mode TEXT")
         _create_common_indexes(conn)
         conn.commit()
 
@@ -1034,7 +1036,7 @@ def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
 
         row = conn.execute(
             """
-            SELECT test_id, title, subject_id, subject_title, subject_emoji, updated_at, updated_by
+            SELECT test_id, title, subject_id, subject_title, subject_emoji, study_mode, updated_at, updated_by
             FROM test_metadata_settings
             WHERE test_id = ?
             """,
@@ -1050,6 +1052,7 @@ def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
         "subject_id": row["subject_id"] or "",
         "subject_title": row["subject_title"] or "",
         "subject_emoji": row["subject_emoji"] or "",
+        "study_mode": row["study_mode"] or "",
         "updated_at": row["updated_at"],
         "updated_by": row["updated_by"],
     }
@@ -1062,7 +1065,10 @@ def set_test_metadata_setting(
     subject_title: str | None = None,
     subject_emoji: str | None = None,
     updated_by: int | None = None,
+    study_mode: str | None = None,
 ) -> None:
+    if study_mode is not None and study_mode not in {"test", "quizlet"}:
+        raise ValueError("Invalid study mode")
     current = get_test_metadata_setting(test_id) or {}
 
     title_value = title if title is not None else current.get("title")
@@ -1081,15 +1087,16 @@ def set_test_metadata_setting(
         conn.execute(
             """
             INSERT INTO test_metadata_settings (
-                test_id, title, subject_id, subject_title, subject_emoji, updated_at, updated_by
+                test_id, title, subject_id, subject_title, subject_emoji, study_mode, updated_at, updated_by
             )
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(test_id)
             DO UPDATE SET
                 title = excluded.title,
                 subject_id = excluded.subject_id,
                 subject_title = excluded.subject_title,
                 subject_emoji = excluded.subject_emoji,
+                study_mode = excluded.study_mode,
                 updated_at = CURRENT_TIMESTAMP,
                 updated_by = excluded.updated_by
             """,
@@ -1099,6 +1106,7 @@ def set_test_metadata_setting(
                 (subject_id_value or None),
                 (subject_title_value or None),
                 (subject_emoji_value or None),
+                study_mode if study_mode is not None else current.get("study_mode") or None,
                 updated_by,
             ),
         )

@@ -230,6 +230,7 @@ class AdminApiTestCase(unittest.TestCase):
             "title": "Новый тест",
             "questions_count": 0,
             "file": "sample_unassigned.json",
+            "study_mode": "test",
             "access_type": "public",
             "access_code": "",
         }])
