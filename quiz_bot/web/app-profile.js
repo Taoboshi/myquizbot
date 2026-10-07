@@ -111,9 +111,15 @@
     }
 
     if (subjects.length === 0) {
+      const emptyMessage = !state.catalogLoaded
+        ? 'Загружаю дисциплины…'
+        : state.catalogLoadFailed
+          ? 'Не удалось загрузить дисциплины. Проверьте соединение и попробуйте ещё раз.'
+          : 'Дисциплин пока нет. Проверьте, привязаны ли тесты к разделам.';
       container.innerHTML = `
         <div class="p-4 rounded-2xl bg-app-surface border border-app-border text-center text-xs text-slate-400">
-          Список дисциплин пуст
+          ${emptyMessage}
+          ${state.catalogLoadFailed ? '<button onclick="retryProfileCatalog()" class="mt-2 px-3 py-1.5 rounded-lg bg-app-card border border-app-border text-brand-300 font-semibold">Повторить загрузку</button>' : ''}
         </div>
       `;
       return;
@@ -166,6 +172,15 @@
       `;
       container.appendChild(item);
     });
+  }
+
+  async function retryProfileCatalog() {
+    state.catalogLoadFailed = false;
+    state.catalogLoaded = false;
+    renderDisciplineMastery();
+    await checkBootstrapAndAdmin();
+    state.catalogLoaded = true;
+    updateProfileFullView();
   }
 
   function openDisciplineStatsModal(subjectId) {
@@ -325,6 +340,8 @@
     loadProfileRating(state.ratingActiveSubject || 'all', state.ratingActiveTest || 'all');
   }
 
+  let profileRatingRequestId = 0;
+
   function onSelectRatingSubject(subId) {
     triggerHaptic('light');
     state.ratingActiveSubject = subId;
@@ -341,6 +358,7 @@
   async function loadProfileRating(subjectId, testId) {
     const container = document.getElementById('profile-rating-items');
     if (!container) return;
+    const requestId = ++profileRatingRequestId;
     container.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">Загрузка данных...</div>';
 
     let items = [];
@@ -356,6 +374,7 @@
       }
     } catch(e) {}
 
+    if (requestId !== profileRatingRequestId || state.activeProfileSubTab !== 'rating') return;
     renderProfileRatingItems(items, subjectId, testId);
   }
 
@@ -1082,6 +1101,28 @@
 
   function renderFavsSubtab() {
     const box = document.getElementById('profile-subtab-content');
+    if (!box) return;
+    const savedTestIds = new Set();
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith('ohtest_favs_')) continue;
+      const testId = key.slice('ohtest_favs_'.length);
+      try {
+        const ids = JSON.parse(localStorage.getItem(key) || '[]');
+        if (ids.length && !BUNDLED_TESTS[testId] && !profileErrorTestLoads.has(testId)) savedTestIds.add(testId);
+      } catch(e) {}
+    }
+    if (savedTestIds.size) {
+      box.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">Загружаю вопросы из избранного…</div>';
+      Promise.all([...savedTestIds].map(loadProfileErrorTest)).then(() => {
+        if (state.activeProfileSubTab === 'favs') {
+          renderFavsSubtab();
+          const count = document.getElementById('profile-fav-count');
+          if (count) count.innerText = getAllSavedFavorites().length;
+        }
+      });
+      return;
+    }
     const favs = getAllSavedFavorites();
 
     if (favs.length === 0) {

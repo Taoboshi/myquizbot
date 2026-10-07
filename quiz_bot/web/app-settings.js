@@ -317,12 +317,9 @@
       return;
     }
 
-    if (tabId === 'home') {
-      state.homeActiveView = 'home';
-      viewStack = ['home'];
-    }
-
     state.currentTab = tabId;
+    state.homeActiveView = 'home';
+    viewStack = ['home'];
 
     ['home', 'profile', 'settings'].forEach(t => {
       const btn = document.getElementById('tab-' + t);

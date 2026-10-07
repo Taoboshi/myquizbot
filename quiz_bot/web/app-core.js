@@ -77,6 +77,8 @@ const nativeFetch = window.fetch.bind(window);
   let state = {
     currentTab: 'home',
     homeActiveView: 'home', // 'home' | 'tests' | 'hub' | 'solver' | 'result' | 'flashcards' | 'search'
+    catalogLoaded: initialTestsMeta.length > 0,
+    catalogLoadFailed: false,
     activeProfileSubTab: 'favs', // 'favs' | 'errors' | 'history' | 'rating'
     showAllErrors: false,
     activeSubjectId: 'luchevaya_diagnostika',
@@ -277,6 +279,7 @@ const nativeFetch = window.fetch.bind(window);
 
     // Fetch server updates & check admin in background (non-blocking)
     checkBootstrapAndAdmin().then(() => {
+      state.catalogLoaded = true;
       renderHomeSubjects();
       updateHubResumeButton();
       const profFavsEl = document.getElementById('profile-fav-count');
@@ -309,6 +312,12 @@ const nativeFetch = window.fetch.bind(window);
 
   // Detect which view is currently active in the DOM
   function getCurrentActiveView() {
+    if (state.homeActiveView === 'home') {
+      if (state.currentTab === 'profile') return 'view-tab-profile';
+      if (state.currentTab === 'settings') return 'view-tab-settings';
+      return 'view-home';
+    }
+
     // 1. If currently in Profile tab and profile view is visible
     if (state.currentTab === 'profile') {
       const p = document.getElementById('view-tab-profile');
@@ -635,7 +644,12 @@ const nativeFetch = window.fetch.bind(window);
       if (tgU?.last_name) bParams.set('last_name', tgU.last_name);
       const url = `/api/bootstrap?${bParams.toString()}`;
       const res = await fetch(url);
-      if (res.ok) {
+      if (!res.ok) {
+        state.catalogLoadFailed = true;
+        return;
+      }
+      state.catalogLoadFailed = false;
+      {
         const data = await res.json();
         if (data.is_admin) {
           state.isAdmin = true;
@@ -705,6 +719,7 @@ const nativeFetch = window.fetch.bind(window);
         }
       }
     } catch(e) {
+      state.catalogLoadFailed = true;
       state.isAdmin = false;
       document.getElementById('settings-admin-block')?.classList.add('hidden');
     }
