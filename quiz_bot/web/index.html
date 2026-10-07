@@ -3608,10 +3608,17 @@
     if (isCorrect) {
       try { triggerHaptic('success'); } catch(e) {}
       state.userErrors.delete(q.id);
+      state.userErrors.delete(String(q.id));
     } else {
       try { triggerHaptic('error'); } catch(e) {}
       // IMMEDIATELY RECORD ERROR TO STATE & LOCALSTORAGE AT THE MOMENT OF SELECTION!
+      state.userErrors.delete(String(q.id));
       state.userErrors.add(q.id);
+      try {
+        const resolvedKey = `ohtest_resolved_errors_${state.activeTestId}`;
+        const resolved = JSON.parse(localStorage.getItem(resolvedKey) || '[]').filter(id => id != q.id);
+        localStorage.setItem(resolvedKey, JSON.stringify(resolved));
+      } catch(e) {}
       try {
         fetch('/api/errors/record', {
           method: 'POST',
@@ -3874,6 +3881,7 @@
           const cIdx = getCorrectIndex(q);
           if (state.userAnswers[q.id] !== undefined && Number(state.userAnswers[q.id]) === Number(cIdx)) {
             state.userErrors.delete(q.id);
+            state.userErrors.delete(String(q.id));
             try {
               const resKey = `ohtest_resolved_errors_${state.activeTestId}`;
               const curRes = new Set(JSON.parse(localStorage.getItem(resKey) || '[]'));
@@ -5225,8 +5233,33 @@
     showToast('✅ Профиль успешно обновлен!');
   }
 
+  const profileErrorTestLoads = new Map();
+  const profileErrorTestFailures = new Set();
+
+  async function loadProfileErrorTest(testId) {
+    if (BUNDLED_TESTS[testId]) return true;
+    if (!profileErrorTestLoads.has(testId)) {
+      profileErrorTestLoads.set(testId, fetch(`/api/tests/${encodeURIComponent(testId)}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (!data || !Array.isArray(data.questions)) {
+            profileErrorTestFailures.add(testId);
+            return false;
+          }
+          BUNDLED_TESTS[testId] = { title: data.title || testId, questions: data.questions };
+          return true;
+        })
+        .catch(() => {
+          profileErrorTestFailures.add(testId);
+          return false;
+        }));
+    }
+    return profileErrorTestLoads.get(testId);
+  }
+
   function getAllSavedErrors() {
     const result = [];
+    const seen = new Set();
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -5237,7 +5270,9 @@
           if (tData && Array.isArray(qids)) {
             qids.forEach(qid => {
               const q = tData.questions.find(item => item.id == qid);
-              if (q) {
+              const key = `${testId}:${qid}`;
+              if (q && !seen.has(key)) {
+                seen.add(key);
                 result.push({
                   testId: testId,
                   testTitle: tData.title,
@@ -5253,10 +5288,11 @@
       const tData = BUNDLED_TESTS[state.activeTestId];
       if (tData) {
         state.userErrors.forEach(qid => {
-          const already = result.some(r => r.testId === state.activeTestId && r.question.id == qid);
-          if (!already) {
+          const key = `${state.activeTestId}:${qid}`;
+          if (!seen.has(key)) {
             const q = tData.questions.find(item => item.id == qid);
             if (q) {
+              seen.add(key);
               result.push({
                 testId: state.activeTestId,
                 testTitle: tData.title,
@@ -5280,6 +5316,7 @@
 
   function getResolvedErrors() {
     const result = [];
+    const unresolved = new Set(getAllSavedErrors().map(e => `${e.testId}:${e.question.id}`));
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -5290,7 +5327,9 @@
           if (tData && Array.isArray(qids)) {
             qids.forEach(qid => {
               const q = tData.questions.find(item => item.id == qid);
-              if (q) {
+              const key = `${testId}:${qid}`;
+              if (q && !unresolved.has(key)) {
+                unresolved.add(key);
                 result.push({
                   testId: testId,
                   testTitle: tData.title,
@@ -5315,18 +5354,42 @@
   function clearResolvedErrors() {
     if (!confirm('Очистить список усвоенных (решённых) ошибок?')) return;
     try {
+      const keys = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && k.startsWith('ohtest_resolved_errors_')) {
-          localStorage.removeItem(k);
+          keys.push(k);
         }
       }
+      keys.forEach(k => localStorage.removeItem(k));
     } catch(e) {}
     renderErrorsSubtab();
+    updateProfileErrorBadge(getAllSavedErrors().length);
   }
 
   function renderErrorsSubtab() {
     const box = document.getElementById('profile-subtab-content');
+    if (!box) return;
+    const savedTestIds = new Set();
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('ohtest_errors_') || key.startsWith('ohtest_resolved_errors_'))) {
+        const prefix = key.startsWith('ohtest_resolved_errors_') ? 'ohtest_resolved_errors_' : 'ohtest_errors_';
+        const testId = key.slice(prefix.length);
+        if (testId && !BUNDLED_TESTS[testId] && !profileErrorTestLoads.has(testId)) savedTestIds.add(testId);
+      }
+    }
+    if (savedTestIds.size) {
+      box.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">Загружаю вопросы из истории ошибок…</div>';
+      Promise.all([...savedTestIds].map(loadProfileErrorTest)).then(() => {
+        if (state.activeProfileSubTab === 'errors') renderErrorsSubtab();
+      });
+      return;
+    }
+    const unavailableTests = [...profileErrorTestFailures];
+    const loadWarning = unavailableTests.length
+      ? `<div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200">Не удалось загрузить вопросы для ${unavailableTests.length} ${unavailableTests.length === 1 ? 'теста' : 'тестов'}. Проверьте соединение и перезапустите приложение.</div>`
+      : '';
     const unresolvedErrors = getAllSavedErrors().map(e => ({ ...e, status: 'unresolved' }));
     const resolvedErrors = getResolvedErrors();
 
@@ -5335,10 +5398,11 @@
     displayList.sort((a, b) => {
       if (a.status === 'unresolved' && b.status === 'resolved') return -1;
       if (a.status === 'resolved' && b.status === 'unresolved') return 1;
-      return 0;
+      const testOrder = a.testTitle.localeCompare(b.testTitle, 'ru');
+      return testOrder || Number(a.question.id) - Number(b.question.id);
     });
 
-    if (displayList.length === 0 && !state.showAllErrors) {
+    if (displayList.length === 0 && !state.showAllErrors && !loadWarning) {
       box.innerHTML = `
         <div class="p-8 text-center rounded-3xl bg-app-card border border-app-border space-y-3">
           <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -5390,6 +5454,7 @@
     }).join('');
 
     box.innerHTML = `
+      ${loadWarning}
       <div class="p-3.5 rounded-2xl bg-app-card border border-app-border space-y-3">
         <div class="flex items-center justify-between">
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-200 font-semibold select-none">
@@ -5499,12 +5564,14 @@
   function clearAllProfileErrors() {
     if (!confirm('Очистить все ошибки из блокнота?')) return;
     try {
+      const keys = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith('ohtest_errors_')) {
-          localStorage.removeItem(k);
+        if (k && (k.startsWith('ohtest_errors_') || k.startsWith('ohtest_resolved_errors_'))) {
+          keys.push(k);
         }
       }
+      keys.forEach(k => localStorage.removeItem(k));
       state.userErrors = new Set();
     } catch(e) {}
     renderErrorsSubtab();
