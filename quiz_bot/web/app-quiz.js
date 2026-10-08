@@ -273,12 +273,14 @@
         let badgeHtml = '<span class="text-[10px] status-positive font-medium">✓ Доступен</span>';
 
         if (accType === 'code') {
-          const isUnlocked = state.isAdmin || state.unlockedCodeTests.has(t.id);
+          const isUnlocked = state.isAdmin || state.personalTestAccess?.has(t.id) || state.unlockedCodeTests.has(t.id);
           badgeHtml = isUnlocked 
             ? '<span class="text-[10px] status-positive font-medium">✓ Доступен</span>'
             : '<span class="text-[10px] text-amber-400 font-medium">🔑 По коду</span>';
         } else if (accType === 'private') {
-          badgeHtml = state.isAdmin
+          badgeHtml = state.personalTestAccess?.has(t.id)
+            ? '<span class="text-[10px] status-positive font-medium">✓ Доступен</span>'
+            : state.isAdmin
             ? '<span class="text-[10px] text-purple-400 font-medium">🔐 Приватный (админ)</span>'
             : '<span class="text-[10px] text-purple-400 font-medium">🔐 Приватный</span>';
         } else if (accType === 'admin_only') {
@@ -315,21 +317,32 @@
   // Test Selection & Hub
   async function selectTest(testId) {
     triggerHaptic('light');
+    if (state.isBlocked) return showToast('Доступ ограничен администратором');
 
     const testMeta = adminStore.testsMeta.find(t => t.id === testId);
     const accType = testMeta ? (testMeta.access_type || 'public') : 'public';
+    if (!state.isAdmin && ['private','code'].includes(accType)) {
+      try {
+        const response = await fetch(`/api/tests/${encodeURIComponent(testId)}/access`);
+        if (!response.ok) throw new Error();
+        const access = await response.json();
+        if (!state.personalTestAccess) state.personalTestAccess = new Set();
+        if (access.allowed) state.personalTestAccess.add(testId);
+        else { state.personalTestAccess.delete(testId); state.unlockedCodeTests.delete(testId); }
+      } catch(e) { return showToast('Не удалось проверить доступ. Проверьте соединение.'); }
+    }
 
     if (accType === 'admin_only' && !state.isAdmin) {
       alert('Этот тест находится в режиме «Только админ» и доступен только администраторам.');
       return;
     }
 
-    if (accType === 'private' && !state.isAdmin) {
+    if (accType === 'private' && !state.isAdmin && !state.personalTestAccess?.has(testId)) {
       alert('Этот тест является приватным. Доступ открывается преподавателем или администратором (@issdm).');
       return;
     }
 
-    if (accType === 'code' && !state.isAdmin && !state.unlockedCodeTests.has(testId)) {
+    if (accType === 'code' && !state.isAdmin && !state.personalTestAccess?.has(testId) && !state.unlockedCodeTests.has(testId)) {
       const codeEntered = prompt(`Тест «${testMeta ? testMeta.title : testId}» защищен паролем.\n\nВведите секретный код доступа:`);
       if (!codeEntered) return;
 

@@ -465,6 +465,10 @@
   function goBack() {
     triggerHaptic('light');
     const activeView = getCurrentActiveView();
+    if (activeView === 'view-admin-person' || activeView === 'view-admin-people') {
+      backAdminPeople();
+      return;
+    }
     if (activeView === 'view-settings-detail') {
       openSettingsSection(null);
       return;

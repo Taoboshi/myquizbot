@@ -1,0 +1,58 @@
+.admin-workspace { color: #e2e8f0; font-size: calc(13px * var(--text-scale, 1)); padding-bottom: 24px; }
+.admin-workspace h2 { font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
+.admin-workspace h3 { font-size: 14px; font-weight: 700; margin: 24px 0 12px; }
+.admin-workspace input, .admin-workspace select, .admin-workspace textarea {
+  width: 100%; min-width: 0; padding: 11px 12px; margin-bottom: 12px; border-radius: 8px;
+  background: #171c25; border: 1px solid #46505e; color: #e2e8f0; font: inherit;
+}
+.admin-workspace textarea { resize: vertical; }
+.admin-workspace input:focus, .admin-workspace select:focus, .admin-workspace textarea:focus,
+.admin-workspace button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+.admin-people-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; margin-top: 18px; }
+.admin-people-controls input { grid-column: 1 / -1; }
+.admin-muted, .admin-person-copy > span { color: #94a3b8; font-size: calc(11px * var(--text-scale, 1)); }
+.admin-person-row { width: 100%; display: flex; align-items: center; text-align: left; gap: 12px; padding: 16px 0; border-bottom: 1px solid #334155; }
+.admin-person-row:hover { background: rgba(148,163,184,.05); }
+.admin-person-avatar { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex: 0 0 38px; background: rgba(148,163,184,.12); border-radius: 8px; font-weight: 800; font-size: 20px; }
+.admin-person-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
+.admin-person-avatar { overflow: hidden; }
+.admin-person-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.admin-person-status { flex-shrink: 0; font-size: 11px; }
+.admin-person-heading { display: flex; align-items: center; gap: 12px; }
+.admin-person-heading > div { min-width: 0; }
+.admin-person-tabs { display: flex; overflow-x: auto; gap: 16px; border-bottom: 1px solid #334155; margin: 20px 0; }
+.admin-person-tabs button { flex-shrink: 0; padding: 10px 0; border-bottom: 2px solid transparent; color: #94a3b8; font-size: 12px; }
+.admin-person-tabs button[aria-selected=true] { color: var(--accent-color); border-color: var(--accent-color); }
+.admin-details { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px 12px; }
+.admin-details dt { color: #94a3b8; }
+.admin-details dd { text-align: right; overflow-wrap: anywhere; }
+.admin-command { display: inline-flex; align-items: center; justify-content: center; padding: 9px 13px; border: 1px solid #46505e; border-radius: 8px; font: inherit; margin: 4px 0; }
+.admin-primary { background: var(--accent-color); border-color: var(--accent-color); color: white; }
+.admin-command:disabled { opacity: .4; cursor: default; }
+.admin-danger { color: #fb7185; }
+.admin-success { color: #34d399; }
+.admin-empty { color: #94a3b8; padding: 24px 0; }
+.admin-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; font-size: 12px; }
+.admin-record { border-bottom: 1px solid #334155; padding: 14px 0; overflow-wrap: anywhere; }
+.admin-record p { margin-top: 6px; white-space: pre-wrap; }
+.admin-access-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.admin-access-row > div { flex: 1; min-width: 0; }
+.admin-access-row button { flex-shrink: 0; }
+body.light-theme .admin-workspace { color: #0f172a; }
+body.light-theme .admin-muted, body.light-theme .admin-person-copy > span,
+body.light-theme .admin-details dt { color: #64748b; }
+body.light-theme .admin-person-tabs button { color: #475569; }
+body.light-theme .admin-person-tabs button[aria-selected=true] { color: var(--accent-color); }
+body.light-theme .admin-person-row, body.light-theme .admin-person-tabs,
+body.light-theme .admin-record { border-color: #d4dbe4; }
+body.light-theme .admin-danger { color: #be123c; }
+body.light-theme .admin-success { color: #047857; }
+@media (max-width: 640px) {
+  .admin-person-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0 12px; overflow: visible; }
+  .admin-person-tabs button { min-width: 0; overflow-wrap: anywhere; }
+}
+@media (max-width: 360px) {
+  .admin-people-controls { grid-template-columns: 1fr; }
+  .admin-person-row { gap: 8px; }
+  .admin-person-status { max-width: 60px; overflow-wrap: anywhere; }
+}

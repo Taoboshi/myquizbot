@@ -8,6 +8,7 @@ import hmac
 import logging
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl
@@ -32,6 +33,7 @@ from .storage import (
     get_all_time_error_indices,
     get_user_profile,
     get_user_preferences,
+    list_user_test_access,
     save_user_preferences,
     is_user_rating_hidden,
     mark_all_time_error_resolved,
@@ -109,6 +111,15 @@ def register_webapp_routes(app: Any) -> None:
         return
 
     from flask import jsonify, request, send_from_directory
+    from .web_admin_people import register_people_routes, reset_markers
+    register_people_routes(app)
+
+    @app.route("/api/tests/<test_id>/access")
+    def api_test_access_status(test_id):
+        from .access import can_open_test
+        if test_id not in LOADED_TESTS:
+            return jsonify({"error": "Test not found"}), 404
+        return jsonify({"allowed": is_admin_user() or can_open_test(authenticated_user_id(), test_id)})
 
     @app.before_request
     def require_telegram_identity():
@@ -126,6 +137,9 @@ def register_webapp_routes(app: Any) -> None:
         verified_id = str(user["id"])
         if any(value not in (None, "") and str(value) != verified_id for value in supplied_ids):
             return jsonify({"error": "user_id does not match authenticated Telegram user"}), 403
+        from .admin_users import is_user_blocked
+        if not is_admin_user() and is_user_blocked(user["id"]):
+            return jsonify({"error": "Доступ ограничен администратором", "blocked": True}), 403
         return None
 
     @app.route("/app")
@@ -233,6 +247,8 @@ def register_webapp_routes(app: Any) -> None:
         return jsonify({
             "is_admin": is_admin,
             "preferences": get_user_preferences(user_id),
+            "progress_resets": reset_markers(user_id),
+            "test_access": list_user_test_access(user_id),
             "is_hidden_in_rating": is_hidden_in_rating,
             "user_profile": user_profile,
             "subjects": subjects_data,
@@ -302,6 +318,9 @@ def register_webapp_routes(app: Any) -> None:
     def api_test_detail(test_id: str):
         if test_id not in LOADED_TESTS:
             return jsonify({"error": "Test not found"}), 404
+        from .access import can_open_test
+        if not is_admin_user() and not can_open_test(authenticated_user_id(), test_id):
+            return jsonify({"error": "Доступ к тесту закрыт"}), 403
 
         info = effective_test_info(test_id)
         raw_qs = LOADED_TESTS[test_id]
@@ -894,29 +913,21 @@ def register_webapp_routes(app: Any) -> None:
                 u.username,
                 u.first_name,
                 u.last_name,
+                u.profile_name,
                 u.first_seen_at AS created_at,
                 u.last_seen_at,
-                COUNT(DISTINCT a.attempt_id) AS attempts_total,
-                SUM(CASE WHEN a.finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished_attempts,
-                COALESCE(SUM(a.answered), 0) AS answered,
-                COALESCE(SUM(a.correct), 0) AS correct,
-                CASE
-                    WHEN COALESCE(SUM(a.answered), 0) > 0
-                    THEN ROUND(COALESCE(SUM(a.correct), 0) * 100.0 / COALESCE(SUM(a.answered), 0), 1)
-                    ELSE 0
-                END AS percent,
-                COUNT(DISTINCT e.question_index) AS active_errors,
-                COUNT(DISTINCT f.question_index) AS favorites,
+                (SELECT COUNT(*) FROM attempts ax WHERE ax.user_id=u.user_id) AS attempts_total,
+                (SELECT COUNT(*) FROM attempts ax WHERE ax.user_id=u.user_id AND ax.finished_at IS NOT NULL) AS finished_attempts,
+                (SELECT COALESCE(SUM(ax.answered),0) FROM attempts ax WHERE ax.user_id=u.user_id) AS answered,
+                (SELECT COALESCE(SUM(ax.correct),0) FROM attempts ax WHERE ax.user_id=u.user_id) AS correct,
+                (SELECT CASE WHEN SUM(ax.answered)>0 THEN ROUND(SUM(ax.correct)*100.0/SUM(ax.answered),1) ELSE 0 END FROM attempts ax WHERE ax.user_id=u.user_id) AS percent,
+                (SELECT COUNT(*) FROM all_time_errors ex WHERE ex.user_id=u.user_id AND COALESCE(ex.is_resolved,0)=0) AS active_errors,
+                (SELECT COUNT(*) FROM favorites fx WHERE fx.user_id=u.user_id) AS favorites,
                 CASE WHEN b.user_id IS NULL THEN 0 ELSE 1 END AS is_blocked,
                 b.blocked_at,
                 b.reason AS blocked_reason
             FROM users u
-            LEFT JOIN attempts a ON a.user_id = u.user_id
-            LEFT JOIN all_time_errors e
-                ON e.user_id = u.user_id AND COALESCE(e.is_resolved, 0) = 0
-            LEFT JOIN favorites f ON f.user_id = u.user_id
             LEFT JOIN blocked_users b ON b.user_id = u.user_id
-            GROUP BY u.user_id, u.username, u.first_name, u.last_name, u.first_seen_at, u.last_seen_at, b.user_id, b.blocked_at, b.reason
         """
 
         with db_connect() as conn:
@@ -925,7 +936,7 @@ def register_webapp_routes(app: Any) -> None:
         items = []
         for r in raw_rows:
             d = dict(r)
-            name = f"{d.get('first_name') or ''} {d.get('last_name') or ''}".strip() or d.get('username') or f"ID {d['user_id']}"
+            name = d.get('profile_name') or f"{d.get('first_name') or ''} {d.get('last_name') or ''}".strip() or d.get('username') or f"ID {d['user_id']}"
             item = {
                 "user_id": d["user_id"],
                 "name": name,
@@ -953,7 +964,7 @@ def register_webapp_routes(app: Any) -> None:
 
             if tab == "blocked" and not item["is_blocked"]:
                 continue
-            if tab == "active" and item["attempts_count"] == 0 and not item["last_seen_at"]:
+            if tab == "active" and str(item["last_seen_at"]) < str(datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)):
                 continue
             if tab == "with_attempts" and item["attempts_count"] == 0:
                 continue
@@ -1029,10 +1040,11 @@ def register_webapp_routes(app: Any) -> None:
             ).fetchall()
 
             fav_count = conn.execute("SELECT COUNT(*) FROM favorites WHERE user_id = ?", (target_uid_int,)).fetchone()[0]
+            error_count = conn.execute("SELECT COUNT(*) FROM all_time_errors WHERE user_id = ? AND COALESCE(is_resolved,0)=0", (target_uid_int,)).fetchone()[0]
 
         user_info = {
             "user_id": target_uid_int,
-            "name": f"{u_row['first_name'] or ''} {u_row['last_name'] or ''}".strip() if u_row else f"ID {target_uid_int}",
+            "name": (u_row['profile_name'] or f"{u_row['first_name'] or ''} {u_row['last_name'] or ''}".strip()) if u_row else f"ID {target_uid_int}",
             "username": u_row["username"] if u_row and u_row["username"] else "",
             "first_name": u_row["first_name"] if u_row and u_row["first_name"] else "",
             "last_name": u_row["last_name"] if u_row and u_row["last_name"] else "",
@@ -1053,7 +1065,7 @@ def register_webapp_routes(app: Any) -> None:
             "answered": ans_tot,
             "correct": cor_tot,
             "percent": acc,
-            "active_errors": len(errors_rows),
+            "active_errors": error_count,
             "favorites": fav_count,
         }
 
@@ -1453,8 +1465,9 @@ def register_webapp_routes(app: Any) -> None:
         if not target_uid:
             return jsonify({"error": "target_user_id required"}), 400
 
-        from .admin_users import reset_user_progress
-        reset_user_progress(int(target_uid))
+        from .web_admin_people import ensure_people_tables, reset_progress
+        ensure_people_tables()
+        reset_progress(int(target_uid), "all")
         return jsonify({"success": True, "target_user_id": target_uid})
 
     @app.route("/api/support/feedback", methods=["POST"])

@@ -360,6 +360,7 @@ const nativeFetch = window.fetch.bind(window);
     for (const v of nestedViews) {
       const el = document.getElementById(v);
       if (el && !el.classList.contains('hidden') && el.style.display !== 'none') {
+        if (v === 'view-admin' && adminPeople.screen) return adminPeople.screen === 'person' ? 'view-admin-person' : 'view-admin-people';
         return v;
       }
     }
@@ -669,12 +670,19 @@ const nativeFetch = window.fetch.bind(window);
       const url = `/api/bootstrap?${bParams.toString()}`;
       const res = await fetch(url);
       if (!res.ok) {
+        const failure = await res.json().catch(() => ({}));
+        if (failure.blocked) showToast(failure.error);
+        state.isBlocked = Boolean(failure.blocked);
         state.catalogLoadFailed = true;
         return;
       }
       state.catalogLoadFailed = false;
       {
         const data = await res.json();
+        state.isBlocked = false;
+        state.personalTestAccess = new Set(data.test_access || []);
+        state.unlockedCodeTests = new Set(data.test_access || []);
+        applyProgressResets(data.progress_resets || []);
         applyServerPreferences(data.preferences || {});
         if (data.user_profile && typeof data.user_profile === 'object') {
           const serverProfile = data.user_profile;

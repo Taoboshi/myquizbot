@@ -1,6 +1,8 @@
 """Admin user, blocking and broadcast helpers."""
 
 import time
+from datetime import datetime, timezone
+from .storage import _add_column_if_missing
 
 from .admin_core import *  # noqa: F401,F403 - split from legacy admin UI module
 from .admin_core import _percent, _safe_count
@@ -20,6 +22,7 @@ def ensure_admin_tables() -> None:
             )
             """
         )
+        _add_column_if_missing(conn, "blocked_users", "blocked_until TEXT")
         conn.commit()
 
 
@@ -36,11 +39,14 @@ def is_user_blocked(user_id: int) -> bool:
     ensure_admin_tables()
     with db_connect() as conn:
         row = conn.execute(
-            "SELECT user_id FROM blocked_users WHERE user_id = ?",
+            "SELECT blocked_until FROM blocked_users WHERE user_id = ?",
             (user_id,),
         ).fetchone()
-    blocked = row is not None
-    _BLOCKED_USERS_CACHE[user_id] = (blocked, now + BLOCKED_CACHE_TTL)
+    expires = None
+    if row and row["blocked_until"]:
+        expires = datetime.fromisoformat(str(row["blocked_until"])).replace(tzinfo=timezone.utc).timestamp()
+    blocked = row is not None and (expires is None or expires > now)
+    _BLOCKED_USERS_CACHE[user_id] = (blocked, min(now + BLOCKED_CACHE_TTL, expires) if blocked and expires else now + BLOCKED_CACHE_TTL)
     return blocked
 
 
@@ -58,23 +64,24 @@ def get_blocked_user(user_id: int):
         ).fetchone()
 
 
-def block_user(user_id: int, blocked_by: int, reason: str | None = None) -> None:
+def block_user(user_id: int, blocked_by: int, reason: str | None = None, blocked_until: str | None = None) -> None:
     ensure_admin_tables()
     with db_connect() as conn:
         conn.execute(
             """
-            INSERT INTO blocked_users (user_id, blocked_by, reason)
-            VALUES (?, ?, ?)
+            INSERT INTO blocked_users (user_id, blocked_by, reason, blocked_until)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(user_id)
             DO UPDATE SET
                 blocked_at = CURRENT_TIMESTAMP,
                 blocked_by = excluded.blocked_by,
-                reason = excluded.reason
+                reason = excluded.reason,
+                blocked_until = excluded.blocked_until
             """,
-            (user_id, blocked_by, reason),
+            (user_id, blocked_by, reason, blocked_until),
         )
         conn.commit()
-    _BLOCKED_USERS_CACHE[user_id] = (True, time.time() + BLOCKED_CACHE_TTL)
+    _BLOCKED_USERS_CACHE.pop(user_id, None)
 
 
 def unblock_user(user_id: int) -> None:
@@ -93,9 +100,10 @@ def broadcast_users() -> list[int]:
             SELECT u.user_id
             FROM users u
             LEFT JOIN blocked_users b ON b.user_id = u.user_id
+                AND (b.blocked_until IS NULL OR b.blocked_until > ?)
             WHERE b.user_id IS NULL
             ORDER BY u.last_seen_at DESC
-            """
+            """, (str(datetime.now(timezone.utc).replace(tzinfo=None)),)
         ).fetchall()
     return [int(row["user_id"]) for row in rows]
 
@@ -895,5 +903,3 @@ def reset_user_progress(user_id: int) -> dict[str, int]:
         "active_sessions": active_count,
         "runtime_sessions": runtime_count,
     }
-
-

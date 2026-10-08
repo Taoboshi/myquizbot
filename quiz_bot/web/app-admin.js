@@ -135,6 +135,7 @@
   }
 
   async function openAdminDashboard() {
+    resetAdminPeopleScreen();
     triggerHaptic('light');
     state.homeActiveView = 'admin';
     hideAllViews();
@@ -160,6 +161,7 @@
 
   // Admin Modals
   async function openAdminModal(type) {
+    if (type === 'users') return openAdminPeople();
     triggerHaptic('light');
     if (type === 'subjects_and_tests' || type === 'subjects') {
       selectedSubjectIconKey = suggestSubjectIcon('');
@@ -988,12 +990,13 @@
     if (confirm(`Сбросить все сохранённые попытки и ошибки для пользователя ID ${uid}?`)) {
       triggerHaptic('light');
       try {
-        await fetch('/api/admin/reset_user', {
+        const response = await fetch('/api/admin/reset_user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: state.userId, target_user_id: uid })
         });
-      } catch(e) {}
+        if (!response.ok) throw new Error('Не удалось сбросить прогресс');
+      } catch(e) { showToast('Не удалось сбросить прогресс. Попробуйте ещё раз.'); return; }
       alert('Прогресс пользователя успешно сброшен!');
 
       const u = adminStore.users.find(x => x.user_id === uid);
