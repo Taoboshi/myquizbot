@@ -234,7 +234,7 @@
       ];
 
       let subjectsHtml = adminStore.subjects.map(s => {
-        const testsInSub = adminStore.testsMeta.filter(t => t.subject_id === s.id);
+        const testsInSub = adminStore.testsMeta.filter(t => t.subject_id === s.id).sort(compareSubjectTestOrder);
         const subjectAccessType = s.access_type || 'public';
         const subjectAccessLabel = { public: 'Открытый', code: 'По коду', private: 'Приватный', admin_only: 'Только админ' }[subjectAccessType] || 'Открытый';
         const subjectAccessCode = subjectAccessType === 'code' && s.access_code ? ` · Код: ${escapeHtml(s.access_code)}` : '';
@@ -243,7 +243,7 @@
         if (testsInSub.length === 0) {
           testsListHtml = '<div class="p-2 text-center text-[11px] text-slate-400">В этом предмете пока нет привязанных тестов.</div>';
         } else {
-          testsListHtml = testsInSub.map(t => {
+          testsListHtml = testsInSub.map((t, index) => {
             const accType = t.access_type || 'public';
             let accBadge = '<span class="px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-400 border border-brand-500/30 text-[10px] font-bold">Открытый</span>';
             let accLabel = 'Открытый';
@@ -259,14 +259,14 @@
             }
 
             return `
-            <div class="p-3 rounded-xl bg-app-card border border-app-border space-y-2">
+            <div data-admin-order-test="${escapeHtml(t.id)}" class="p-3 rounded-xl bg-app-card border border-app-border space-y-2">
               <div class="flex items-start justify-between text-xs gap-2">
                 <div class="space-y-0.5 min-w-0 flex-1">
                   <div class="font-bold text-white truncate">${t.title}</div>
                   <div class="text-[10px] text-slate-400 font-mono">${t.id}</div>
                 </div>
                 <div class="flex flex-col items-end gap-1 shrink-0">
-                  <span class="font-mono text-[10px] text-brand-300 font-bold">${t.questions_count} вопр.</span>
+                  <span class="font-mono text-[10px] text-slate-300 font-bold">${t.questions_count} ${t.study_mode === 'quizlet' ? 'карт.' : 'вопр.'}</span>
                   ${accBadge}
                 </div>
               </div>
@@ -277,6 +277,17 @@
                   <option value="quizlet" ${t.study_mode === 'quizlet' ? 'selected' : ''}>Только квизлет</option>
                 </select>
               </label>
+              <div class="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                <span data-order-position>Позиция ${index + 1} из ${testsInSub.length}</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" data-order-direction="-1" onclick="moveAdminTest(${escapeHtml(JSON.stringify(s.id))}, ${escapeHtml(JSON.stringify(t.id))}, -1)" aria-label="Переместить выше" title="Переместить выше" ${index === 0 ? 'disabled' : ''} class="w-9 h-9 flex items-center justify-center rounded-lg bg-app-surface border border-app-border text-slate-300 disabled:opacity-30 disabled:cursor-default">
+                    <span class="-rotate-90">${renderInterfaceIcon('chevron-right')}</span>
+                  </button>
+                  <button type="button" data-order-direction="1" onclick="moveAdminTest(${escapeHtml(JSON.stringify(s.id))}, ${escapeHtml(JSON.stringify(t.id))}, 1)" aria-label="Переместить ниже" title="Переместить ниже" ${index === testsInSub.length - 1 ? 'disabled' : ''} class="w-9 h-9 flex items-center justify-center rounded-lg bg-app-surface border border-app-border text-slate-300 disabled:opacity-30 disabled:cursor-default">
+                    <span class="rotate-90">${renderInterfaceIcon('chevron-right')}</span>
+                  </button>
+                </div>
+              </div>
               <div class="flex items-center justify-between pt-1 border-t border-app-border/60 text-[11px] gap-2 flex-wrap">
                 <button onclick="openAccessModal('${t.id}')" class="text-brand-400 hover:underline font-bold flex items-center gap-1">
                   Доступ: ${accLabel}
@@ -316,7 +327,7 @@
               <span class="text-slate-400">Доступ к разделу: <strong class="text-white">${subjectAccessLabel}${subjectAccessCode}</strong></span>
               <button onclick="openSubjectAccessModal(${escapeHtml(JSON.stringify(s.id))})" class="shrink-0 text-brand-400 hover:underline font-bold">Изменить</button>
             </div>
-            <div class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
+            <div data-admin-order-subject="${escapeHtml(s.id)}" class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
               ${testsListHtml}
             </div>
           </div>
@@ -1127,6 +1138,50 @@
       }).catch(() => {});
       renderHomeSubjects();
       openAdminModal('subjects_and_tests');
+    }
+  }
+
+  let adminTestOrderBusy = false;
+
+  async function moveAdminTest(subjectId, testId, direction) {
+    if (adminTestOrderBusy || ![-1, 1].includes(direction)) return;
+    const tests = adminStore.testsMeta.filter(test => test.subject_id === subjectId).sort(compareSubjectTestOrder);
+    const index = tests.findIndex(test => test.id === testId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= tests.length) return;
+    const list = [...document.querySelectorAll('[data-admin-order-subject]')].find(item => item.dataset.adminOrderSubject === subjectId);
+    if (!list) return;
+    adminTestOrderBusy = true;
+    const buttons = list.querySelectorAll('[data-order-direction]');
+    buttons.forEach(button => { button.disabled = true; });
+    [tests[index], tests[target]] = [tests[target], tests[index]];
+    try {
+      const response = await fetch('/api/admin/reorder_tests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject_id: subjectId, test_ids: tests.map(test => test.id) })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Не удалось сохранить порядок');
+      const rows = new Map([...list.querySelectorAll('[data-admin-order-test]')].map(row => [row.dataset.adminOrderTest, row]));
+      tests.forEach((test, position) => {
+        test.sort_order = position;
+        const row = rows.get(test.id);
+        row.querySelector('[data-order-position]').textContent = `Позиция ${position + 1} из ${tests.length}`;
+        list.appendChild(row);
+      });
+      try { localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta)); } catch(e) {}
+      triggerHaptic('light');
+      showToast('Порядок сохранён');
+    } catch(error) {
+      showToast(error.message || 'Не удалось сохранить порядок');
+    } finally {
+      adminTestOrderBusy = false;
+      const rows = [...list.querySelectorAll('[data-admin-order-test]')];
+      rows.forEach((row, position) => {
+        row.querySelector('[data-order-direction="-1"]').disabled = position === 0;
+        row.querySelector('[data-order-direction="1"]').disabled = position === rows.length - 1;
+      });
     }
   }
 

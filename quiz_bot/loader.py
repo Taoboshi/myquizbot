@@ -383,6 +383,8 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
         info["title"] = setting["title"]
     if setting.get("study_mode"):
         info["study_mode"] = setting["study_mode"]
+    if setting.get("sort_order") is not None:
+        info["sort_order"] = setting["sort_order"]
     if setting.get("subject_id"):
         info["subject_id"] = setting["subject_id"]
         if is_unassigned_subject_id(setting["subject_id"]):
@@ -539,7 +541,10 @@ def get_tests_for_subject(subject_id: str) -> list[tuple[str, dict[str, Any]]]:
         info = effective_test_info(test_id)
         if info.get("subject_id") == subject_id:
             rows.append((test_id, info))
-    return sorted(rows, key=lambda item: str(item[1].get("title", item[0])).casefold())
+    return sorted(rows, key=lambda item: (
+        item[1].get("sort_order") if item[1].get("sort_order") is not None else float("inf"),
+        str(item[1].get("title", item[0])).casefold(),
+    ))
 
 
 def get_unassigned_tests() -> list[tuple[str, dict[str, Any]]]:

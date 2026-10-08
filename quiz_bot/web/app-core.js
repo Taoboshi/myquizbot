@@ -76,6 +76,13 @@ const nativeFetch = window.fetch.bind(window);
     testsMeta: initialTestsMeta.filter(t => t && typeof t === 'object')
   };
 
+  function compareSubjectTestOrder(a, b) {
+    const aOrder = Number.isInteger(a.sort_order) ? a.sort_order : Infinity;
+    const bOrder = Number.isInteger(b.sort_order) ? b.sort_order : Infinity;
+    if (aOrder !== bOrder) return aOrder < bOrder ? -1 : 1;
+    return a.title.localeCompare(b.title, 'ru');
+  }
+
   // User State
   let state = {
     currentTab: 'home',
@@ -783,6 +790,7 @@ const nativeFetch = window.fetch.bind(window);
                 subject_id: isUnassigned ? 'default' : s.id,
                 subject_emoji: s.emoji || '📚',
                 questions_count: t.questions_count,
+                sort_order: t.sort_order ?? null,
                 study_mode: t.study_mode || 'test',
                 access_type: t.access_type || 'public',
                 access_code: t.access_code || ''

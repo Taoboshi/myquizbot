@@ -553,6 +553,7 @@ def _init_postgres_db() -> None:
 
         _ensure_subject_settings_columns(conn)
         _add_column_if_missing(conn, "test_metadata_settings", "study_mode TEXT")
+        _add_column_if_missing(conn, "test_metadata_settings", "sort_order INTEGER")
         _add_column_if_missing(conn, "users", "preferences_json TEXT")
         _create_common_indexes(conn)
         conn.commit()
@@ -710,6 +711,7 @@ def _init_sqlite_db() -> None:
 
         _ensure_subject_settings_columns(conn)
         _add_column_if_missing(conn, "test_metadata_settings", "study_mode TEXT")
+        _add_column_if_missing(conn, "test_metadata_settings", "sort_order INTEGER")
         _add_column_if_missing(conn, "users", "preferences_json TEXT")
         _create_common_indexes(conn)
         conn.commit()
@@ -1038,7 +1040,7 @@ def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
 
         row = conn.execute(
             """
-            SELECT test_id, title, subject_id, subject_title, subject_emoji, study_mode, updated_at, updated_by
+            SELECT test_id, title, subject_id, subject_title, subject_emoji, study_mode, sort_order, updated_at, updated_by
             FROM test_metadata_settings
             WHERE test_id = ?
             """,
@@ -1055,6 +1057,7 @@ def get_test_metadata_setting(test_id: str) -> dict[str, Any] | None:
         "subject_title": row["subject_title"] or "",
         "subject_emoji": row["subject_emoji"] or "",
         "study_mode": row["study_mode"] or "",
+        "sort_order": row["sort_order"],
         "updated_at": row["updated_at"],
         "updated_by": row["updated_by"],
     }
@@ -1075,6 +1078,7 @@ def set_test_metadata_setting(
 
     title_value = title if title is not None else current.get("title")
     subject_id_value = subject_id if subject_id is not None else current.get("subject_id")
+    sort_order = current.get("sort_order") if subject_id_value == current.get("subject_id") else None
 
     is_unlinked = str(subject_id_value or "").strip().lower() in ("", "default", "unassigned", "none", "no_subject")
     if is_unlinked:
@@ -1089,9 +1093,9 @@ def set_test_metadata_setting(
         conn.execute(
             """
             INSERT INTO test_metadata_settings (
-                test_id, title, subject_id, subject_title, subject_emoji, study_mode, updated_at, updated_by
+                test_id, title, subject_id, subject_title, subject_emoji, study_mode, sort_order, updated_at, updated_by
             )
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
             ON CONFLICT(test_id)
             DO UPDATE SET
                 title = excluded.title,
@@ -1099,6 +1103,7 @@ def set_test_metadata_setting(
                 subject_title = excluded.subject_title,
                 subject_emoji = excluded.subject_emoji,
                 study_mode = excluded.study_mode,
+                sort_order = excluded.sort_order,
                 updated_at = CURRENT_TIMESTAMP,
                 updated_by = excluded.updated_by
             """,
@@ -1109,9 +1114,29 @@ def set_test_metadata_setting(
                 (subject_title_value or None),
                 (subject_emoji_value or None),
                 study_mode if study_mode is not None else current.get("study_mode") or None,
+                sort_order,
                 updated_by,
             ),
         )
+        conn.commit()
+    clear_cache()
+
+
+def set_subject_test_order(subject_id: str, test_ids: list[str], updated_by: int) -> None:
+    with db_connect() as conn:
+        for position, test_id in enumerate(test_ids):
+            conn.execute(
+                """
+                INSERT INTO test_metadata_settings (test_id, subject_id, sort_order, updated_at, updated_by)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+                ON CONFLICT(test_id) DO UPDATE SET
+                    subject_id = excluded.subject_id,
+                    sort_order = excluded.sort_order,
+                    updated_at = CURRENT_TIMESTAMP,
+                    updated_by = excluded.updated_by
+                """,
+                (test_id, subject_id, position, updated_by),
+            )
         conn.commit()
     clear_cache()
 

@@ -327,12 +327,12 @@
       tests = tests.filter(t => (t.access_type || 'public') !== 'admin_only');
     }
 
-    // Alphabetical sort with pinned on top
+    // Keep personal pins above the subject's saved order.
     const sortedTests = [...tests].sort((a, b) => {
       const aPinned = pinnedTests.has(a.id) ? 1 : 0;
       const bPinned = pinnedTests.has(b.id) ? 1 : 0;
       if (aPinned !== bPinned) return bPinned - aPinned;
-      return a.title.localeCompare(b.title, 'ru');
+      return compareSubjectTestOrder(a, b);
     });
 
     if (sortedTests.length === 0) {

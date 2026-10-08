@@ -40,6 +40,7 @@ from .storage import (
     record_attempt_finish,
     reset_user_rating,
     set_subject_setting,
+    set_subject_test_order,
     set_test_metadata_setting,
     set_user_rating_hidden,
     save_user_profile,
@@ -225,6 +226,7 @@ def register_webapp_routes(app: Any) -> None:
                         "title": info.get("title", t_id),
                         "questions_count": len(LOADED_TESTS.get(t_id, [])),
                         "study_mode": get_test_study_mode(t_id),
+                        "sort_order": info.get("sort_order"),
                         "description": info.get("description", ""),
                         "access_type": acc_type,
                         "access_code": acc_code if is_admin else "",
@@ -802,6 +804,27 @@ def register_webapp_routes(app: Any) -> None:
         clear_cache()
         return jsonify({"success": True, "test_id": test_id, "subject_id": subject_id})
 
+    @app.route("/api/admin/reorder_tests", methods=["POST"])
+    def api_admin_reorder_tests():
+        if not is_admin_user():
+            return jsonify({"error": "Forbidden"}), 403
+        data = request.get_json(force=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({"error": "Укажите предмет и список тестов"}), 400
+        subject_id = data.get("subject_id")
+        test_ids = data.get("test_ids")
+        if not isinstance(subject_id, str) or not isinstance(test_ids, list) or not test_ids:
+            return jsonify({"error": "Укажите предмет и список тестов"}), 400
+        if any(not isinstance(test_id, str) for test_id in test_ids) or len(set(test_ids)) != len(test_ids):
+            return jsonify({"error": "Список тестов содержит неверные или повторяющиеся ID"}), 400
+        if subject_id not in {key for key, _ in get_subjects()}:
+            return jsonify({"error": "Предмет не найден"}), 404
+        expected_ids = {test_id for test_id, _ in get_tests_for_subject(subject_id)}
+        if set(test_ids) != expected_ids:
+            return jsonify({"error": "Список тестов изменился. Откройте управление предметами заново"}), 409
+        set_subject_test_order(subject_id, test_ids, authenticated_user_id())
+        return jsonify({"success": True, "subject_id": subject_id, "test_ids": test_ids})
+
     @app.route("/api/admin/unlink_test", methods=["POST"])
     def api_admin_unlink_test():
         data = request.get_json(force=True) or {}
@@ -1350,6 +1373,7 @@ def register_webapp_routes(app: Any) -> None:
                 "title": info.get("title", t_id),
                 "subject_id": info.get("subject_id", "default"),
                 "subject_title": info.get("subject_title", "Не привязан"),
+                "sort_order": info.get("sort_order"),
                 "questions_count": len(qs),
                 "study_mode": get_test_study_mode(t_id),
                 "file": TESTS.get(t_id, {}).get("file", ""),

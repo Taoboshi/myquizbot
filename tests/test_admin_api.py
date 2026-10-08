@@ -263,6 +263,66 @@ class AdminApiTestCase(unittest.TestCase):
             "access_code": "",
         }])
 
+    def test_subject_test_order_persists_in_catalog_and_preserves_metadata(self):
+        from quiz_bot.loader import LOADED_TESTS, TESTS, effective_test_info, get_tests_for_subject
+        from quiz_bot import storage
+
+        fixtures = {
+            "order_a": {"title": "A", "subject_id": "ordering", "subject_title": "Ordering"},
+            "order_b": {"title": "B", "subject_id": "ordering", "subject_title": "Ordering"},
+        }
+        with patch.dict(TESTS, fixtures, clear=True), patch.dict(LOADED_TESTS, {key: [] for key in fixtures}, clear=True):
+            storage.set_test_metadata_setting("order_b", title="B renamed", subject_id="ordering", study_mode="quizlet")
+            self.assertEqual([key for key, _ in get_tests_for_subject("ordering")], ["order_a", "order_b"])
+            response = self.client.post("/api/admin/reorder_tests", headers=self._auth_header(12345), json={
+                "subject_id": "ordering", "test_ids": ["order_b", "order_a"],
+            })
+            self.assertEqual(response.status_code, 200)
+            storage.clear_cache()
+            self.assertEqual([key for key, _ in get_tests_for_subject("ordering")], ["order_b", "order_a"])
+            self.assertEqual(effective_test_info("order_b")["study_mode"], "quizlet")
+            self.assertEqual(effective_test_info("order_b")["title"], "B renamed")
+            catalog = self.client.get("/api/bootstrap", headers=self._auth_header(99999)).get_json()
+            subject = next(subject for subject in catalog["subjects"] if subject["id"] == "ordering")
+            self.assertEqual([test["id"] for test in subject["tests"]], ["order_b", "order_a"])
+            self.assertEqual([test["sort_order"] for test in subject["tests"]], [0, 1])
+            admin_items = self.client.get("/api/admin/tests", headers=self._auth_header(12345)).get_json()["items"]
+            self.assertEqual({test["id"]: test["sort_order"] for test in admin_items}, {"order_a": 1, "order_b": 0})
+            storage.set_test_metadata_setting("order_b", title="Z renamed")
+            self.assertEqual([key for key, _ in get_tests_for_subject("ordering")], ["order_b", "order_a"])
+            TESTS["order_new"] = {"title": "0 New", "subject_id": "ordering"}
+            self.assertEqual([key for key, _ in get_tests_for_subject("ordering")], ["order_b", "order_a", "order_new"])
+            storage.set_test_metadata_setting("order_b", subject_id="other")
+            self.assertIsNone(storage.get_test_metadata_setting("order_b")["sort_order"])
+
+    def test_reorder_requires_admin_and_complete_subject_membership(self):
+        from quiz_bot.loader import TESTS
+        from quiz_bot import storage
+
+        fixtures = {
+            "order_a": {"title": "A", "subject_id": "ordering"},
+            "order_b": {"title": "B", "subject_id": "ordering"},
+            "outside": {"title": "Outside", "subject_id": "other"},
+        }
+        with patch.dict(TESTS, fixtures, clear=True):
+            response = self.client.post("/api/admin/reorder_tests", headers=self._auth_header(99999), json={
+                "user_id": 12345, "subject_id": "ordering", "test_ids": ["order_b", "order_a"],
+            })
+            self.assertEqual(response.status_code, 403)
+            for payload, status in [
+                ({"subject_id": "ordering", "test_ids": ["order_a"]}, 409),
+                ({"subject_id": "ordering", "test_ids": ["outside", "order_a"]}, 409),
+                ({"subject_id": "ordering", "test_ids": ["order_a", "order_a"]}, 400),
+                ({"subject_id": "ordering", "test_ids": [{}]}, 400),
+                ({"subject_id": "missing", "test_ids": ["order_a"]}, 404),
+                (["invalid"], 400),
+            ]:
+                with self.subTest(payload=payload):
+                    response = self.client.post("/api/admin/reorder_tests", headers=self._auth_header(12345), json=payload)
+                    self.assertEqual(response.status_code, status)
+            self.assertIsNone(storage.get_test_metadata_setting("order_a"))
+            self.assertIsNone(storage.get_test_metadata_setting("order_b"))
+
     def test_admin_delete_subject_api(self):
         res = self.client.post(
             "/api/admin/delete_subject",
