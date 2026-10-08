@@ -882,7 +882,7 @@
     const q = state.activeQuestions[state.currentQIndex];
     const total = state.activeQuestions.length;
 
-    document.getElementById('solver-counter').innerText = `Вопрос ${state.currentQIndex + 1} из ${total}`;
+    document.getElementById('solver-counter').innerText = `${state.currentQIndex + 1} / ${total}`;
     document.getElementById('solver-q-num-pill').innerText = `ВОПРОС #${q.id}`;
     document.getElementById('solver-q-text').innerText = q.question;
     document.getElementById('solver-bar').style.width = `${((state.currentQIndex + 1) / total) * 100}%`;
@@ -901,7 +901,6 @@
 
     const ans = state.userAnswers[q.id];
     const isRevealed = state.revealedAnswers.has(q.id);
-    document.getElementById('solver-self-assessment')?.classList.toggle('hidden', !isRevealed || ans !== undefined);
 
     const showBtnText = document.getElementById('solver-btn-show-text');
     if (isRevealed || ans !== undefined) {
@@ -931,10 +930,10 @@
       } else {
         // Answered: GREEN ON CORRECT, RED ON WRONG + GREEN ON CORRECT!
         if (isCorrectOption) {
-          btn.className += "option-btn-correct font-bold ring-2 ring-emerald-500/60 shadow-lg";
+          btn.className += "option-btn-correct";
           badgeChip = `<span class="badge-correct px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">Верно ✓</span>`;
         } else if (isUserChoice && !isCorrectOption) {
-          btn.className += "option-btn-wrong font-bold ring-2 ring-rose-500/60 shadow-lg";
+          btn.className += "option-btn-wrong";
           badgeChip = `<span class="badge-wrong px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 shrink-0">Ваш ответ ✕</span>`;
         } else {
           btn.className += "option-btn-muted";
@@ -972,7 +971,7 @@
 
   function selectOption(idx) {
     const q = state.activeQuestions[state.currentQIndex];
-    if (state.userAnswers[q.id] !== undefined) return; // Prevent double select
+    if (state.userAnswers[q.id] !== undefined || state.revealedAnswers.has(q.id)) return;
     state.userAnswers[q.id] = idx;
 
     const correctIdx = getCorrectIndex(q);
@@ -1030,28 +1029,6 @@
     }
   }
 
-  const revealedErrorWrites = new Map();
-
-  function assessRevealedAnswer(known) {
-    const q = state.activeQuestions[state.currentQIndex];
-    if (!q || !state.revealedAnswers.has(q.id) || state.userAnswers[q.id] !== undefined) return;
-    const testId = state.activeTestId;
-    const userId = state.userId;
-    selectOption(known ? getCorrectIndex(q) : -1);
-    if (!known) return;
-    try {
-      const key = `ohtest_resolved_errors_${testId}`;
-      const resolved = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
-      resolved.add(q.id);
-      localStorage.setItem(key, JSON.stringify([...resolved]));
-    } catch(e) {}
-    // Resolve only after the reveal's initial error record has reached the server.
-    Promise.resolve(revealedErrorWrites.get(`${testId}:${q.id}`)).then(() => fetch('/api/errors/resolve', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({user_id: userId, test_id: testId, question_id: q.id})
-    })).catch(() => {});
-  }
-
   function exitStudySession() {
     clearInterval(state.timerInterval);
     clearTimeout(autoAdvanceTimer);
@@ -1077,7 +1054,7 @@
       state.userErrors.add(q.id);
       try {
         localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
-        const write = fetch('/api/errors/record', {
+        fetch('/api/errors/record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1087,11 +1064,6 @@
             user_answer: null
           })
         }).catch(() => {});
-        const key = `${state.activeTestId}:${q.id}`;
-        revealedErrorWrites.set(key, write);
-        write.finally(() => {
-          if (revealedErrorWrites.get(key) === write) revealedErrorWrites.delete(key);
-        });
       } catch(e) {}
 
       const hubErrors = document.getElementById('hub-q-errors');
