@@ -2,18 +2,52 @@ let selectedSubjectIconKey = 'stethoscope';
 let subjectIconWasManuallySelected = false;
 
 function renderSubjectIconPicker(selectedKey, pickerId) {
-  return `<div id="${pickerId}" class="grid grid-cols-6 sm:grid-cols-8 gap-1.5">${SUBJECT_ICON_CATALOG.map(icon => `
+  const selected = SUBJECT_ICON_CATALOG.find(icon => icon.key === selectedKey) || SUBJECT_ICON_CATALOG[0];
+  return `<div id="${pickerId}" class="subject-icon-picker">
+    <div class="subject-icon-selection">
+      <span class="subject-icon-preview" data-icon-preview>${renderSubjectIcon(selected.key)}</span>
+      <span data-icon-selection-label aria-live="polite">${selected.label}</span>
+    </div>
+    <div class="subject-icon-filters">
+      <input type="search" data-icon-search aria-label="Поиск значка предмета" placeholder="Поиск значка" oninput="filterSubjectIconPicker(this)">
+      <select data-icon-group aria-label="Группа значков" onchange="filterSubjectIconPicker(this)">
+        <option value="">Все группы</option>
+        ${SUBJECT_ICON_GROUPS.map(group => `<option value="${group.key}">${group.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="subject-icon-grid" role="group" aria-label="Значки предметов">${SUBJECT_ICON_CATALOG.map(icon => `
     <button type="button" onclick="selectSubjectIcon('${icon.key}')" data-subject-icon="${icon.key}" aria-label="${icon.label}" title="${icon.label}" aria-pressed="${icon.key === selectedKey}"
-      class="aspect-square rounded-xl border flex items-center justify-center transition ${icon.key === selectedKey ? 'bg-brand-500/15 border-brand-500/50 text-brand-300' : 'bg-app-card border-app-border text-slate-400 hover:text-white hover:border-brand-500/40'}">
+      class="subject-icon-option">
       ${renderSubjectIcon(icon.key, '')}
-    </button>`).join('')}</div>`;
+    </button>`).join('')}</div>
+    <p class="subject-icon-empty" hidden>Значки не найдены</p>
+  </div>`;
+}
+
+function filterSubjectIconPicker(control) {
+  const picker = control.closest('.subject-icon-picker');
+  const query = picker.querySelector('[data-icon-search]').value.trim().toLocaleLowerCase().replaceAll('ё', 'е');
+  const group = picker.querySelector('[data-icon-group]').value;
+  let visible = 0;
+  picker.querySelectorAll('[data-subject-icon]').forEach(button => {
+    const icon = SUBJECT_ICON_CATALOG.find(item => item.key === button.dataset.subjectIcon);
+    const matches = (!group || icon.group === group) && `${icon.label} ${icon.key}`.toLocaleLowerCase().replaceAll('ё', 'е').includes(query);
+    button.hidden = !matches;
+    if (matches) visible++;
+  });
+  picker.querySelector('.subject-icon-empty').hidden = visible > 0;
 }
 
 function updateSubjectIconPicker(iconKey) {
   document.querySelectorAll('[data-subject-icon]').forEach(button => {
     const active = button.dataset.subjectIcon === iconKey;
     button.setAttribute('aria-pressed', String(active));
-    button.className = `aspect-square rounded-xl border flex items-center justify-center transition ${active ? 'bg-brand-500/15 border-brand-500/50 text-brand-300' : 'bg-app-card border-app-border text-slate-400 hover:text-white hover:border-brand-500/40'}`;
+  });
+  const selected = SUBJECT_ICON_CATALOG.find(icon => icon.key === iconKey);
+  if (!selected) return;
+  document.querySelectorAll('.subject-icon-picker').forEach(picker => {
+    picker.querySelector('[data-icon-preview]').innerHTML = renderSubjectIcon(iconKey);
+    picker.querySelector('[data-icon-selection-label]').textContent = selected.label;
   });
 }
 

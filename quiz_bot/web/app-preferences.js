@@ -100,7 +100,7 @@ function preferenceRow(key, title, description, options) {
 }
 
 function settingsAction(title, description, action, dangerous = false) {
-  return `<button type="button" class="settings-row settings-action ${dangerous ? 'settings-danger' : ''}" onclick="${action}"><span class="settings-row-copy"><span class="settings-row-title">${title}</span><span class="settings-row-description">${description}</span></span><span aria-hidden="true">›</span></button>`;
+  return `<button type="button" class="settings-row settings-action ${dangerous ? 'settings-danger' : ''}" onclick="${action}"><span class="settings-row-copy"><span class="settings-row-title">${title}</span><span class="settings-row-description">${description}</span></span><span aria-hidden="true">${renderInterfaceIcon('chevron-right')}</span></button>`;
 }
 
 function initializeSettingsSections() {
@@ -112,11 +112,11 @@ function initializeSettingsSections() {
   const about = root.querySelector('div.text-center');
   const admin = document.getElementById('settings-admin-block');
   const sections = [
-    ['appearance', 'Оформление', 'Тема, цвет и размер текста', 'eye'],
-    ['learning', 'Обучение', 'Ответы, таймер и тренировка', 'book'],
-    ['comfort', 'Удобство', 'Вибрация и навигация', 'activity'],
-    ['profile', 'Профиль и рейтинг', 'Профиль, рейтинг и данные', 'shield'],
-    ['help', 'Помощь', 'Поддержка и версия приложения', 'hospital']
+    ['appearance', 'Оформление', 'Тема, цвет и размер текста', 'palette'],
+    ['learning', 'Обучение', 'Ответы, таймер и тренировка', 'book-open'],
+    ['comfort', 'Удобство', 'Вибрация и навигация', 'vibrate'],
+    ['profile', 'Профиль и рейтинг', 'Профиль, рейтинг и данные', 'user-round-cog'],
+    ['help', 'Помощь', 'Поддержка и версия приложения', 'circle-help']
   ];
   const menu = document.createElement('div');
   menu.id = 'settings-sections-menu';
@@ -129,7 +129,7 @@ function initializeSettingsSections() {
     button.type = 'button';
     button.className = 'settings-section-link';
     button.onclick = () => openSettingsSection(id);
-    button.innerHTML = `<span class="settings-section-icon">${renderSubjectIcon(icon)}</span><span class="settings-row-copy"><span class="settings-row-title">${title}</span><span class="settings-row-description">${description}</span></span><span aria-hidden="true">›</span>`;
+    button.innerHTML = `<span class="settings-section-icon">${renderInterfaceIcon(icon)}</span><span class="settings-row-copy"><span class="settings-row-title">${title}</span><span class="settings-row-description">${description}</span></span><span aria-hidden="true">${renderInterfaceIcon('chevron-right')}</span>`;
     menu.append(button);
     const page = document.createElement('div');
     page.dataset.settingsSection = id;

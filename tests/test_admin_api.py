@@ -71,6 +71,34 @@ class AdminApiTestCase(unittest.TestCase):
     def _auth_header(self, user_id: int) -> dict[str, str]:
         return {"X-Telegram-Init-Data": _make_init_data(user_id)}
 
+    def test_subject_icons_can_be_assigned_and_changed(self):
+        from quiz_bot.storage import get_subject_setting
+
+        headers = self._auth_header(12345)
+        for icon_key in ("stethoscope", "histology", "gynecology", "informatics"):
+            with self.subTest(icon_key=icon_key):
+                subject_id = f"icon_test_{icon_key}"
+                created = self.client.post("/api/admin/add_subject", headers=headers, json={
+                    "user_id": 12345, "id": subject_id,
+                    "title": "Test subject", "icon_key": icon_key,
+                })
+                self.assertEqual(created.status_code, 200)
+                self.assertEqual(get_subject_setting(subject_id)["icon_key"], icon_key)
+
+                edited = self.client.post("/api/admin/edit_subject", headers=headers, json={
+                    "user_id": 12345, "id": subject_id,
+                    "title": "Renamed subject", "icon_key": "oncology",
+                })
+                self.assertEqual(edited.status_code, 200)
+                self.assertEqual(get_subject_setting(subject_id)["icon_key"], "oncology")
+
+        invalid = self.client.post("/api/admin/edit_subject", headers=headers, json={
+            "user_id": 12345, "id": "icon_test_histology",
+            "title": "Test subject", "icon_key": "unknown_icon",
+        })
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(get_subject_setting("icon_test_histology")["icon_key"], "oncology")
+
     def test_admin_users_api(self):
         # Unauthorized access
         res = self.client.get(
