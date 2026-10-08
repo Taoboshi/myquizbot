@@ -1371,8 +1371,8 @@ def register_webapp_routes(app: Any) -> None:
             return jsonify({"error": "Test not found"}), 404
         if not isinstance(study_mode, str) or study_mode not in {"test", "quizlet"}:
             return jsonify({"error": "Invalid study mode"}), 400
-        if study_mode == "test" and any(len(q.get("options", [])) < 2 for q in LOADED_TESTS[test_id]):
-            return jsonify({"error": "У этого материала нет вариантов ответа. Доступен только квизлет."}), 400
+        if study_mode == "test" and any(not q.get("options") for q in LOADED_TESTS[test_id]):
+            return jsonify({"error": "У каждого вопроса должен быть хотя бы один вариант ответа."}), 400
         set_test_metadata_setting(test_id, study_mode=study_mode, updated_by=authenticated_user_id())
         return jsonify({"success": True, "test_id": test_id, "study_mode": get_test_study_mode(test_id)})
 

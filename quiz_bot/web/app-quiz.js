@@ -203,8 +203,9 @@
     const meta = adminStore.testsMeta.find(test => test.id === testId);
     const bundled = BUNDLED_TESTS[testId];
     const questions = testId === state.activeTestId ? state.currentTestOriginalQuestions : bundled?.questions;
-    return meta?.study_mode === 'quizlet' || bundled?.study_mode === 'quizlet' ||
-      (questions || []).some(question => !Array.isArray(question.options) || question.options.length < 2);
+    const studyMode = meta?.study_mode || bundled?.study_mode;
+    if (studyMode === 'test' || studyMode === 'quizlet') return studyMode === 'quizlet';
+    return (questions || []).some(question => !Array.isArray(question.options) || question.options.length < 2);
   }
 
   function updateHubStudyMode() {

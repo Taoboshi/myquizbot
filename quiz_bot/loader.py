@@ -188,15 +188,14 @@ def normalize_question(raw: dict[str, Any], index: int, study_mode: str = "test"
 
     if not question:
         raise ValueError(f"Вопрос #{index + 1}: нет текста вопроса")
-    if study_mode == "quizlet" and not options:
+    if not options:
         answer = raw.get("answer")
         if not isinstance(answer, str) or not answer.strip():
             raise ValueError(f"Вопрос #{index + 1}: нет текста ответа")
         return {"question": str(question).strip(), "options": [answer.strip()], "correct_index": 0,
                 "explanation": str(raw.get("explanation") or "").strip()}
-    minimum_options = 1 if study_mode == "quizlet" else 2
-    if not isinstance(options, list) or len(options) < minimum_options:
-        raise ValueError(f"Вопрос #{index + 1}: options должен быть списком минимум из {minimum_options} вариантов")
+    if not isinstance(options, list) or not options:
+        raise ValueError(f"Вопрос #{index + 1}: options должен содержать хотя бы один вариант")
 
     correct = raw.get("correct_index")
     if correct is None:
@@ -411,8 +410,10 @@ def effective_test_info(test_id: str) -> dict[str, Any]:
 
 def get_test_study_mode(test_id: str) -> str:
     questions = LOADED_TESTS.get(test_id, [])
-    if test_id in TESTS and effective_test_info(test_id).get("study_mode") == "quizlet":
-        return "quizlet"
+    if test_id in TESTS:
+        configured_mode = effective_test_info(test_id).get("study_mode")
+        if configured_mode in {"test", "quizlet"}:
+            return configured_mode
     if any(len(question.get("options", [])) < 2 for question in questions):
         return "quizlet"
     return "test"

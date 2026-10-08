@@ -52,8 +52,7 @@ class QuizletTestCase(unittest.TestCase):
         self.assertEqual(question["correct_index"], 0)
         data = {"study_mode": "quizlet", "questions": [{"question": "Term", "answer": "Definition"}]}
         self.assertEqual(loader._questions_from_data(data, Path("cards.json")), [question])
-        with self.assertRaises(ValueError):
-            loader.normalize_question({"question": "Term", "answer": "Definition"}, 0)
+        self.assertEqual(loader.normalize_question({"question": "Term", "answer": "Definition"}, 0), question)
         with self.assertRaises(ValueError):
             loader.normalize_question({"question": "Term", "answer": " "}, 0, "quizlet")
 
@@ -70,6 +69,14 @@ class QuizletTestCase(unittest.TestCase):
             "filename": "test.json", "data": {"questions": loader.LOADED_TESTS["sample_cards"]}
         })
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["study_mode"], "test")
+        response = self.client.post("/api/admin/preview_test", json={
+            "filename": "mixed.json", "data": {
+                "study_mode": "test", "questions": [{"question": "Term", "answer": "Definition"}]
+            }
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["questions"][0]["options"], ["Definition"])
         self.assertEqual(response.json["study_mode"], "test")
 
     def test_format_api_updates_catalog_and_detail(self):
@@ -98,7 +105,7 @@ class QuizletTestCase(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 404)
 
-    def test_answer_only_material_cannot_be_switched_to_test(self):
+    def test_single_answer_material_can_be_switched_to_test_and_quizlet(self):
         with patch.dict(loader.LOADED_TESTS, {"sample_cards": [
             {"question": "Term", "options": ["Definition"], "correct_index": 0}
         ]}):
@@ -106,7 +113,8 @@ class QuizletTestCase(unittest.TestCase):
             response = self.client.post("/api/admin/set_test_study_mode", json={
                 "test_id": "sample_cards", "study_mode": "test"
             })
-            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json["study_mode"], "test")
 
     def test_upload_refreshes_live_questions_without_restart(self):
         question = {"question": "Term", "options": ["Definition"], "correct_index": 0}
