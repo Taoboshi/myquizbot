@@ -2506,6 +2506,9 @@
     #fc-card { height: 100% !important; min-height: 180px; }
     #fc-card > div > .flex-1 { display: block; min-height: 0; overflow: hidden; align-content: safe center; padding: 12px 4px; }
     #fc-card > div > .flex-1[data-truncated="true"] { align-content: start; mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
+    #fc-front-label, #fc-back-label { display: none; }
+    #fc-card > div > div:has(> #fc-front-label), #fc-card > div > div:has(> #fc-back-label) { justify-content: flex-end; }
+    #fc-front-text, #fc-back-answer { width: fit-content; max-width: 100%; margin-inline: auto; }
     #fc-front-text, #fc-back-answer, #fc-full-text-content { font-size: calc(24px * var(--text-scale)) !important; font-weight: 700; text-align: left; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
     .fc-more-button { flex: 0 0 36px; height: 36px; font-size: 13px; font-weight: 600; color: var(--accent-color); }
     .fc-more-button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
