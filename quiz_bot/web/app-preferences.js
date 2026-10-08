@@ -158,7 +158,10 @@ function initializeSettingsSections() {
     preferenceRow('trainingCount', 'Вопросов в тренировке', 'Предлагаемое количество при запуске'));
   page('comfort').append(haptic);
   haptic.className = 'settings-row';
-  haptic.querySelector('.font-bold').textContent = 'Вибрация';
+  haptic.firstElementChild.className = 'settings-row-copy';
+  haptic.querySelector('.font-bold').className = 'settings-row-title';
+  haptic.querySelector('.text-\\[10px\\]').className = 'settings-row-description';
+  haptic.querySelector('.settings-row-title').textContent = 'Вибрация';
   haptic.querySelector('#set-haptic').onchange = event => setPreference('haptic', event.target.checked);
   haptic.querySelector('#set-haptic').setAttribute('aria-label', 'Вибрация');
   haptic.querySelector('#set-haptic').setAttribute('role', 'switch');
@@ -166,6 +169,9 @@ function initializeSettingsSections() {
   page('profile').insertAdjacentHTML('beforeend', settingsAction('Имя и аватарка', 'Изменить профиль', 'openEditProfileModal()'));
   page('profile').append(rating);
   rating.className = 'settings-row';
+  rating.firstElementChild.className = 'settings-row-copy';
+  rating.querySelector('.font-bold').className = 'settings-row-title';
+  rating.querySelector('.text-\\[10px\\]').className = 'settings-row-description';
   rating.querySelector('#set-hide-rating').setAttribute('aria-label', 'Скрыть профиль из рейтинга');
   rating.querySelector('#set-hide-rating').setAttribute('role', 'switch');
   page('profile').append(settingsAction('Сбросить результаты рейтинга', 'Удалить попытки и рекорды на сервере. Избранное сохранится.', 'resetMyRatingProgress()', true));
