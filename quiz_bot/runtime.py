@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 import time
 from threading import Thread
@@ -157,7 +158,7 @@ try:
     from .webapp import register_webapp_routes
     register_webapp_routes(WEB_APP)
 except Exception:
-    pass
+    logging.getLogger(__name__).exception("Failed to register Mini App routes")
 
 
 def keep_alive() -> None:

@@ -7,12 +7,13 @@ from datetime import datetime, timedelta, timezone
 from flask import jsonify, request
 
 from . import storage
-from .admin_users import block_user, ensure_admin_tables, unblock_user
 from .config import ADMIN_IDS, get_bot_token, get_env_admin_ids
 from .loader import LOADED_TESTS
 
 
 def ensure_people_tables():
+    # Keep bot helpers lazy: they depend on runtime, which registers these routes.
+    from .admin_users import ensure_admin_tables
     ensure_admin_tables()
     with storage.db_connect() as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS admin_user_notes (
@@ -209,6 +210,7 @@ def register_people_routes(app):
 
     @app.route("/api/admin/people/<int:uid>/action", methods=["POST"])
     def admin_person_action(uid):
+        from .admin_users import block_user, unblock_user
         if not is_admin_user():
             return jsonify({"error": "Forbidden"}), 403
         ensure_people_tables()
