@@ -373,10 +373,10 @@
               ${isPinned ? '<span class="text-xs" title="Закреплено">📌</span>' : ''}
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 font-bold">${t.questions_count} ${isQuizletOnly(t.id) ? 'карточек' : 'вопросов'}</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-app-surface border border-app-border text-slate-300 font-bold">${t.questions_count} ${isQuizletOnly(t.id) ? 'карточек' : 'вопросов'}</span>
               ${badgeHtml}
             </div>
-            <div class="text-[10px] text-brand-300 font-semibold">${isQuizletOnly(t.id) ? 'Только квизлет' : 'Тест и квизлет'}</div>
+            <div class="text-[10px] text-slate-400 font-semibold">${isQuizletOnly(t.id) ? 'Только квизлет' : 'Тест и квизлет'}</div>
           </div>
           <span class="text-xs text-slate-500 group-hover:text-brand-400 transition">→</span>
         `;
