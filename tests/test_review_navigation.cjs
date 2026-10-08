@@ -11,7 +11,7 @@ const context = vm.createContext({
     currentTestOriginalQuestions: [{id: 1}], userErrors: new Set([1]),
     currentTab: 'home', homeActiveView: 'hub',
   },
-  document: {getElementById(id) {
+  document: {addEventListener() {}, getElementById(id) {
     if (!elements.has(id)) elements.set(id, {classList: {
       add() {}, remove() {},
     }});

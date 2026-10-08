@@ -505,6 +505,7 @@
   }
 
   function hideAllViews() {
+    stopFCAutoplay();
     clearTimeout(autoAdvanceTimer);
     const views = ['view-home', 'view-tests', 'view-hub', 'view-solver', 'view-result', 'view-flashcards', 'view-search', 'view-tab-profile', 'view-tab-settings', 'view-admin'];
     views.forEach(v => {

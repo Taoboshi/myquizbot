@@ -569,6 +569,9 @@
     /* Flashcards */
     .perspective-1000 { perspective: 1000px; }
     .transform-style-3d { transform-style: preserve-3d; }
+    #fc-card { will-change: transform; }
+    #fc-card > div { transform: translateZ(1px); }
+    #fc-card > div:last-child { transform: rotateY(180deg) translateZ(1px); }
     .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
     .rotate-y-180 { transform: rotateY(180deg); }
     #fc-card > div:first-child {
@@ -582,34 +585,6 @@
       backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--accent-border-subtle) !important;
       box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
-    }
-
-    /* Flashcard Action Buttons (Clean matte, non-glowing, zero sticky hover) */
-    .fc-card-btn {
-      -webkit-tap-highlight-color: transparent !important;
-      outline: none !important;
-      box-shadow: none !important;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .fc-card-btn:focus,
-    .fc-card-btn:focus-visible {
-      outline: none !important;
-      box-shadow: none !important;
-    }
-    @media (hover: hover) {
-      #fc-btn-dontknow:hover {
-        background-color: rgba(244, 63, 94, 0.18) !important;
-      }
-      #fc-btn-know:hover {
-        background-color: rgba(5, 150, 105, 1) !important;
-      }
-    }
-    @media (hover: none) {
-      .fc-card-btn:hover {
-        filter: none !important;
-        box-shadow: none !important;
-      }
     }
 
     /* Option button styles */
@@ -1492,18 +1467,14 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a5 5 0 015 5v2m-15-7l4-4m-4 4l4 4"/></svg>
             </button>
 
-            <!-- Quick Knowledge Buttons (Optically dead center between prev button and right spacer) -->
-            <div class="flex-1 grid grid-cols-2 gap-2.5">
-              <button id="fc-btn-dontknow" type="button" onclick="this.blur(); fcNext(false)" class="fc-card-btn w-full py-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-xs active:bg-rose-500/25 active:scale-95 transition flex items-center justify-center gap-1.5">
-                <span>Не знаю</span> <span class="text-sm">✕</span>
-              </button>
-              <button id="fc-btn-know" type="button" onclick="this.blur(); fcNext(true)" class="fc-card-btn w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-xs border border-emerald-500/40 active:bg-emerald-700 active:scale-95 transition flex items-center justify-center gap-1.5">
-                <span>Знаю</span> <span class="text-sm">✓</span>
-              </button>
-            </div>
-
-            <!-- Symmetrical spacer on the right matching prev button width to keep buttons strictly centered -->
-            <div class="w-11 h-11 shrink-0 pointer-events-none" aria-hidden="true"></div>
+            <span id="fc-autoplay-label" class="flex-1 text-center text-xs font-semibold text-slate-400" aria-live="polite">Автопроигрывание выключено</span>
+            <button id="fc-btn-autoplay" type="button" onclick="toggleFCAutoplay()" aria-pressed="false" aria-label="Запустить автопроигрывание" title="Запустить автопроигрывание" class="w-11 h-11 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-200 active:scale-90 transition shrink-0">
+              <svg id="fc-autoplay-play" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="fc-autoplay-pause" class="hidden w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+            </button>
+            <button type="button" onclick="fcSkipNext()" title="Следующая карточка" aria-label="Следующая карточка" class="w-11 h-11 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 active:scale-90 transition shrink-0">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+            </button>
           </div>
         </div>
 

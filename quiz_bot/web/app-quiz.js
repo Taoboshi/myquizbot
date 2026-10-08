@@ -1503,8 +1503,61 @@
   let fcReview = [];
   let fcHistoryStack = []; // stores { index, question, known }
   let lastFlipTime = 0;
+  let fcSuppressFlipUntil = 0;
   let fcShuffleEnabled = false;
   let fcStarredOnlyEnabled = false;
+  let fcAutoPlaying = false;
+  let fcAutoTimer = null;
+
+  function stopFCAutoplay() {
+    fcAutoPlaying = false;
+    clearTimeout(fcAutoTimer);
+    fcAutoTimer = null;
+    const button = document.getElementById('fc-btn-autoplay');
+    if (button) {
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', 'Запустить автопроигрывание');
+      button.title = 'Запустить автопроигрывание';
+    }
+    document.getElementById('fc-autoplay-play')?.classList.remove('hidden');
+    document.getElementById('fc-autoplay-pause')?.classList.add('hidden');
+    const label = document.getElementById('fc-autoplay-label');
+    if (label) label.textContent = 'Автопроигрывание выключено';
+  }
+
+  function scheduleFCAutoplay() {
+    clearTimeout(fcAutoTimer);
+    if (!fcAutoPlaying) return;
+    fcAutoTimer = setTimeout(() => {
+      if (document.hidden || state.homeActiveView !== 'flashcards' ||
+          document.getElementById('view-flashcards').classList.contains('hidden') ||
+          !document.getElementById('modal-fc-options').classList.contains('hidden')) {
+        stopFCAutoplay();
+        return;
+      }
+      if (!fcFlipped) {
+        flipCard(true);
+        scheduleFCAutoplay();
+      } else fcNext(true, true);
+    }, 4000);
+  }
+
+  function toggleFCAutoplay() {
+    if (fcAutoPlaying) return stopFCAutoplay();
+    fcAutoPlaying = true;
+    const button = document.getElementById('fc-btn-autoplay');
+    button.setAttribute('aria-pressed', 'true');
+    button.setAttribute('aria-label', 'Приостановить автопроигрывание');
+    button.title = 'Приостановить автопроигрывание';
+    document.getElementById('fc-autoplay-play').classList.add('hidden');
+    document.getElementById('fc-autoplay-pause').classList.remove('hidden');
+    document.getElementById('fc-autoplay-label').textContent = 'Автопроигрывание включено';
+    scheduleFCAutoplay();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopFCAutoplay();
+  });
 
   function initFlashcardGestures() {
     const card = document.getElementById('fc-card');
@@ -1517,6 +1570,7 @@
     let touchIsDragging = false;
 
     card.addEventListener('touchstart', (e) => {
+      stopFCAutoplay();
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchCurrentX = touchStartX;
@@ -1543,7 +1597,8 @@
       const dy = e.changedTouches[0] ? (e.changedTouches[0].clientY - touchStartY) : 0;
       card.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
 
-      if (Math.abs(dx) > 70) {
+      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) {
+        fcSuppressFlipUntil = Date.now() + 600;
         const isRight = dx > 0;
         const flyX = isRight ? 450 : -450;
         const rot = isRight ? 25 : -25;
@@ -1671,6 +1726,8 @@
 
     const q = state.activeQuestions[fcIndex];
     fcFlipped = false;
+    lastFlipTime = 0;
+    scheduleFCAutoplay();
     const card = document.getElementById('fc-card');
     if (card) {
       card.style.transition = 'none';
@@ -1748,19 +1805,23 @@
     renderFCCard();
   }
 
-  function flipCard() {
+  function flipCard(automatic = false) {
+    if (!automatic) stopFCAutoplay();
     const now = Date.now();
-    if (now - lastFlipTime < 280) return; // Prevent duplicate tap-flip
+    if (!automatic && now < fcSuppressFlipUntil) return;
+    if (now - lastFlipTime < 520) return;
     lastFlipTime = now;
     triggerHaptic('light');
     fcFlipped = !fcFlipped;
     const c = document.getElementById('fc-card');
     if (!c) return;
-    c.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+    c.style.transition = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'none' : 'transform 0.52s cubic-bezier(0.45, 0, 0.2, 1)';
     c.style.transform = fcFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
   }
 
-  function fcNext(known) {
+  function fcNext(known, automatic = false) {
+    if (!automatic) stopFCAutoplay();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -1787,7 +1848,8 @@
     }
   }
 
-  function fcSkipNext() {
+  function fcSkipNext(automatic = false) {
+    if (!automatic) stopFCAutoplay();
     triggerHaptic('light');
     const q = state.activeQuestions[fcIndex];
     fcHistoryStack.push({ index: fcIndex, question: q, known: null });
@@ -1801,6 +1863,7 @@
   }
 
   function fcPrevCard() {
+    stopFCAutoplay();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
@@ -1824,6 +1887,7 @@
   }
 
   function openFCOptionsModal() {
+    stopFCAutoplay();
     triggerHaptic('light');
     const modal = document.getElementById('modal-fc-options');
     if (!modal) return;
@@ -1863,6 +1927,7 @@
   }
 
   function showFCFinishScreen() {
+    stopFCAutoplay();
     triggerHaptic('success');
     document.getElementById('fc-active-deck').classList.add('hidden');
     document.getElementById('fc-finish-screen').classList.remove('hidden');
