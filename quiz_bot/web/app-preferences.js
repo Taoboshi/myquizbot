@@ -115,8 +115,7 @@ function initializeSettingsSections() {
     ['appearance', 'Оформление', 'Тема, цвет и размер текста', 'eye'],
     ['learning', 'Обучение', 'Ответы, таймер и тренировка', 'book'],
     ['comfort', 'Удобство', 'Вибрация и навигация', 'activity'],
-    ['profile', 'Профиль и рейтинг', 'Имя, аватарка и видимость', 'shield'],
-    ['data', 'Данные', 'Каталог, кэш и сброс', 'clipboard'],
+    ['profile', 'Профиль и рейтинг', 'Профиль, рейтинг и данные', 'shield'],
     ['help', 'Помощь', 'Поддержка и версия приложения', 'hospital']
   ];
   const menu = document.createElement('div');
@@ -170,8 +169,8 @@ function initializeSettingsSections() {
   rating.querySelector('#set-hide-rating').setAttribute('aria-label', 'Скрыть профиль из рейтинга');
   rating.querySelector('#set-hide-rating').setAttribute('role', 'switch');
   page('profile').append(settingsAction('Сбросить результаты рейтинга', 'Удалить попытки и рекорды на сервере. Избранное сохранится.', 'resetMyRatingProgress()', true));
-  page('data').insertAdjacentHTML('beforeend',
-    settingsAction('Сбросить локальный прогресс', 'Удалить попытки, ошибки и избранные вопросы только на этом устройстве. Серверные результаты сохранятся.', 'clearLocalAppCache()', true));
+  page('profile').insertAdjacentHTML('beforeend',
+    settingsAction('Сбросить локальный прогресс', 'Удалить попытки, ошибки и избранные вопросы на этом устройстве. Серверный рейтинг и настройки сохранятся.', 'clearLocalAppCache()', true));
   page('help').append(support, about);
   about.querySelector('div:last-child').textContent = 'Подготовка к вузовским тестам';
   admin.replaceChildren();
