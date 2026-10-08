@@ -174,7 +174,7 @@ function initializeSettingsSections() {
   rating.querySelector('.text-\\[10px\\]').className = 'settings-row-description';
   rating.querySelector('#set-hide-rating').setAttribute('aria-label', 'Скрыть профиль из рейтинга');
   rating.querySelector('#set-hide-rating').setAttribute('role', 'switch');
-  page('profile').append(settingsAction('Сбросить результаты рейтинга', 'Удалить попытки и рекорды на сервере. Избранное сохранится.', 'resetMyRatingProgress()', true));
+  page('profile').insertAdjacentHTML('beforeend', settingsAction('Сбросить результаты рейтинга', 'Удалить попытки и рекорды на сервере. Избранное сохранится.', 'resetMyRatingProgress()', true));
   page('profile').insertAdjacentHTML('beforeend',
     settingsAction('Сбросить локальный прогресс', 'Удалить попытки, ошибки и избранные вопросы на этом устройстве. Серверный рейтинг и настройки сохранятся.', 'clearLocalAppCache()', true));
   page('help').append(support, about);
