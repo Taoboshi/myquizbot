@@ -95,6 +95,8 @@ const nativeFetch = window.fetch.bind(window);
     activeSubjectTitle: 'ОЗиЗ и здравоохранение',
     activeTestId: 'oziz_module_2',
     activeTestTitle: 'oziz_module_2',
+    testLoadStatus: 'ready',
+    testLoadError: '',
     currentTestOriginalQuestions: [...BUNDLED_TESTS['oziz_module_2'].questions],
     activeQuestions: [...BUNDLED_TESTS['oziz_module_2'].questions],
     currentMode: 'normal',

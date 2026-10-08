@@ -74,6 +74,9 @@
 
   function updateHubResumeButton() {
     renderActiveAttemptBanner();
+    if (state.testLoadStatus !== 'ready') {
+      document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
+    }
   }
 
   async function resumeActiveAttempt() {
@@ -211,6 +214,16 @@
   function updateHubStudyMode() {
     const onlyQuizlet = isQuizletOnly();
     const count = state.currentTestOriginalQuestions.length;
+    const ready = state.testLoadStatus === 'ready' && count > 0;
+    const loading = ['checking', 'loading'].includes(state.testLoadStatus);
+    document.getElementById('view-hub').setAttribute('aria-busy', String(loading));
+    document.getElementById('hub-load-status').classList.toggle('hidden', state.testLoadStatus === 'ready');
+    document.getElementById('hub-load-message').textContent = state.testLoadStatus === 'checking'
+      ? 'Проверяем доступ…'
+      : state.testLoadStatus === 'loading' ? 'Загружаем вопросы и карточки…' : state.testLoadError;
+    document.getElementById('hub-load-retry').classList.toggle('hidden', state.testLoadStatus !== 'error');
+    const meta = adminStore.testsMeta.find(test => test.id === state.activeTestId);
+    document.getElementById('hub-q-count').textContent = ready ? count : (meta?.questions_count ?? '—');
     ['hub-quiz-modes', 'hub-quiz-tools', 'hub-reset-errors'].forEach(id => {
       document.getElementById(id)?.classList.toggle('hidden', onlyQuizlet);
     });
@@ -221,30 +234,33 @@
     document.getElementById('hub-stats').classList.toggle('grid-cols-3', !onlyQuizlet);
     const word = count % 10 === 1 && count % 100 !== 11 ? 'карточка'
       : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'карточки' : 'карточек';
-    document.getElementById('hub-quizlet-count').innerText = count ? `${count} ${word}` : 'Загрузка карточек...';
-    document.getElementById('hub-quizlet-open').disabled = !count;
-    document.querySelectorAll('#hub-quiz-modes button, #hub-quiz-tools button').forEach(button => {
-      button.disabled = !count;
+    document.getElementById('hub-quizlet-count').innerText = ready ? `${count} ${word}` : loading ? 'Загрузка карточек…' : 'Карточки не загружены';
+    document.getElementById('hub-quizlet-open').disabled = !ready;
+    document.querySelectorAll('#hub-quiz-modes button, #hub-quiz-tools button, #hub-reset-errors').forEach(button => {
+      button.disabled = !ready;
+      button.classList.toggle('opacity-50', !ready);
     });
-    if (onlyQuizlet) document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
+    if (onlyQuizlet || !ready) document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
   }
 
   // Subject Tests View
-  async function ensureSubjectAccess(subjectId) {
+  async function ensureSubjectAccess(subjectId, signal) {
     if (state.isAdmin) return true;
     const subject = adminStore.subjects.find(item => item.id === subjectId);
     if (!subject) return false;
 
     let access;
     try {
-      const response = await fetch(`/api/subjects/${encodeURIComponent(subjectId)}/access`);
-      access = await response.json().catch(() => ({}));
+      const { response, data } = await fetchTestResource(`/api/subjects/${encodeURIComponent(subjectId)}/access`, { signal });
+      access = data;
       if (!response.ok) throw new Error(access.error || 'access check failed');
     } catch (error) {
+      if (signal?.aborted) return false;
       showToast('Не удалось проверить доступ к разделу. Проверьте соединение.');
       return false;
     }
 
+    if (signal?.aborted) return false;
     const accessType = access.access_type || subject.access_type || 'public';
     const accessKey = `subject:${subjectId}`;
     if (access.allowed) {
@@ -266,12 +282,12 @@
       const code = prompt(`Раздел «${subject.title}» защищён кодом.\n\nВведите код доступа:`);
       if (!code?.trim()) return false;
       try {
-        const response = await fetch('/api/subjects/verify_code', {
+        const { response, data: result } = await fetchTestResource('/api/subjects/verify_code', {
           method: 'POST',
+          signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subject_id: subjectId, code: code.trim() })
         });
-        const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success) {
           alert('Неверный код доступа. Проверьте код или обратитесь к администратору.');
           return false;
@@ -390,117 +406,128 @@
   }
 
   // Test Selection & Hub
+  let testSelectionRequest = 0;
+  let testSelectionController = null;
+
+  async function fetchTestResource(url, options = {}) {
+    const controller = new AbortController();
+    const cancel = () => controller.abort();
+    if (options.signal?.aborted) cancel();
+    else options.signal?.addEventListener('abort', cancel, { once: true });
+    const timeout = setTimeout(cancel, 20000);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      const data = await response.json();
+      return { response, data };
+    } finally {
+      clearTimeout(timeout);
+      options.signal?.removeEventListener('abort', cancel);
+    }
+  }
+
   async function selectTest(testId) {
     triggerHaptic('light');
     if (state.isBlocked) return showToast('Доступ ограничен администратором');
 
-    const testMeta = adminStore.testsMeta.find(t => t.id === testId);
-    let accType = testMeta ? (testMeta.access_type || 'public') : 'public';
-    if (!state.isAdmin && testMeta?.subject_id && testMeta.subject_id !== 'default') {
-      if (!await ensureSubjectAccess(testMeta.subject_id)) return;
-    }
-    let testAccessAllowed = state.isAdmin;
-    if (!state.isAdmin) {
-      try {
-        const response = await fetch(`/api/tests/${encodeURIComponent(testId)}/access`);
-        if (!response.ok) throw new Error();
-        const access = await response.json();
-        accType = access.access_type || accType;
-        testAccessAllowed = Boolean(access.allowed);
-        if (!state.personalTestAccess) state.personalTestAccess = new Set();
-        if (access.allowed) state.personalTestAccess.add(testId);
-        else { state.personalTestAccess.delete(testId); state.unlockedCodeTests.delete(testId); }
-      } catch(e) { return showToast('Не удалось проверить доступ. Проверьте соединение.'); }
-    }
-
-    if (!testAccessAllowed && !['private', 'code', 'admin_only'].includes(accType)) {
-      alert('Доступ к этому материалу закрыт. Обратитесь к администратору.');
-      return;
-    }
-
-    if (accType === 'admin_only' && !state.isAdmin) {
-      alert('Этот тест находится в режиме «Только админ» и доступен только администраторам.');
-      return;
-    }
-
-    if (accType === 'private' && !state.isAdmin && !state.personalTestAccess?.has(testId)) {
-      alert('Этот тест является приватным. Доступ открывается преподавателем или администратором (@issdm).');
-      return;
-    }
-
-    if (accType === 'code' && !state.isAdmin && !state.personalTestAccess?.has(testId) && !state.unlockedCodeTests.has(testId)) {
-      const codeEntered = prompt(`Тест «${testMeta ? testMeta.title : testId}» защищен паролем.\n\nВведите секретный код доступа:`);
-      if (!codeEntered) return;
-
-      let verified = false;
-      if (testMeta && testMeta.access_code && testMeta.access_code.trim().toLowerCase() === codeEntered.trim().toLowerCase()) {
-        verified = true;
-      } else {
-        try {
-          const res = await fetch('/api/tests/verify_code', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: state.userId, test_id: testId, code: codeEntered.trim() })
-          });
-          if (res.ok) verified = true;
-        } catch(e) {}
-      }
-
-      if (!verified) {
-        alert('❌ Неверный код доступа. Пожалуйста, проверьте код или обратитесь к @issdm.');
-        return;
-      }
-
-      state.unlockedCodeTests.add(testId);
-      try {
-        localStorage.setItem('ohtest_unlocked_tests', JSON.stringify([...state.unlockedCodeTests]));
-      } catch(e) {}
-      alert('✓ Код принят! Доступ к тесту открыт.');
-      await openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
-    }
+    const requestId = ++testSelectionRequest;
+    testSelectionController?.abort();
+    const controller = new AbortController();
+    testSelectionController = controller;
+    const current = () => requestId === testSelectionRequest && state.activeTestId === testId;
+    const testMeta = adminStore.testsMeta.find(test => test.id === testId);
 
     state.activeTestId = testId;
-    const testData = BUNDLED_TESTS[testId];
-    state.activeTestTitle = testMeta?.title || testData?.title || testId;
-
-    // Load original questions
-    state.currentTestOriginalQuestions = testData ? [...testData.questions] : [];
-    state.activeQuestions = [...state.currentTestOriginalQuestions];
-
-    // Restore test specific errors & favorites from localStorage
+    state.activeTestTitle = testMeta?.title || BUNDLED_TESTS[testId]?.title || testId;
+    state.testLoadStatus = 'checking';
+    state.testLoadError = '';
+    state.currentTestOriginalQuestions = [];
+    state.activeQuestions = [];
+    state.userErrors = new Set();
+    state.favorites = new Set();
     try {
-      const errs = localStorage.getItem(`ohtest_errors_${testId}`);
-      state.userErrors = errs ? new Set(JSON.parse(errs)) : new Set();
-      const favs = localStorage.getItem(`ohtest_favs_${testId}`);
-      state.favorites = favs ? new Set(JSON.parse(favs)) : new Set();
+      state.userErrors = new Set(JSON.parse(localStorage.getItem(`ohtest_errors_${testId}`) || '[]'));
+      state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${testId}`) || '[]'));
     } catch(e) {}
-
     openTestHub();
 
-    // Live Server Sync
     try {
-      const res = await fetch(`/api/tests/${testId}`);
-      if (res.ok) {
-        const liveData = await res.json();
-        if (state.activeTestId !== testId) return;
-        if (liveData && liveData.questions && liveData.questions.length > 0) {
-          BUNDLED_TESTS[testId] = {
-            title: liveData.title,
-            questions: liveData.questions,
-            study_mode: liveData.study_mode || 'test'
-          };
-          state.activeTestTitle = liveData.title;
-          state.currentTestOriginalQuestions = [...liveData.questions];
-          if (state.homeActiveView === 'hub') state.activeQuestions = [...liveData.questions];
-          if (testMeta) testMeta.study_mode = liveData.study_mode || 'test';
-          document.getElementById('hub-test-title').innerText = state.activeTestTitle;
-          document.getElementById('hub-q-count').innerText = state.currentTestOriginalQuestions.length;
-          updateHubStudyMode();
+      let accType = testMeta?.access_type || 'public';
+      if (!state.isAdmin) {
+        if (testMeta?.subject_id && testMeta.subject_id !== 'default') {
+          const allowed = await ensureSubjectAccess(testMeta.subject_id, controller.signal);
+          if (!current()) return;
+          if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
+        }
+        const { response, data: access } = await fetchTestResource(`/api/tests/${encodeURIComponent(testId)}/access`, { signal: controller.signal });
+        if (!current()) return;
+        if (!response.ok) throw new Error(access.error || 'Не удалось проверить доступ к материалу.');
+        accType = access.access_type || accType;
+        state.personalTestAccess ||= new Set();
+        if (access.allowed) state.personalTestAccess.add(testId);
+        else {
+          state.personalTestAccess.delete(testId);
+          state.unlockedCodeTests.delete(testId);
+          if (accType === 'code') {
+            const code = prompt(`Тест «${state.activeTestTitle}» защищён кодом.\n\nВведите код доступа:`);
+            if (!code?.trim()) throw new Error('Для открытия материала нужен код доступа.');
+            const { response: verification, data: result } = await fetchTestResource('/api/tests/verify_code', {
+              method: 'POST',
+              signal: controller.signal,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_id: state.userId, test_id: testId, code: code.trim() })
+            });
+            if (!current()) return;
+            if (!verification.ok || !result.success) throw new Error(result.error || 'Неверный код доступа.');
+            state.personalTestAccess.add(testId);
+            state.unlockedCodeTests.add(testId);
+            try { localStorage.setItem('ohtest_unlocked_tests', JSON.stringify([...state.unlockedCodeTests])); } catch(e) {}
+          } else {
+            throw new Error(accType === 'admin_only'
+              ? 'Этот материал доступен только администраторам.'
+              : 'Доступ к материалу закрыт. Обратитесь к администратору.');
+          }
         }
       }
-    } catch(e) {}
-    if (state.activeTestId === testId && !state.currentTestOriginalQuestions.length) {
-      document.getElementById('hub-quizlet-count').innerText = 'Не удалось загрузить карточки';
+      if (!current()) return;
+      state.testLoadStatus = 'loading';
+      updateHubStudyMode();
+
+      const { response, data } = await fetchTestResource(`/api/tests/${encodeURIComponent(testId)}`, { signal: controller.signal });
+      if (!current()) return;
+      if (!response.ok) throw new Error(data.error || 'Не удалось загрузить материал.');
+      if (!Array.isArray(data.questions) || !data.questions.length) {
+        throw new Error('В материале пока нет вопросов или карточек.');
+      }
+
+      BUNDLED_TESTS[testId] = {
+        title: data.title || state.activeTestTitle,
+        questions: data.questions,
+        study_mode: data.study_mode || 'test'
+      };
+      state.activeTestTitle = BUNDLED_TESTS[testId].title;
+      state.currentTestOriginalQuestions = [...data.questions];
+      state.activeQuestions = [...data.questions];
+      state.testLoadStatus = 'ready';
+      const latestMeta = adminStore.testsMeta.find(test => test.id === testId);
+      if (latestMeta) {
+        latestMeta.study_mode = data.study_mode || 'test';
+        latestMeta.questions_count = data.questions.length;
+        latestMeta.access_type = data.access_type || accType;
+      }
+      document.getElementById('hub-test-title').textContent = state.activeTestTitle;
+      updateHubResumeButton();
+      updateHubStudyMode();
+    } catch(error) {
+      if (!current()) return;
+      state.testLoadStatus = 'error';
+      state.testLoadError = error.name === 'AbortError'
+        ? 'Загрузка заняла слишком много времени. Попробуйте ещё раз.'
+        : ['TypeError', 'SyntaxError'].includes(error.name)
+          ? 'Не удалось загрузить материал. Проверьте соединение и попробуйте ещё раз.'
+          : error.message || 'Не удалось загрузить материал. Проверьте соединение.';
+      updateHubStudyMode();
+    } finally {
+      if (testSelectionController === controller) testSelectionController = null;
     }
   }
 
@@ -546,11 +573,12 @@
 
     updateHubResumeButton();
     updateHubStudyMode();
-    viewStack.push('hub');
+    if (viewStack.at(-1) !== 'hub') viewStack.push('hub');
   }
 
   // Quiz Solver Modes
   function openTrainingSelectorModal() {
+    if (state.testLoadStatus !== 'ready') return;
     triggerHaptic('light');
     const modal = document.getElementById('modal-training-select');
     const container = document.getElementById('training-options-list');
@@ -595,7 +623,7 @@
       showToast('Этот материал доступен только в квизлете');
       return;
     }
-    if (!state.currentTestOriginalQuestions.length) {
+    if (state.testLoadStatus !== 'ready' || !state.currentTestOriginalQuestions.length) {
       showToast('Подождите загрузки вопросов');
       return;
     }
@@ -1432,7 +1460,7 @@
   }
 
   function openFlashcards() {
-    if (!state.currentTestOriginalQuestions.length) {
+    if (state.testLoadStatus !== 'ready' || !state.currentTestOriginalQuestions.length) {
       showToast('Подождите загрузки карточек');
       return;
     }
