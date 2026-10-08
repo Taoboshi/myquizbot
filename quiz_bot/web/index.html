@@ -1127,7 +1127,7 @@
         <!-- Tests List Container -->
         <div id="subject-load-status" class="hidden flex items-center justify-between gap-3 px-1 text-xs text-slate-400" role="status" aria-live="polite">
           <span id="subject-load-message" class="min-w-0 flex-1"></span>
-          <button id="subject-load-retry" type="button" onclick="openSubjectTests(state.activeSubjectId, state.activeSubjectTitle)" class="hidden shrink-0 px-3 py-2 rounded-lg bg-app-surface border border-app-border text-slate-300 font-semibold">Повторить</button>
+          <button id="subject-load-retry" type="button" onclick="openSubjectTests(state.activeSubjectId, state.activeSubjectTitle, { forceRefresh: true })" class="hidden shrink-0 px-3 py-2 rounded-lg bg-app-surface border border-app-border text-slate-300 font-semibold">Повторить</button>
         </div>
         <div id="tests-items-container" class="space-y-2.5">
           <!-- Rendered dynamically -->

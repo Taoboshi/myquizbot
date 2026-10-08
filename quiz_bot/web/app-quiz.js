@@ -361,6 +361,8 @@
     document.getElementById('view-tests').setAttribute('aria-busy', 'true');
     if (viewStack.at(-1) !== 'tests') viewStack.push('tests');
 
+    let showingCachedList = false;
+    let accessRejected = false;
     try {
       const cachedSubject = adminStore.subjects.find(item => item.id === subjectId);
       const isPublic = cachedSubject && (cachedSubject.access_type || 'public') === 'public';
@@ -370,6 +372,16 @@
         renderSubjectTests(adminStore.testsMeta.filter(test => test.subject_id === subjectId));
         status.classList.add('hidden');
         return;
+      }
+      const cachedTests = adminStore.testsMeta.filter(test =>
+        test.subject_id === subjectId && ['public', 'code'].includes(test.access_type || 'public')
+      );
+      if (!forceRefresh && isPublic && cachedTests.length) {
+        showingCachedList = true;
+        state.subjectLoadStatus = 'ready';
+        renderSubjectTests(cachedTests);
+        message.textContent = 'Обновляем список…';
+        document.getElementById('view-tests').setAttribute('aria-busy', 'false');
       }
       if (!isPublic) {
         const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
@@ -381,12 +393,14 @@
       if (!current()) return;
       // A cached public section may have become restricted since the last visit.
       if (isPublic && response.status === 403) {
+        accessRejected = true;
         const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
         if (!current()) return;
         if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
         ({ response, data } = await fetchTestResource(listUrl, { signal: controller.signal }));
       }
       if (!current()) return;
+      accessRejected = [401, 403, 404].includes(response.status);
       if (!response.ok) throw new Error(data.error || 'Не удалось загрузить тесты раздела.');
       if (!Array.isArray(data.items)) throw new Error('Не удалось получить список тестов. Попробуйте ещё раз.');
       if (isPublic) loadedPublicSubjects.add(subjectId);
@@ -408,16 +422,22 @@
       document.getElementById('tests-subj-title').textContent = state.activeSubjectTitle;
       state.subjectLoadStatus = 'ready';
       renderSubjectTests(data.items);
+      filterSubjectTestsByQuery(testsSearch?.value || '');
       status.classList.add('hidden');
     } catch(error) {
       if (!current()) return;
-      state.subjectLoadStatus = 'error';
-      container.textContent = '';
-      message.textContent = error.name === 'AbortError'
+      if (showingCachedList && !accessRejected) {
+        state.subjectLoadStatus = 'ready';
+        message.textContent = 'Не удалось обновить список. Показана сохранённая версия.';
+      } else {
+        state.subjectLoadStatus = 'error';
+        container.textContent = '';
+        message.textContent = error.name === 'AbortError'
         ? 'Загрузка заняла слишком много времени. Попробуйте ещё раз.'
         : ['TypeError', 'SyntaxError'].includes(error.name)
           ? 'Не удалось загрузить тесты раздела. Проверьте соединение.'
           : error.message || 'Не удалось загрузить тесты раздела.';
+      }
       retry.classList.remove('hidden');
     } finally {
       if (current()) document.getElementById('view-tests').setAttribute('aria-busy', 'false');
