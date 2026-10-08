@@ -135,6 +135,36 @@ def register_webapp_routes(app: Any) -> None:
             "access_type": subject_access_type(subject_id),
         })
 
+    @app.route("/api/subjects/<subject_id>/tests")
+    def api_subject_tests(subject_id):
+        from .access import can_open_subject, can_view_test, effective_test_access
+
+        subjects = dict(get_subjects())
+        if subject_id not in subjects:
+            return jsonify({"error": "Предмет не найден. Обновите каталог."}), 404
+        user_id = authenticated_user_id()
+        is_admin = is_admin_user()
+        if not is_admin and not can_open_subject(user_id, subject_id):
+            return jsonify({"error": "Доступ к разделу закрыт"}), 403
+
+        items = []
+        for test_id, info in get_tests_for_subject(subject_id):
+            if not can_view_test(user_id, test_id):
+                continue
+            access = effective_test_access(test_id)
+            items.append({
+                "id": test_id,
+                "title": info.get("title", test_id),
+                "subject_id": subject_id,
+                "subject_title": subjects[subject_id].get("title", subject_id),
+                "questions_count": len(LOADED_TESTS.get(test_id, [])),
+                "study_mode": get_test_study_mode(test_id),
+                "sort_order": info.get("sort_order"),
+                "access_type": access.get("type", "public"),
+                "access_code": access.get("code", "") if is_admin else "",
+            })
+        return jsonify({"subject_id": subject_id, "title": subjects[subject_id].get("title", subject_id), "items": items})
+
     @app.before_request
     def require_telegram_identity():
         if not request.path.startswith("/api/"):

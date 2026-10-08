@@ -244,7 +244,7 @@
   }
 
   // Subject Tests View
-  async function ensureSubjectAccess(subjectId, signal) {
+  async function ensureSubjectAccess(subjectId, signal, { refreshCatalog = true } = {}) {
     if (state.isAdmin) return true;
     const subject = adminStore.subjects.find(item => item.id === subjectId);
     if (!subject) return false;
@@ -267,7 +267,7 @@
       state.personalTestAccess ||= new Set();
       state.personalTestAccess.add(accessKey);
       const hasLoadedSectionTests = adminStore.testsMeta.some(test => test.subject_id === subjectId);
-      if (accessType !== 'public' && !hasLoadedSectionTests && Number(subject.tests_count) > 0) {
+      if (refreshCatalog && accessType !== 'public' && !hasLoadedSectionTests && Number(subject.tests_count) > 0) {
         await checkBootstrapAndAdmin();
         if (state.catalogLoadFailed) {
           showToast('Не удалось загрузить тесты раздела. Попробуйте ещё раз.');
@@ -288,21 +288,25 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subject_id: subjectId, code: code.trim() })
         });
+        if (signal?.aborted) return false;
         if (!response.ok || !result.success) {
           alert('Неверный код доступа. Проверьте код или обратитесь к администратору.');
           return false;
         }
         state.personalTestAccess ||= new Set();
         state.personalTestAccess.add(accessKey);
-        await checkBootstrapAndAdmin();
-        if (state.catalogLoadFailed) {
-          showToast('Код принят, но не удалось загрузить тесты. Попробуйте открыть раздел ещё раз.');
-          return false;
+        if (refreshCatalog) {
+          await checkBootstrapAndAdmin();
+          if (state.catalogLoadFailed) {
+            showToast('Код принят, но не удалось загрузить тесты. Попробуйте открыть раздел ещё раз.');
+            return false;
+          }
+          renderHomeSubjects();
         }
-        renderHomeSubjects();
         showToast('Доступ к разделу открыт');
         return true;
       } catch (error) {
+        if (signal?.aborted) return false;
         showToast('Не удалось проверить код. Проверьте соединение.');
         return false;
       }
@@ -316,17 +320,26 @@
     return false;
   }
 
+  let subjectSelectionRequest = 0;
+  let subjectSelectionController = null;
+
   async function openSubjectTests(subjectId, subjectTitle) {
-    if (!await ensureSubjectAccess(subjectId)) return;
+    if (state.isBlocked) return showToast('Доступ ограничен администратором');
+    const requestId = ++subjectSelectionRequest;
+    subjectSelectionController?.abort();
+    const controller = new AbortController();
+    subjectSelectionController = controller;
+    const current = () => requestId === subjectSelectionRequest && state.activeSubjectId === subjectId;
     triggerHaptic('light');
     const testsSearch = document.getElementById('subject-tests-search');
     const testsSearchWrap = document.getElementById('subject-tests-search-wrap');
     if (testsSearch) testsSearch.value = '';
     testsSearchWrap?.classList.add('hidden');
-    filterSubjectTestsByQuery('');
+    document.getElementById('subject-tests-search-empty').classList.add('hidden');
     state.activeSubjectId = subjectId;
     state.activeSubjectTitle = subjectTitle;
     state.homeActiveView = 'tests';
+    state.subjectLoadStatus = 'loading';
 
     hideAllViews();
     document.getElementById('view-tests').classList.remove('hidden');
@@ -334,14 +347,65 @@
     updateTelegramBackButton();
 
     document.getElementById('tests-subj-title').innerText = subjectTitle;
+    const container = document.getElementById('tests-items-container');
+    container.innerHTML = `<div class="space-y-2.5 animate-pulse" aria-hidden="true">
+      ${[0, 1].map(() => '<div class="h-24 rounded-2xl bg-app-card border border-app-border p-4 space-y-3"><div class="h-3 w-1/2 rounded bg-white/10"></div><div class="h-2 w-1/3 rounded bg-white/5"></div></div>').join('')}
+    </div>`;
+    const status = document.getElementById('subject-load-status');
+    const message = document.getElementById('subject-load-message');
+    const retry = document.getElementById('subject-load-retry');
+    status.classList.remove('hidden');
+    retry.classList.add('hidden');
+    message.textContent = 'Загружаем тесты раздела…';
+    document.getElementById('view-tests').setAttribute('aria-busy', 'true');
+    if (viewStack.at(-1) !== 'tests') viewStack.push('tests');
 
+    try {
+      const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
+      if (!current()) return;
+      if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
+      const { response, data } = await fetchTestResource(`/api/subjects/${encodeURIComponent(subjectId)}/tests`, { signal: controller.signal });
+      if (!current()) return;
+      if (!response.ok) throw new Error(data.error || 'Не удалось загрузить тесты раздела.');
+      if (!Array.isArray(data.items)) throw new Error('Не удалось получить список тестов. Попробуйте ещё раз.');
+      const ids = new Set(data.items.map(test => test.id));
+      adminStore.testsMeta = [
+        ...adminStore.testsMeta.filter(test => test.subject_id !== subjectId && !ids.has(test.id)),
+        ...data.items
+      ];
+      state.activeSubjectTitle = data.title || subjectTitle;
+      const subject = adminStore.subjects.find(item => item.id === subjectId);
+      if (subject) {
+        subject.title = state.activeSubjectTitle;
+        subject.tests_count = data.items.length;
+      }
+      try {
+        localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta));
+        localStorage.setItem('ohtest_cached_subjects', JSON.stringify(adminStore.subjects));
+      } catch(e) {}
+      document.getElementById('tests-subj-title').textContent = state.activeSubjectTitle;
+      state.subjectLoadStatus = 'ready';
+      renderSubjectTests(data.items);
+      status.classList.add('hidden');
+    } catch(error) {
+      if (!current()) return;
+      state.subjectLoadStatus = 'error';
+      container.textContent = '';
+      message.textContent = error.name === 'AbortError'
+        ? 'Загрузка заняла слишком много времени. Попробуйте ещё раз.'
+        : ['TypeError', 'SyntaxError'].includes(error.name)
+          ? 'Не удалось загрузить тесты раздела. Проверьте соединение.'
+          : error.message || 'Не удалось загрузить тесты раздела.';
+      retry.classList.remove('hidden');
+    } finally {
+      if (current()) document.getElementById('view-tests').setAttribute('aria-busy', 'false');
+      if (subjectSelectionController === controller) subjectSelectionController = null;
+    }
+  }
+
+  function renderSubjectTests(tests) {
     const container = document.getElementById('tests-items-container');
     container.innerHTML = '';
-
-    let tests = adminStore.testsMeta.filter(t => t.subject_id === subjectId);
-    if (!state.isAdmin) {
-      tests = tests.filter(t => (t.access_type || 'public') !== 'admin_only');
-    }
 
     // Keep personal pins above the subject's saved order.
     const sortedTests = [...tests].sort((a, b) => {
@@ -402,7 +466,6 @@
 
     filterSubjectTestsByQuery('');
 
-    viewStack.push('tests');
   }
 
   // Test Selection & Hub

@@ -323,6 +323,50 @@ class AdminApiTestCase(unittest.TestCase):
             self.assertIsNone(storage.get_test_metadata_setting("order_a"))
             self.assertIsNone(storage.get_test_metadata_setting("order_b"))
 
+    def test_subject_tests_load_current_order_and_filter_restricted_tests(self):
+        from quiz_bot.loader import LOADED_TESTS, TESTS
+        from quiz_bot import storage
+
+        fixtures = {key: {"title": key, "subject_id": "loading"} for key in ["load_public", "load_code", "load_private", "load_admin"]}
+        with patch.dict(TESTS, fixtures, clear=True), patch.dict(LOADED_TESTS, {key: [] for key in fixtures}, clear=True):
+            storage.set_test_access_setting("load_code", "code", code="secret")
+            storage.set_test_access_setting("load_private", "private")
+            storage.set_test_access_setting("load_admin", "admin_only")
+            order = ["load_admin", "load_private", "load_public", "load_code"]
+            storage.set_subject_test_order("loading", order, 12345)
+
+            student = self.client.get("/api/subjects/loading/tests", headers=self._auth_header(99999))
+            self.assertEqual(student.status_code, 200)
+            self.assertEqual([test["id"] for test in student.get_json()["items"]], ["load_public", "load_code"])
+            self.assertTrue(all(test["access_code"] == "" for test in student.get_json()["items"]))
+            admin = self.client.get("/api/subjects/loading/tests", headers=self._auth_header(12345))
+            self.assertEqual([test["id"] for test in admin.get_json()["items"]], order)
+            self.assertEqual(admin.get_json()["items"][-1]["access_code"], "secret")
+            storage.grant_user_test_access(99999, "load_private")
+            granted = self.client.get("/api/subjects/loading/tests", headers=self._auth_header(99999))
+            self.assertEqual([test["id"] for test in granted.get_json()["items"]], ["load_private", "load_public", "load_code"])
+
+    def test_subject_tests_require_identity_and_section_access(self):
+        from quiz_bot.loader import TESTS
+        from quiz_bot import storage
+
+        with patch.dict(TESTS, {"load_public": {"title": "Public", "subject_id": "locked"}}, clear=True):
+            storage.set_subject_setting("locked", title="Locked", access_type="code", code="section-secret")
+            unauthenticated = self.client.get("/api/subjects/locked/tests")
+            self.assertEqual(unauthenticated.status_code, 401)
+            denied = self.client.get("/api/subjects/locked/tests", headers=self._auth_header(99999))
+            self.assertEqual(denied.status_code, 403)
+            self.assertNotIn("items", denied.get_json())
+            verified = self.client.post("/api/subjects/verify_code", headers=self._auth_header(99999), json={
+                "subject_id": "locked", "code": "section-secret",
+            })
+            self.assertEqual(verified.status_code, 200)
+            allowed = self.client.get("/api/subjects/locked/tests", headers=self._auth_header(99999))
+            self.assertEqual(allowed.status_code, 200)
+            self.assertEqual([test["id"] for test in allowed.get_json()["items"]], ["load_public"])
+            missing = self.client.get("/api/subjects/missing/tests", headers=self._auth_header(99999))
+            self.assertEqual(missing.status_code, 404)
+
     def test_admin_delete_subject_api(self):
         res = self.client.post(
             "/api/admin/delete_subject",

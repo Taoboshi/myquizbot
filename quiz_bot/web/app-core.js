@@ -93,6 +93,7 @@ const nativeFetch = window.fetch.bind(window);
     showAllErrors: false,
     activeSubjectId: 'oziz',
     activeSubjectTitle: 'ОЗиЗ и здравоохранение',
+    subjectLoadStatus: 'idle',
     activeTestId: 'oziz_module_2',
     activeTestTitle: 'oziz_module_2',
     testLoadStatus: 'ready',
@@ -512,6 +513,10 @@ const nativeFetch = window.fetch.bind(window);
   function filterSubjectTestsByQuery(q) {
     const container = document.getElementById('tests-items-container');
     if (!container) return;
+    if (state.subjectLoadStatus !== 'ready') {
+      document.getElementById('subject-tests-search-empty')?.classList.add('hidden');
+      return;
+    }
     const cards = container.querySelectorAll('.p-4');
     let matched = 0;
     const query = (q || '').toLocaleLowerCase('ru').trim();
