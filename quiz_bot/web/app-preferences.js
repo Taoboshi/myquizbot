@@ -108,7 +108,6 @@ function initializeSettingsSections() {
   const theme = document.getElementById('theme-accent-settings-block');
   const haptic = document.getElementById('set-haptic').closest('div.flex');
   const rating = document.getElementById('set-hide-rating').closest('div.flex');
-  const resetRating = root.querySelector('button[onclick="resetMyRatingProgress()"]')?.parentElement;
   const support = root.querySelector('button[onclick="openSupportChat()"]')?.parentElement.parentElement;
   const about = root.querySelector('div.text-center');
   const admin = document.getElementById('settings-admin-block');
@@ -152,7 +151,8 @@ function initializeSettingsSections() {
   page('appearance').append(theme);
   page('appearance').insertAdjacentHTML('beforeend',
     preferenceRow('textSize', 'Размер текста', 'Размер подписей и текста вопросов', [['normal', 'Обычный'], ['large', 'Крупный'], ['larger', 'Очень крупный']]) +
-    preferenceRow('reduceMotion', 'Меньше анимаций', 'Минимум движения при переходах'));
+    preferenceRow('reduceMotion', 'Меньше анимаций', 'Минимум движения при переходах') +
+    settingsAction('Сбросить настройки приложения', 'Вернуть параметры к исходным значениям', 'resetAppPreferences()', true));
   page('learning').insertAdjacentHTML('beforeend',
     preferenceRow('autoNext', 'Переходить к следующему вопросу', 'После ответа, с короткой паузой') +
     preferenceRow('showTimer', 'Показывать таймер', 'Время прохождения теста') +
@@ -169,13 +169,9 @@ function initializeSettingsSections() {
   rating.className = 'settings-row';
   rating.querySelector('#set-hide-rating').setAttribute('aria-label', 'Скрыть профиль из рейтинга');
   rating.querySelector('#set-hide-rating').setAttribute('role', 'switch');
+  page('profile').append(settingsAction('Сбросить результаты рейтинга', 'Удалить попытки и рекорды на сервере. Избранное сохранится.', 'resetMyRatingProgress()', true));
   page('data').insertAdjacentHTML('beforeend',
-    settingsAction('Обновить каталог', 'Получить актуальные предметы и тесты', 'refreshSettingsCatalog(this)') +
-    settingsAction('Очистить временный кэш', 'Убрать сохранённую копию каталога', 'clearTemporaryCache()') +
-    settingsAction('Восстановить настройки', 'Вернуть стандартные параметры', 'resetAppPreferences()') +
-    settingsAction('Сбросить локальный прогресс', 'Удалить попытки, ошибки и избранное на этом устройстве', 'clearLocalAppCache()', true));
-  page('data').append(resetRating);
-  resetRating.className = 'settings-row';
+    settingsAction('Сбросить локальный прогресс', 'Удалить попытки, ошибки и избранные вопросы только на этом устройстве. Серверные результаты сохранятся.', 'clearLocalAppCache()', true));
   page('help').append(support, about);
   about.querySelector('div:last-child').textContent = 'Подготовка к вузовским тестам';
   admin.replaceChildren();
@@ -200,22 +196,6 @@ function openSettingsSection(section) {
   window.scrollTo(0, 0);
   updateHeaderNavState();
   updateTelegramBackButton();
-}
-
-async function refreshSettingsCatalog(button) {
-  button.disabled = true;
-  try {
-    await checkBootstrapAndAdmin();
-    if (state.catalogLoadFailed) throw new Error();
-    renderHomeSubjects();
-    showToast('Каталог обновлён');
-  } catch(e) { showToast('Не удалось обновить каталог'); }
-  finally { button.disabled = false; }
-}
-
-function clearTemporaryCache() {
-  ['ohtest_cached_subjects', 'ohtest_cached_tests_meta'].forEach(key => localStorage.removeItem(key));
-  showToast('Временный кэш очищен');
 }
 
 function resetAppPreferences() {
