@@ -553,6 +553,7 @@ def _init_postgres_db() -> None:
 
         _ensure_subject_settings_columns(conn)
         _add_column_if_missing(conn, "test_metadata_settings", "study_mode TEXT")
+        _add_column_if_missing(conn, "users", "preferences_json TEXT")
         _create_common_indexes(conn)
         conn.commit()
 
@@ -709,6 +710,7 @@ def _init_sqlite_db() -> None:
 
         _ensure_subject_settings_columns(conn)
         _add_column_if_missing(conn, "test_metadata_settings", "study_mode TEXT")
+        _add_column_if_missing(conn, "users", "preferences_json TEXT")
         _create_common_indexes(conn)
         conn.commit()
 
@@ -1229,6 +1231,28 @@ def upsert_user(user) -> None:
         conn.commit()
 
     _USER_UPSERT_CACHE[user.id] = now
+
+
+def get_user_preferences(user_id: int) -> dict[str, Any]:
+    with db_connect() as conn:
+        row = conn.execute("SELECT preferences_json FROM users WHERE user_id = ?", (int(user_id),)).fetchone()
+    try:
+        value = json.loads(row["preferences_json"] or "{}") if row else {}
+        return value if isinstance(value, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def save_user_preferences(user_id: int, preferences: dict[str, Any]) -> dict[str, Any]:
+    merge = "(COALESCE(users.preferences_json, '{}')::jsonb || excluded.preferences_json::jsonb)::text" if DATABASE_URL else "json_patch(COALESCE(users.preferences_json, '{}'), excluded.preferences_json)"
+    with db_connect() as conn:
+        conn.execute(
+            f"""INSERT INTO users (user_id, preferences_json) VALUES (?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET preferences_json = {merge}""",
+            (int(user_id), json.dumps(preferences)),
+        )
+        conn.commit()
+    return get_user_preferences(user_id)
 
 
 def get_user_profile(user_id: int) -> dict[str, str | None]:

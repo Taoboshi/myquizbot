@@ -21,6 +21,7 @@ class MiniAppAssetTestCase(unittest.TestCase):
             "app-admin.js",
             "app-subject-admin.js",
             "app-settings.js",
+            "app-preferences.js",
         )
         positions = []
         for module in modules:
@@ -39,6 +40,7 @@ class MiniAppAssetTestCase(unittest.TestCase):
             "app-admin.js",
             "app-subject-admin.js",
             "app-settings.js",
+            "app-preferences.js",
         ):
             with self.subTest(module=module):
                 response = self.client.get(f"/app-assets/{module}")

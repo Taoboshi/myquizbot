@@ -31,6 +31,8 @@ from .storage import (
     delete_subject_setting,
     get_all_time_error_indices,
     get_user_profile,
+    get_user_preferences,
+    save_user_preferences,
     is_user_rating_hidden,
     mark_all_time_error_resolved,
     record_attempt_finish,
@@ -230,12 +232,28 @@ def register_webapp_routes(app: Any) -> None:
 
         return jsonify({
             "is_admin": is_admin,
+            "preferences": get_user_preferences(user_id),
             "is_hidden_in_rating": is_hidden_in_rating,
             "user_profile": user_profile,
             "subjects": subjects_data,
             "unassigned_tests": unassigned_data,
             "total_loaded_tests": len(LOADED_TESTS),
         })
+
+    @app.route("/api/user/preferences", methods=["POST"])
+    def api_save_preferences():
+        payload = request.get_json(silent=True)
+        allowed = {"autoNext", "showTimer", "fcShuffle", "fcAnswerFirst", "fcSwipes", "fcRemember", "trainingCount"}
+        if not isinstance(payload, dict) or not payload or set(payload) - allowed:
+            return jsonify({"error": "Invalid preferences"}), 400
+        for key, value in payload.items():
+            if key == "trainingCount":
+                if type(value) is not int or not 1 <= value <= 500:
+                    return jsonify({"error": "Invalid training count"}), 400
+            elif type(value) is not bool:
+                return jsonify({"error": "Invalid preference value"}), 400
+        preferences = save_user_preferences(authenticated_user_id(), payload)
+        return jsonify({"success": True, "preferences": preferences})
 
     @app.route("/api/user/profile", methods=["POST"])
     def api_save_user_profile():

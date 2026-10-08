@@ -1431,7 +1431,7 @@
               <!-- Front -->
               <div class="absolute inset-0 w-full h-full p-6 sm:p-8 rounded-3xl bg-app-card border border-white/10 backface-hidden flex flex-col justify-between">
                 <div class="flex items-center justify-between text-slate-400 text-sm">
-                  <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400">ВОПРОС</span>
+                  <span id="fc-front-label" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-400">ВОПРОС</span>
                   <button type="button" onclick="event.stopPropagation(); toggleFCCurrentStar();" id="fc-star-btn" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg text-slate-400 hover:text-amber-400 active:scale-90 transition" title="В избранное">
                     ☆
                   </button>
@@ -1447,7 +1447,7 @@
               <!-- Back -->
               <div class="absolute inset-0 w-full h-full p-6 sm:p-8 rounded-3xl bg-app-card border border-brand-500/30 backface-hidden rotate-y-180 flex flex-col justify-between">
                 <div class="flex items-center justify-between text-slate-400 text-sm">
-                  <span class="text-[10px] font-mono font-semibold text-brand-300 px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20">ОТВЕТ</span>
+                  <span id="fc-back-label" class="text-[10px] font-mono font-semibold text-brand-300 px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/20">ОТВЕТ</span>
                   <button type="button" onclick="event.stopPropagation(); toggleFCCurrentStar();" id="fc-star-btn-back" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg text-slate-400 hover:text-amber-400 active:scale-90 transition" title="В избранное">
                     ☆
                   </button>
@@ -2451,6 +2451,58 @@
     </nav>
   </div>
 
+  <style>
+    body { --text-scale: 1; }
+    body[data-text-size="large"] { --text-scale: 1.12; }
+    body[data-text-size="larger"] { --text-scale: 1.25; }
+    body[data-text-size] .text-xs { font-size: calc(.75rem * var(--text-scale)); }
+    body[data-text-size] .text-sm { font-size: calc(.875rem * var(--text-scale)); }
+    body[data-text-size] .text-base { font-size: calc(1rem * var(--text-scale)); }
+    body[data-text-size] [class~="text-[10px]"] { font-size: calc(10px * var(--text-scale)); }
+    body[data-text-size] [class~="text-[11px]"] { font-size: calc(11px * var(--text-scale)); }
+    body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+      animation: none !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+    .settings-section-link, .settings-row {
+      width: 100%; display: flex; align-items: center; gap: 14px;
+      padding: 16px 0; border-bottom: 1px solid var(--border-color, rgba(148,163,184,.16));
+      text-align: left; background: transparent;
+    }
+    .settings-section-link:hover, .settings-action:hover { background: var(--accent-soft, rgba(148,163,184,.05)); }
+    .settings-section-link > span:last-child, .settings-action > span:last-child { color: var(--accent-color); font-size: 22px; }
+    .settings-section-icon { color: var(--accent-color); width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center; }
+    .settings-row-copy { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+    .settings-row-title { font-size: calc(13px * var(--text-scale)); font-weight: 700; color: #f1f5f9; line-height: 1.45; overflow-wrap: anywhere; }
+    .settings-row-description { font-size: calc(11px * var(--text-scale)); color: #94a3b8; line-height: 1.5; }
+    .settings-page select, .settings-page input[type=number], #modal-fc-options select {
+      min-width: 0; max-width: 48%; flex-shrink: 0; padding: 8px; border-radius: 8px;
+      background: var(--bg-surface, #1e293b); color: inherit; border: 1px solid rgba(148,163,184,.25); font-size: calc(12px * var(--text-scale));
+    }
+    .settings-page input[type=number] { width: 76px; }
+    .settings-row input[type=checkbox] {
+      appearance: none; position: relative; width: 40px; height: 24px; flex: 0 0 40px;
+      border-radius: 12px; background: #475569; cursor: pointer; border: 0;
+    }
+    .settings-row input[type=checkbox]::before {
+      content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px;
+      background: white; border-radius: 50%; transition: transform .15s;
+    }
+    .settings-row input[type=checkbox]:checked { background: var(--accent-color); }
+    .settings-row input[type=checkbox]:checked::before { transform: translateX(16px); }
+    .settings-row input:focus-visible, .settings-row select:focus-visible, .settings-section-link:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
+    .settings-danger .settings-row-title { color: #fb7185; }
+    .settings-page #theme-accent-settings-block > div { background: transparent; border: 0; border-radius: 0; padding: 16px 0; margin: 0; }
+    body.light-theme .settings-row-title { color: #0f172a; }
+    body.light-theme .settings-row-description { color: #64748b; }
+    body.light-theme .settings-row input[type=checkbox] { background-color: #94a3b8 !important; }
+    body.light-theme .settings-row input[type=checkbox]:checked { background-color: var(--accent-color) !important; }
+    body.light-theme .settings-page select, body.light-theme .settings-page input[type=number] { background: #f1f5f9; color: #0f172a; }
+    body.light-theme .settings-danger .settings-row-title { color: #be123c; }
+    body.light-theme #modal-fc-options > div { background: #f8fafc !important; }
+  </style>
+
   <!-- APPLICATION JAVASCRIPT ENGINE -->
   <script src="/app-assets/app-data.js" defer></script>
   <script src="/app-assets/app-core.js" defer></script>
@@ -2460,5 +2512,6 @@
   <script src="/app-assets/app-admin.js" defer></script>
   <script src="/app-assets/app-subject-admin.js" defer></script>
   <script src="/app-assets/app-settings.js" defer></script>
+  <script src="/app-assets/app-preferences.js" defer></script>
 </body>
 </html>

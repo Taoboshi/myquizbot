@@ -457,7 +457,8 @@
     const container = document.getElementById('training-options-list');
     const totalQ = state.currentTestOriginalQuestions.length;
 
-    const counts = [10, 20, 30, 50].filter(c => c < totalQ);
+    const defaultCount = Math.min(totalQ, appPreferences.trainingCount);
+    const counts = [...new Set([10, 20, 30, 50, defaultCount].filter(c => c < totalQ))].sort((a, b) => a - b);
     counts.push(totalQ);
 
     container.innerHTML = '';
@@ -465,6 +466,8 @@
       const btn = document.createElement('button');
       btn.className = "p-3 rounded-2xl bg-app-surface border border-app-border hover:border-brand-500 text-center active:scale-95 transition group";
       const isAll = (count === totalQ);
+      if (count === defaultCount) btn.classList.add('border-brand-500', 'bg-brand-500/10');
+      btn.setAttribute('aria-label', `${isAll ? 'Все вопросы' : count + ' вопросов'}${count === defaultCount ? ', по умолчанию' : ''}`);
       btn.onclick = () => {
         closeTrainingSelectorModal();
         startTrainingWithCount(count);
@@ -668,6 +671,8 @@
     saveActiveAttemptState();
   }
 
+  let autoAdvanceTimer;
+
   function selectOption(idx) {
     const q = state.activeQuestions[state.currentQIndex];
     if (state.userAnswers[q.id] !== undefined) return; // Prevent double select
@@ -718,6 +723,14 @@
     } catch(e) {}
 
     renderCurrentQuestion();
+    if (appPreferences.autoNext && state.currentQIndex < state.activeQuestions.length - 1) {
+      const index = state.currentQIndex;
+      const testId = state.activeTestId;
+      clearTimeout(autoAdvanceTimer);
+      autoAdvanceTimer = setTimeout(() => {
+        if (getCurrentActiveView() === 'view-solver' && state.activeTestId === testId && state.currentQIndex === index) nextQuestion();
+      }, 900);
+    }
   }
 
   function showCurrentAnswer() {
@@ -1272,6 +1285,7 @@
     let touchIsDragging = false;
 
     card.addEventListener('touchstart', (e) => {
+      if (!appPreferences.fcSwipes) return;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchCurrentX = touchStartX;
@@ -1333,13 +1347,62 @@
 
     // Prepare Questions Deck
     setupFlashcardsDeck(false);
+    const savedRoundFinished = restoreFCProgress();
 
     document.getElementById('fc-active-deck').classList.remove('hidden');
     document.getElementById('fc-finish-screen').classList.add('hidden');
 
     renderFCCard();
+    if (savedRoundFinished) showFCFinishScreen();
     initFlashcardGestures();
     viewStack.push('flashcards');
+  }
+
+  const fcSignatures = new WeakMap();
+  function fcProgressSignature() {
+    const questions = state.currentTestOriginalQuestions;
+    if (!fcSignatures.has(questions)) {
+      const text = JSON.stringify(questions.map(q => [q.id, q.question, getQuestionCorrectText(q)]));
+      let hash = 2166136261;
+      for (let index = 0; index < text.length; index++) hash = Math.imul(hash ^ text.charCodeAt(index), 16777619);
+      fcSignatures.set(questions, `${questions.length}:${hash >>> 0}`);
+    }
+    return fcSignatures.get(questions);
+  }
+
+  function saveFCProgress() {
+    if (!appPreferences.fcRemember || state.homeActiveView !== 'flashcards' || !state.activeQuestions.length) return;
+    try {
+      localStorage.setItem(`ohtest_fc_progress_${state.activeTestId}`, JSON.stringify({
+        signature: fcProgressSignature(), deck: state.activeQuestions.map(q => q.id), index: fcIndex,
+        learned: fcLearned.map(q => q.id), review: fcReview.map(q => q.id), starredOnly: fcStarredOnlyEnabled,
+        history: fcHistoryStack.map(item => ({ index: item.index, id: item.question.id, known: item.known })),
+        finished: !document.getElementById('fc-finish-screen').classList.contains('hidden')
+      }));
+    } catch(e) {}
+  }
+
+  function restoreFCProgress() {
+    if (!appPreferences.fcRemember) return false;
+    try {
+      const saved = JSON.parse(localStorage.getItem(`ohtest_fc_progress_${state.activeTestId}`) || 'null');
+      if (!saved || saved.signature !== fcProgressSignature()) return false;
+      const byId = new Map(state.currentTestOriginalQuestions.map(q => [String(q.id), q]));
+      const restore = ids => ids.map(id => byId.get(String(id)));
+      const deck = restore(saved.deck);
+      if (!deck.length || deck.some(q => !q) || !Number.isInteger(saved.index) || saved.index < 0 || saved.index >= deck.length) return false;
+      const learned = restore(saved.learned);
+      const review = restore(saved.review);
+      const history = saved.history.map(item => ({ index: item.index, question: byId.get(String(item.id)), known: item.known }));
+      if (learned.some(q => !q) || review.some(q => !q) || history.some(item => !item.question || item.index < 0 || item.index >= deck.length)) return false;
+      state.activeQuestions = deck;
+      fcIndex = saved.index;
+      fcLearned = learned;
+      fcReview = review;
+      fcHistoryStack = history;
+      fcStarredOnlyEnabled = Boolean(saved.starredOnly);
+      return Boolean(saved.finished);
+    } catch(e) { return false; }
   }
 
   function setupFlashcardsDeck(keepShuffle = false) {
@@ -1385,8 +1448,10 @@
 
     const total = state.activeQuestions.length;
     document.getElementById('fc-counter').innerText = `${fcIndex + 1} / ${total}`;
-    document.getElementById('fc-front-text').innerText = q.question;
-    document.getElementById('fc-back-answer').innerText = getQuestionCorrectText(q);
+    document.getElementById('fc-front-text').innerText = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : q.question;
+    document.getElementById('fc-back-answer').innerText = appPreferences.fcAnswerFirst ? q.question : getQuestionCorrectText(q);
+    document.getElementById('fc-front-label').innerText = appPreferences.fcAnswerFirst ? 'ОТВЕТ' : 'ВОПРОС';
+    document.getElementById('fc-back-label').innerText = appPreferences.fcAnswerFirst ? 'ВОПРОС' : 'ОТВЕТ';
 
     document.getElementById('fc-tag-known').innerText = fcLearned.length;
     document.getElementById('fc-tag-review').innerText = fcReview.length;
@@ -1410,6 +1475,7 @@
     if (prevBtn) {
       prevBtn.disabled = (fcHistoryStack.length === 0);
     }
+    saveFCProgress();
   }
 
   function toggleFCCurrentStar() {
@@ -1546,6 +1612,7 @@
   function toggleFCShuffle(enabled) {
     triggerHaptic('medium');
     fcShuffleEnabled = enabled;
+    setPreference('fcShuffle', enabled);
     showToast(enabled ? '🔀 Карточки перемешаны' : 'Порядок карточек сброшен');
     setupFlashcardsDeck(false);
     renderFCCard();
@@ -1579,6 +1646,7 @@
     } else {
       repBtn.classList.remove('hidden');
     }
+    saveFCProgress();
   }
 
   function fcRepeatReview() {

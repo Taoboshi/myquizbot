@@ -12,7 +12,7 @@ const nativeFetch = window.fetch.bind(window);
     // Restore the saved theme before the first screen is rendered.
   try {
     const _earlyTheme = localStorage.getItem('ohtest_theme') || 'dark';
-    document.body.classList.toggle('light-theme', _earlyTheme === 'light');
+    document.body.classList.toggle('light-theme', _earlyTheme === 'light' || (_earlyTheme === 'system' && matchMedia('(prefers-color-scheme: light)').matches));
     let _earlyAccent = localStorage.getItem('ohtest_accent') || 'green';
     if (_earlyAccent === 'emerald') _earlyAccent = 'green';
     else if (_earlyAccent === 'amber') _earlyAccent = 'base';
@@ -224,7 +224,7 @@ const nativeFetch = window.fetch.bind(window);
   // Telegram WebApp Initialization
   window.addEventListener('DOMContentLoaded', async () => {
     // Reapply saved theme after settings controls are available.
-    setThemeMode(document.body.classList.contains('light-theme') ? 'light' : 'dark', true);
+    setThemeMode(localStorage.getItem('ohtest_theme') || 'dark', true);
     let savedAccent = localStorage.getItem('ohtest_accent') || 'green';
     if (savedAccent === 'emerald') savedAccent = 'green';
     else if (savedAccent === 'amber') savedAccent = 'base';
@@ -337,12 +337,6 @@ const nativeFetch = window.fetch.bind(window);
 
   // Detect which view is currently active in the DOM
   function getCurrentActiveView() {
-    if (state.homeActiveView === 'home') {
-      if (state.currentTab === 'profile') return 'view-tab-profile';
-      if (state.currentTab === 'settings') return 'view-tab-settings';
-      return 'view-home';
-    }
-
     // 1. If currently in Profile tab and profile view is visible
     if (state.currentTab === 'profile') {
       const p = document.getElementById('view-tab-profile');
@@ -354,7 +348,7 @@ const nativeFetch = window.fetch.bind(window);
     if (state.currentTab === 'settings') {
       const s = document.getElementById('view-tab-settings');
       if (s && !s.classList.contains('hidden') && s.style.display !== 'none') {
-        return 'view-tab-settings';
+        return state.settingsSection ? 'view-settings-detail' : 'view-tab-settings';
       }
     }
 
@@ -543,16 +537,18 @@ const nativeFetch = window.fetch.bind(window);
     // THEME MODE SWITCHER (СВЕТЛАЯ / ТЕМНАЯ ТЕМА)
   function setThemeMode(mode, skipSave = false) {
     if (!skipSave) triggerHaptic('light');
-    const isLight = (mode === 'light');
+    const isLight = mode === 'light' || (mode === 'system' && matchMedia('(prefers-color-scheme: light)').matches);
     if (isLight) {
       document.body.classList.add('light-theme');
     } else {
       document.body.classList.remove('light-theme');
     }
     if (!skipSave) {
-      localStorage.setItem('ohtest_theme', isLight ? 'light' : 'dark');
+      localStorage.setItem('ohtest_theme', mode);
     }
     updateThemeUI(isLight);
+    const themeControl = document.getElementById('settings-theme-mode');
+    if (themeControl) themeControl.value = mode;
   }
 
   function toggleTheme() {
@@ -679,6 +675,7 @@ const nativeFetch = window.fetch.bind(window);
       state.catalogLoadFailed = false;
       {
         const data = await res.json();
+        applyServerPreferences(data.preferences || {});
         if (data.user_profile && typeof data.user_profile === 'object') {
           const serverProfile = data.user_profile;
           const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;

@@ -68,9 +68,11 @@
 
   // WORKING CLEAR CACHE FUNCTION (CLEARS LOCALSTORAGE + IN-MEMORY STATE + RESETS UI COUNTERS)
   function clearLocalAppCache() {
-    if (confirm('Сбросить историю попыток, нерешенные ошибки и локальный кэш?')) {
+    if (confirm('Удалить локальные попытки, ошибки и избранное на этом устройстве? Серверная статистика и настройки сохранятся.')) {
       triggerHaptic('success');
-      localStorage.clear();
+      Object.keys(localStorage).filter(key =>
+        /^ohtest_(history$|active_attempt$|errors_|favs_|resolved_errors_|fc_progress_)/.test(key)
+      ).forEach(key => localStorage.removeItem(key));
       state.activeAttempt = null;
       state.historyAttempts = [];
       state.userErrors = new Set();
@@ -79,6 +81,12 @@
       state.revealedAnswers = new Set();
       state.timerSeconds = 0;
       clearInterval(state.timerInterval);
+      state.activeQuestions = [...state.currentTestOriginalQuestions];
+      state.currentQIndex = 0;
+      fcLearned = [];
+      fcReview = [];
+      fcHistoryStack = [];
+      if (['solver', 'result', 'flashcards'].includes(state.homeActiveView)) state.homeActiveView = 'hub';
 
       // Re-render UI
       renderActiveAttemptBanner();
@@ -95,7 +103,7 @@
       document.getElementById('hub-q-favs').innerText = '0';
       document.getElementById('hub-err-tag').innerText = '0';
 
-      alert('✓ Кэш попыток и локальные данные успешно очищены!');
+      alert('Локальный прогресс сброшен.');
     }
   }
 
@@ -309,7 +317,9 @@
   }
 
   let homeTabScrollTop = 0;
+  let homeWindowScrollTop = 0;
   const tabScrollPositions = { profile: 0, settings: 0 };
+  const tabWindowScrollPositions = { profile: 0, settings: 0 };
   let homeHeaderControls = null;
 
   function switchTab(tabId) {
@@ -325,6 +335,7 @@
     const appBody = document.getElementById('app-body');
     if (previousTab === 'home' && tabId !== 'home') {
       homeTabScrollTop = appBody?.scrollTop || 0;
+      homeWindowScrollTop = window.scrollY;
       homeHeaderControls = ['btn-grid-modal', 'btn-finish-early', 'btn-fav-toggle', 'header-admin-pill']
         .reduce((controls, id) => {
           const element = document.getElementById(id);
@@ -333,11 +344,12 @@
         }, {});
     } else if (previousTab !== 'home' && previousTab !== tabId) {
       tabScrollPositions[previousTab] = appBody?.scrollTop || 0;
+      tabWindowScrollPositions[previousTab] = window.scrollY;
     }
 
     state.currentTab = tabId;
     if (tabId === 'home') {
-      if (previousTab === 'home') {
+      if (previousTab === 'home' || !appPreferences.restoreHome) {
         state.homeActiveView = 'home';
         viewStack = ['home'];
       }
@@ -386,6 +398,7 @@
       document.getElementById('view-tab-profile').classList.remove('hidden');
     } else if (tabId === 'settings') {
       document.getElementById('view-tab-settings').classList.remove('hidden');
+      if (previousTab === 'settings') openSettingsSection(null);
     }
 
     updateHeaderNavState();
@@ -407,13 +420,21 @@
     }
     if (appBody) {
       const scrollTop = tabId === 'home'
-        ? (previousTab === 'home' ? 0 : homeTabScrollTop)
+        ? (previousTab === 'home' || !appPreferences.restoreHome ? 0 : homeTabScrollTop)
         : (tabScrollPositions[tabId] || 0);
-      requestAnimationFrame(() => { appBody.scrollTop = scrollTop; });
+      const windowTop = tabId === 'home'
+        ? (previousTab === 'home' || !appPreferences.restoreHome ? 0 : homeWindowScrollTop)
+        : (tabWindowScrollPositions[tabId] || 0);
+      requestAnimationFrame(() => {
+        if (state.currentTab !== tabId) return;
+        appBody.scrollTop = scrollTop;
+        window.scrollTo(0, windowTop);
+      });
     }
   }
 
   function hideAllViews() {
+    clearTimeout(autoAdvanceTimer);
     const views = ['view-home', 'view-tests', 'view-hub', 'view-solver', 'view-result', 'view-flashcards', 'view-search', 'view-tab-profile', 'view-tab-settings', 'view-admin'];
     views.forEach(v => {
       const el = document.getElementById(v);
@@ -444,6 +465,10 @@
   function goBack() {
     triggerHaptic('light');
     const activeView = getCurrentActiveView();
+    if (activeView === 'view-settings-detail') {
+      openSettingsSection(null);
+      return;
+    }
     if (activeView === 'view-solver' || activeView === 'view-flashcards' || activeView === 'view-search' || activeView === 'view-result') {
       if (state.activeTestId) {
         openTestHub();
