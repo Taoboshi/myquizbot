@@ -1830,8 +1830,8 @@
 
     const total = state.activeQuestions.length;
     document.getElementById('fc-counter').innerText = `${fcIndex + 1} / ${total}`;
-    document.getElementById('fc-front-text').innerText = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : q.question;
-    document.getElementById('fc-back-answer').innerText = appPreferences.fcAnswerFirst ? q.question : getQuestionCorrectText(q);
+    document.getElementById('fc-front-text').textContent = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : q.question;
+    document.getElementById('fc-back-answer').textContent = appPreferences.fcAnswerFirst ? q.question : getQuestionCorrectText(q);
     fitFCCardToContent();
     document.getElementById('fc-front-label').innerText = appPreferences.fcAnswerFirst ? 'ОТВЕТ' : 'ВОПРОС';
     document.getElementById('fc-back-label').innerText = appPreferences.fcAnswerFirst ? 'ВОПРОС' : 'ОТВЕТ';
@@ -1903,10 +1903,55 @@
   function fitFCCardToContent() {
     const card = document.getElementById('fc-card');
     if (!card || document.getElementById('view-flashcards').classList.contains('hidden')) return;
-    const textHeight = Math.max(document.getElementById('fc-front-text').scrollHeight,
-      document.getElementById('fc-back-answer').scrollHeight);
-    card.style.height = `${Math.max(360, window.innerHeight - 180, textHeight + 160)}px`;
+    card.style.removeProperty('height');
+    for (const [textId, buttonId] of [['fc-front-text', 'fc-more-front'], ['fc-back-answer', 'fc-more-back']]) {
+      const text = document.getElementById(textId);
+      const slot = text.parentElement;
+      const button = document.getElementById(buttonId);
+      const truncated = text.scrollHeight > slot.clientHeight - 24 + 1;
+      slot.dataset.truncated = String(truncated);
+      button.style.visibility = truncated ? 'visible' : 'hidden';
+      button.disabled = !truncated;
+    }
   }
+
+  let fcFullTextTrigger = null;
+  function openFCFullText(back) {
+    stopFCAutoplay();
+    fcFullTextTrigger = document.getElementById(back ? 'fc-more-back' : 'fc-more-front');
+    const text = document.getElementById(back ? 'fc-back-answer' : 'fc-front-text');
+    const label = document.getElementById(back ? 'fc-back-label' : 'fc-front-label');
+    document.getElementById('fc-full-text-content').textContent = text.textContent;
+    document.getElementById('fc-full-text-title').textContent = label.textContent;
+    document.getElementById('modal-fc-full-text').classList.remove('hidden');
+    document.getElementById('fc-full-text-scroll').scrollTop = 0;
+    document.getElementById('fc-full-text-close').focus();
+  }
+
+  function closeFCFullText() {
+    document.getElementById('modal-fc-full-text').classList.add('hidden');
+    fcFullTextTrigger?.focus();
+  }
+
+  document.addEventListener('keydown', event => {
+    if (document.getElementById('modal-fc-full-text').classList.contains('hidden')) return;
+    if (event.key === 'Escape') closeFCFullText();
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const close = document.getElementById('fc-full-text-close');
+      const content = document.getElementById('fc-full-text-scroll');
+      (document.activeElement === close ? content : close).focus();
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const observer = new ResizeObserver(fitFCCardToContent);
+    ['fc-front-text', 'fc-back-answer'].forEach(id => {
+      const text = document.getElementById(id);
+      observer.observe(text);
+      observer.observe(text.parentElement);
+    });
+  });
 
   if (typeof window !== 'undefined') window.addEventListener('resize', fitFCCardToContent);
 

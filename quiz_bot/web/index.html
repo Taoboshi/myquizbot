@@ -1453,7 +1453,7 @@
                     Вопрос
                   </h3>
                 </div>
-                <div class="h-4"></div>
+                <button id="fc-more-front" type="button" class="fc-more-button" style="visibility: hidden" disabled onclick="event.stopPropagation(); openFCFullText(false)">Показать полностью</button>
               </div>
 
               <!-- Back -->
@@ -1469,7 +1469,7 @@
                     Ответ
                   </div>
                 </div>
-                <div class="h-4"></div>
+                <button id="fc-more-back" type="button" class="fc-more-button" style="visibility: hidden" disabled onclick="event.stopPropagation(); openFCFullText(true)">Показать полностью</button>
               </div>
             </div>
           </div>
@@ -2399,6 +2399,15 @@
         <button type="button" onclick="closeStudyOptions(); requestFinishQuiz()" class="btn-glass-secondary w-full py-3 rounded-lg text-xs font-semibold">Завершить тест</button>
       </div>
     </div>
+    <div id="modal-fc-full-text" class="hidden fixed inset-0 z-[100] bg-slate-950/80 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="closeFCFullText()">
+      <div role="dialog" aria-modal="true" aria-labelledby="fc-full-text-title" class="fc-full-text-dialog w-full max-w-2xl border border-app-border rounded-t-lg sm:rounded-lg" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between gap-3 p-4 border-b border-app-border">
+          <h3 id="fc-full-text-title" class="text-sm font-bold text-white">Полный текст</h3>
+          <button id="fc-full-text-close" type="button" onclick="closeFCFullText()" class="study-icon-button" title="Закрыть" aria-label="Закрыть полный текст"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
+        </div>
+        <div id="fc-full-text-scroll" class="overflow-y-auto p-5" tabindex="0"><div id="fc-full-text-content"></div></div>
+      </div>
+    </div>
     <!-- Quizlet Options Modal (Настройки карточек: Перемешать, Рестарт, Избранное) -->
     <div id="modal-fc-options" class="hidden fixed inset-0 z-[100] bg-slate-950/95 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" onclick="closeFCOptionsModal()">
       <div class="w-full max-w-sm rounded-t-3xl sm:rounded-3xl !bg-[#0f172a] border border-white/[0.1] shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" onclick="event.stopPropagation()">
@@ -2492,11 +2501,17 @@
     #solver-options-box .option-btn-correct, #solver-options-box .option-btn-wrong { border-width: 1px !important; }
     #solver-options-box .option-btn-muted { opacity: .75 !important; }
     #view-flashcards > h2 { display: none; }
-    #fc-active-deck:not(.hidden) { display: flex; flex-direction: column; gap: 12px; flex: 1 0 auto; }
-    #fc-active-deck > .perspective-1000 { flex: 1 0 auto; min-height: 360px; }
-    #fc-card { min-height: 360px; }
-    #fc-card > div > .flex-1 { display: block; min-height: 0; overflow: visible; align-content: safe center; touch-action: pan-y; padding: 12px 4px; }
-    #fc-front-text, #fc-back-answer { overflow-wrap: anywhere; }
+    #fc-active-deck:not(.hidden) { display: flex; flex-direction: column; gap: 12px; flex: 1 1 0; min-height: 0; }
+    #fc-active-deck > .perspective-1000 { flex: 1 1 0; min-height: 180px; }
+    #fc-card { height: 100% !important; min-height: 180px; }
+    #fc-card > div > .flex-1 { display: block; min-height: 0; overflow: hidden; align-content: safe center; padding: 12px 4px; }
+    #fc-card > div > .flex-1[data-truncated="true"] { align-content: start; mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent); }
+    #fc-front-text, #fc-back-answer, #fc-full-text-content { font-size: calc(24px * var(--text-scale)) !important; font-weight: 700; text-align: left; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .fc-more-button { flex: 0 0 36px; height: 36px; font-size: 13px; font-weight: 600; color: var(--accent-color); }
+    .fc-more-button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+    .fc-full-text-dialog { display: flex; flex-direction: column; max-height: 90dvh; background: var(--bg-canvas); padding-bottom: env(safe-area-inset-bottom); }
+    .fc-full-text-dialog > div:first-child { flex-shrink: 0; }
+    #fc-full-text-scroll { min-height: 0; overscroll-behavior: contain; }
     #fc-finish-screen { flex: 1 0 auto; overflow: visible; }
     .tool-skeleton-layout { display: grid; gap: 16px; }
     .tool-skeleton-layout > div { animation: tool-loading-pulse 1.6s ease-in-out infinite; }

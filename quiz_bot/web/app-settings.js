@@ -538,6 +538,10 @@
 
   function goBack() {
     triggerHaptic('light');
+    if (!document.getElementById('modal-fc-full-text').classList.contains('hidden')) {
+      closeFCFullText();
+      return;
+    }
     const activeView = getCurrentActiveView();
     if (activeView === 'view-tool-loading') {
       cancelStudyTool();
