@@ -90,12 +90,12 @@ function applyPreferences() {
   if (themeSelect) themeSelect.value = localStorage.getItem('ohtest_theme') || 'dark';
 }
 
-function preferenceRow(key, title, description, options) {
+function preferenceRow(key, title, description, options, customControl) {
   const control = options
     ? `<select data-preference="${key}" aria-label="${title}" onchange="setPreference('${key}', this.value)">${options.map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}</select>`
     : key === 'trainingCount'
       ? `<input type="number" data-preference="${key}" aria-label="${title}" min="1" max="500" inputmode="numeric" onchange="setPreference('${key}', this.value)">`
-      : `<input type="checkbox" role="switch" data-preference="${key}" aria-label="${title}" onchange="setPreference('${key}', this.checked)">`;
+      : `<input type="checkbox" role="switch" ${customControl ? `id="${customControl.id}"` : `data-preference="${key}"`} aria-label="${title}" onchange="${customControl ? `${customControl.handler}(this.checked)` : `setPreference('${key}', this.checked)`}">`;
   return `<label class="settings-row"><span class="settings-row-copy"><span class="settings-row-title">${title}</span><span class="settings-row-description">${description}</span></span>${control}</label>`;
 }
 
@@ -185,9 +185,16 @@ function initializeSettingsSections() {
   root.replaceChildren(menu, pages);
   applyPreferences();
   const options = document.querySelector('#modal-fc-options .divide-y');
-  options.insertAdjacentHTML('afterbegin',
+  const restart = options.lastElementChild;
+  const deckOption = (key, id, title, description, handler) =>
+    preferenceRow(key, title, description, undefined, {id, handler});
+  options.className = 'fc-options-list';
+  options.innerHTML =
     preferenceRow('fcAnswerFirst', 'Начинать с ответа', 'Показывать ответ на лицевой стороне карточки') +
-    preferenceRow('fcRemember', 'Запоминать прогресс', 'Продолжать набор на этом устройстве'));
+    preferenceRow('fcRemember', 'Запоминать прогресс', 'Продолжать набор на этом устройстве') +
+    deckOption('fcShuffle', 'fc-opt-shuffle', 'Перемешать карточки', 'Случайный порядок при изучении', 'toggleFCShuffle') +
+    deckOption('fcStarredOnly', 'fc-opt-starred-only', 'Только отмеченные', 'Учить только избранные термины', 'toggleFCStarredOnly');
+  options.append(restart);
   applyPreferences();
 }
 
