@@ -1410,7 +1410,10 @@
       <!-- VIEW 6: FLASHCARDS (3D КАРТОЧКИ С СИСТЕМОЙ QUIZLET) -->
       <!-- ========================================== -->
       <section id="view-tool-loading" class="hidden space-y-5" aria-busy="true" aria-labelledby="tool-loading-title">
-        <h2 id="tool-loading-title" class="text-sm font-bold text-white"></h2>
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="goBack()" class="study-icon-button" aria-label="Отменить загрузку" title="Отменить загрузку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
+          <h2 id="tool-loading-title" class="text-sm font-bold text-white"></h2>
+        </div>
         <div id="tool-loading-shapes" class="tool-skeleton-layout" aria-hidden="true"></div>
         <p class="sr-only" role="status">Загрузка материала</p>
         <div id="tool-loading-error" class="hidden space-y-3" role="alert">
@@ -2471,10 +2474,11 @@
     body { --text-scale: 1; }
     .study-icon-button { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-surface); color: var(--text-main); }
     .study-icon-button svg { width: 20px; height: 20px; }
-    body:has(#view-solver:not(.hidden)), body:has(#view-flashcards:not(.hidden)) { overflow: hidden; }
+    body:has(#view-solver:not(.hidden)), body:has(#view-flashcards:not(.hidden)), body:has(#view-tool-loading:not(.hidden)) { overflow: hidden; }
     body:has(#view-solver:not(.hidden)) #app-header, body:has(#view-solver:not(.hidden)) nav.glass,
-    body:has(#view-flashcards:not(.hidden)) #app-header, body:has(#view-flashcards:not(.hidden)) nav.glass { display: none !important; }
-    #view-solver:not(.hidden), #view-flashcards:not(.hidden) {
+    body:has(#view-flashcards:not(.hidden)) #app-header, body:has(#view-flashcards:not(.hidden)) nav.glass,
+    body:has(#view-tool-loading:not(.hidden)) #app-header, body:has(#view-tool-loading:not(.hidden)) nav.glass { display: none !important; }
+    #view-solver:not(.hidden), #view-flashcards:not(.hidden), #view-tool-loading:not(.hidden) {
       position: fixed; inset: 0; z-index: 60; width: 100%; max-width: 720px; margin: 0 auto;
       height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
       display: flex; flex-direction: column; gap: 12px; background: var(--bg-canvas); overflow-y: auto; overscroll-behavior: contain;
