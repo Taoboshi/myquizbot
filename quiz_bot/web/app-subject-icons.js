@@ -144,7 +144,7 @@
 
   // Subject artwork has its own palette; interface icons still inherit the app accent.
   const palettes = {
-    coral: ['#fb7185', '#fbbf24', '#be123c', '#a16207'],
+    coral: ['#fb7185', '#fda4af', '#be123c', '#be123c'],
     rose: ['#f472b6', '#c4b5fd', '#be185d', '#7c3aed'],
     peach: ['#fb923c', '#fda4af', '#c2410c', '#be123c'],
     gold: ['#fbbf24', '#67e8f9', '#a16207', '#0e7490'],
@@ -155,30 +155,45 @@
     blue: ['#93c5fd', '#5eead4', '#1d4ed8', '#0f766e'],
     violet: ['#c4b5fd', '#67e8f9', '#7c3aed', '#0e7490'],
     lilac: ['#d8b4fe', '#f9a8d4', '#9333ea', '#be185d'],
-    ivory: ['#fde68a', '#93c5fd', '#a16207', '#1d4ed8'],
+    ivory: ['#f1f5f9', '#cbd5e1', '#64748b', '#475569'],
+    tissue: ['#fda4af', '#fb7185', '#be123c', '#9f1239'],
+    skin: ['#fdba9e', '#fda4af', '#b45335', '#be123c'],
+    steel: ['#cbd5e1', '#93c5fd', '#475569', '#1d4ed8'],
+    apple: ['#fb7185', '#86efac', '#be123c', '#15803d'],
   };
   const iconColors = {
-    stethoscope: 'teal', scan: 'cyan', hospital: 'blue', heart: 'coral',
-    brain: 'lilac', bone: 'ivory', lungs: 'cyan', kidney: 'peach',
-    eye: 'blue', tooth: 'teal', ear: 'gold', skin: 'rose', blood: 'coral',
-    pill: 'violet', syringe: 'blue', microscope: 'cyan', dna: 'rose',
+    stethoscope: 'steel', scan: 'cyan', hospital: 'steel', heart: 'coral',
+    brain: 'tissue', bone: 'ivory', lungs: 'tissue', kidney: 'coral',
+    eye: 'steel', tooth: 'ivory', ear: 'skin', skin: 'skin', blood: 'coral',
+    pill: 'blue', syringe: 'steel', microscope: 'steel', dna: 'blue',
     flask: 'mint', shield: 'gold', clipboard: 'blue', activity: 'coral',
-    baby: 'peach', chart: 'cyan', book: 'violet', surgery: 'blue',
-    emergency: 'coral', 'first-aid': 'coral', nursing: 'rose',
+    baby: 'skin', chart: 'cyan', book: 'blue', surgery: 'steel',
+    emergency: 'coral', 'first-aid': 'coral', nursing: 'steel',
     gynecology: 'rose', urology: 'blue', oncology: 'gold', psychiatry: 'violet',
-    rehabilitation: 'mint', nutrition: 'forest', endocrinology: 'gold',
+    rehabilitation: 'blue', nutrition: 'apple', endocrinology: 'gold',
     'intensive-care': 'coral', infection: 'forest', biochemistry: 'cyan',
     histology: 'lilac', pathology: 'violet', chemistry: 'mint', physics: 'blue',
     biology: 'forest', ecology: 'mint', imaging: 'violet', ultrasound: 'cyan',
-    thermometer: 'peach', pressure: 'coral', research: 'gold',
-    'medical-record': 'teal', consultation: 'blue', 'public-health': 'teal',
+    thermometer: 'coral', pressure: 'steel', research: 'steel',
+    'medical-record': 'steel', consultation: 'blue', 'public-health': 'blue',
     prevention: 'mint', hygiene: 'cyan', epidemiology: 'peach', ethics: 'lilac',
     law: 'ivory', informatics: 'blue', math: 'gold', language: 'teal',
-    psychology: 'rose', history: 'peach', education: 'violet', sports: 'forest',
+    psychology: 'rose', history: 'gold', education: 'steel', sports: 'steel',
   };
 
-  function iconSvg(source) {
-    return `<svg class="app-line-icon w-6 h-6" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${artwork[source] || artwork.stethoscope}</svg>`;
+  // Only identifiable details get a second color, rather than alternating strokes.
+  const detailParts = {
+    eye: [1], nutrition: [1], heart: [1], stethoscope: [4],
+    microscope: [4, 5], hospital: [0, 3], 'medical-record': [2, 3],
+  };
+
+  function iconSvg(source, coloredParts = []) {
+    let partIndex = 0;
+    const drawing = (artwork[source] || artwork.stethoscope).replace(/<(?:path|circle|line|rect|polygon)\b/g, tag => {
+      const isDetail = coloredParts.includes(partIndex++);
+      return isDetail ? `${tag} class="subject-icon-detail"` : tag;
+    });
+    return `<svg class="app-line-icon w-6 h-6" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawing}</svg>`;
   }
 
   function suggestSubjectIcon(title = '') {
@@ -222,7 +237,7 @@
     if (byKey[key]) {
       const [primary, detail, lightPrimary, lightDetail] = palettes[iconColors[key] || 'teal'];
       const colors = `--subject-primary-dark:${primary};--subject-detail-dark:${detail};--subject-primary-light:${lightPrimary};--subject-detail-light:${lightDetail};--subject-tint:${primary}18`;
-      return `<span class="subject-icon-art" style="${colors}" aria-hidden="true">${iconSvg(byKey[key].source)}</span>`;
+      return `<span class="subject-icon-art" style="${colors}" aria-hidden="true">${iconSvg(byKey[key].source, detailParts[key])}</span>`;
     }
     const safeText = String(fallback || '📚').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     return `<span aria-hidden="true">${safeText}</span>`;
