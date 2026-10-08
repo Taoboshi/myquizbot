@@ -1,9 +1,9 @@
 const preferenceDefaults = {
   autoNext: false, showTimer: true, trainingCount: 10,
-  fcShuffle: false, fcAnswerFirst: false, fcSwipes: true, fcRemember: true,
+  fcShuffle: false, fcAnswerFirst: false, fcRemember: true,
   textSize: 'normal', reduceMotion: false, haptic: true, restoreHome: true
 };
-const accountPreferenceKeys = ['autoNext', 'showTimer', 'trainingCount', 'fcShuffle', 'fcAnswerFirst', 'fcSwipes', 'fcRemember'];
+const accountPreferenceKeys = ['autoNext', 'showTimer', 'trainingCount', 'fcShuffle', 'fcAnswerFirst', 'fcRemember'];
 let appPreferences = { ...preferenceDefaults };
 try {
   const saved = JSON.parse(localStorage.getItem('ohtest_preferences') || '{}');
@@ -187,7 +187,6 @@ function initializeSettingsSections() {
   const options = document.querySelector('#modal-fc-options .divide-y');
   options.insertAdjacentHTML('afterbegin',
     preferenceRow('fcAnswerFirst', 'Начинать с ответа', 'Показывать ответ на лицевой стороне карточки') +
-    preferenceRow('fcSwipes', 'Управление свайпами', 'Листать карточки и отмечать результат жестом') +
     preferenceRow('fcRemember', 'Запоминать прогресс', 'Продолжать набор на этом устройстве'));
   applyPreferences();
 }

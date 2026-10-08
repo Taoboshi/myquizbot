@@ -1298,7 +1298,6 @@
     let touchIsDragging = false;
 
     card.addEventListener('touchstart', (e) => {
-      if (!appPreferences.fcSwipes) return;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchCurrentX = touchStartX;
