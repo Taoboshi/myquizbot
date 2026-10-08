@@ -901,20 +901,13 @@
 
     const ans = state.userAnswers[q.id];
     const isRevealed = state.revealedAnswers.has(q.id);
+    document.getElementById('solver-self-assessment')?.classList.toggle('hidden', !isRevealed || ans !== undefined);
 
     const showBtnText = document.getElementById('solver-btn-show-text');
     if (isRevealed || ans !== undefined) {
       showBtnText.innerText = isRevealed ? '✓ Ответ открыт' : '✓ Вы ответили';
     } else {
       showBtnText.innerText = 'Показать ответ';
-    }
-    const answerNote = document.getElementById('solver-answer-note');
-    if (answerNote) {
-      answerNote.innerText = isRevealed
-        ? 'Вопрос добавлен в «Ошибки» для повторения.'
-        : 'Неверный ответ или открытый ответ попадёт в «Ошибки» для повторения.';
-      answerNote.classList.toggle('text-amber-300', isRevealed);
-      answerNote.classList.toggle('text-slate-400', !isRevealed);
     }
 
     // Render Options with unmistakable Green/Red Feedback. ZERO EXPLANATION BOX!
@@ -1037,6 +1030,46 @@
     }
   }
 
+  const revealedErrorWrites = new Map();
+
+  function assessRevealedAnswer(known) {
+    const q = state.activeQuestions[state.currentQIndex];
+    if (!q || !state.revealedAnswers.has(q.id) || state.userAnswers[q.id] !== undefined) return;
+    const testId = state.activeTestId;
+    const userId = state.userId;
+    selectOption(known ? getCorrectIndex(q) : -1);
+    if (!known) return;
+    try {
+      const key = `ohtest_resolved_errors_${testId}`;
+      const resolved = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
+      resolved.add(q.id);
+      localStorage.setItem(key, JSON.stringify([...resolved]));
+    } catch(e) {}
+    // Resolve only after the reveal's initial error record has reached the server.
+    Promise.resolve(revealedErrorWrites.get(`${testId}:${q.id}`)).then(() => fetch('/api/errors/resolve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({user_id: userId, test_id: testId, question_id: q.id})
+    })).catch(() => {});
+  }
+
+  function exitStudySession() {
+    clearInterval(state.timerInterval);
+    clearTimeout(autoAdvanceTimer);
+    saveActiveAttemptState();
+    if (state.currentMode === 'errors_solve') returnFromErrorReview();
+    else if (state.currentMode === 'all_favs') finishFavoriteReview();
+    else openTestHub();
+  }
+
+  function openStudyOptions() {
+    applyPreferences();
+    document.getElementById('modal-study-options').classList.remove('hidden');
+  }
+
+  function closeStudyOptions() {
+    document.getElementById('modal-study-options').classList.add('hidden');
+  }
+
   function showCurrentAnswer() {
     triggerHaptic('light');
     const q = state.activeQuestions[state.currentQIndex];
@@ -1044,7 +1077,7 @@
       state.userErrors.add(q.id);
       try {
         localStorage.setItem(`ohtest_errors_${state.activeTestId}`, JSON.stringify([...state.userErrors]));
-        fetch('/api/errors/record', {
+        const write = fetch('/api/errors/record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1054,6 +1087,11 @@
             user_answer: null
           })
         }).catch(() => {});
+        const key = `${state.activeTestId}:${q.id}`;
+        revealedErrorWrites.set(key, write);
+        write.finally(() => {
+          if (revealedErrorWrites.get(key) === write) revealedErrorWrites.delete(key);
+        });
       } catch(e) {}
 
       const hubErrors = document.getElementById('hub-q-errors');
