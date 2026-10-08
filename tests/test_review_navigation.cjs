@@ -72,3 +72,10 @@ context.state.finished = false;
 context.requestFinishQuiz();
 assert.equal(context.state.finished, false);
 console.log('Passed: review origins, retry origin, immediate review/training finish, normal-test confirmation.');
+context.adminStore = {testsMeta: [{id: 'test', title: 'Test', questions_count: 1}]};
+context.fetchTestResource = () => {throw new Error('Opening the hub must not request questions');};
+context.selectTest('test').then(() => {
+  assert.equal(context.state.testLoadStatus, 'idle');
+  assert.equal(context.state.currentTestOriginalQuestions.length, 0);
+  console.log('Passed: opening the test hub defers all material requests.');
+}).catch(error => {console.error(error); process.exitCode = 1;});

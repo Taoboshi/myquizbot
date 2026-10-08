@@ -74,7 +74,7 @@
 
   function updateHubResumeButton() {
     renderActiveAttemptBanner();
-    if (state.testLoadStatus !== 'ready') {
+    if (['checking', 'loading'].includes(state.testLoadStatus)) {
       document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
     }
   }
@@ -83,7 +83,10 @@
     if (!state.activeAttempt) return;
     triggerHaptic('light');
     const attempt = state.activeAttempt;
-    await selectTest(attempt.testId);
+    if (state.activeTestId !== attempt.testId || state.testLoadStatus !== 'ready') {
+      if (state.activeTestId !== attempt.testId) await selectTest(attempt.testId);
+      return loadStudyTool(resumeActiveAttempt);
+    }
     if (state.activeAttempt !== attempt || state.activeTestId !== attempt.testId || !state.currentTestOriginalQuestions.length) return;
     if (isQuizletOnly()) {
       showToast('Этот материал доступен только в квизлете');
@@ -217,7 +220,7 @@
     const ready = state.testLoadStatus === 'ready' && count > 0;
     const loading = ['checking', 'loading'].includes(state.testLoadStatus);
     document.getElementById('view-hub').setAttribute('aria-busy', String(loading));
-    document.getElementById('hub-load-status').classList.toggle('hidden', state.testLoadStatus === 'ready');
+    document.getElementById('hub-load-status').classList.toggle('hidden', !loading && state.testLoadStatus !== 'error');
     document.getElementById('hub-load-message').textContent = state.testLoadStatus === 'checking'
       ? 'Проверяем доступ…'
       : state.testLoadStatus === 'loading' ? 'Загружаем вопросы и карточки…' : state.testLoadError;
@@ -234,13 +237,13 @@
     document.getElementById('hub-stats').classList.toggle('grid-cols-3', !onlyQuizlet);
     const word = count % 10 === 1 && count % 100 !== 11 ? 'карточка'
       : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'карточки' : 'карточек';
-    document.getElementById('hub-quizlet-count').innerText = ready ? `${count} ${word}` : loading ? 'Загрузка карточек…' : 'Карточки не загружены';
-    document.getElementById('hub-quizlet-open').disabled = !ready;
+    document.getElementById('hub-quizlet-count').innerText = ready ? `${count} ${word}` : `${meta?.questions_count ?? '—'} карточек`;
+    document.getElementById('hub-quizlet-open').disabled = loading;
     document.querySelectorAll('#hub-quiz-modes button, #hub-quiz-tools button, #hub-reset-errors').forEach(button => {
-      button.disabled = !ready;
-      button.classList.toggle('opacity-50', !ready);
+      button.disabled = loading;
+      button.classList.toggle('opacity-50', loading);
     });
-    if (onlyQuizlet || !ready) document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
+    if (onlyQuizlet || loading) document.querySelectorAll('#view-hub .active-attempt-card').forEach(banner => banner.classList.add('hidden'));
   }
 
   // Subject Tests View
@@ -349,13 +352,11 @@
 
     document.getElementById('tests-subj-title').innerText = subjectTitle;
     const container = document.getElementById('tests-items-container');
-    container.innerHTML = `<div class="space-y-2.5 animate-pulse" aria-hidden="true">
-      ${[0, 1].map(() => '<div class="h-24 rounded-2xl bg-app-card border border-app-border p-4 space-y-3"><div class="h-3 w-1/2 rounded bg-white/10"></div><div class="h-2 w-1/3 rounded bg-white/5"></div></div>').join('')}
-    </div>`;
+    container.textContent = '';
     const status = document.getElementById('subject-load-status');
     const message = document.getElementById('subject-load-message');
     const retry = document.getElementById('subject-load-retry');
-    status.classList.remove('hidden');
+    status.classList.add('hidden');
     retry.classList.add('hidden');
     message.textContent = 'Загружаем тесты раздела…';
     document.getElementById('view-tests').setAttribute('aria-busy', 'true');
@@ -439,6 +440,7 @@
           : error.message || 'Не удалось загрузить тесты раздела.';
       }
       retry.classList.remove('hidden');
+      status.classList.remove('hidden');
     } finally {
       if (current()) document.getElementById('view-tests').setAttribute('aria-busy', 'false');
       if (subjectSelectionController === controller) subjectSelectionController = null;
@@ -530,7 +532,7 @@
     }
   }
 
-  async function selectTest(testId) {
+  async function selectTest(testId, { loadQuestions = false } = {}) {
     triggerHaptic('light');
     if (state.isBlocked) return showToast('Доступ ограничен администратором');
 
@@ -543,7 +545,7 @@
 
     state.activeTestId = testId;
     state.activeTestTitle = testMeta?.title || BUNDLED_TESTS[testId]?.title || testId;
-    state.testLoadStatus = 'checking';
+    state.testLoadStatus = loadQuestions ? 'checking' : 'idle';
     state.testLoadError = '';
     state.currentTestOriginalQuestions = [];
     state.activeQuestions = [];
@@ -554,6 +556,10 @@
       state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${testId}`) || '[]'));
     } catch(e) {}
     openTestHub();
+    if (!loadQuestions) {
+      testSelectionController = null;
+      return;
+    }
 
     try {
       let accType = testMeta?.access_type || 'public';
@@ -636,6 +642,24 @@
     }
   }
 
+  let pendingStudyTool = null;
+  async function loadStudyTool(action) {
+    if (['checking', 'loading'].includes(state.testLoadStatus)) return;
+    const testId = state.activeTestId;
+    pendingStudyTool = { testId, action };
+    await selectTest(testId, { loadQuestions: true });
+    if (state.activeTestId !== testId || state.homeActiveView !== 'hub' ||
+        document.getElementById('view-hub').classList.contains('hidden')) return;
+    if (state.testLoadStatus === 'ready') {
+      pendingStudyTool = null;
+      action();
+    }
+  }
+
+  function retryStudyTool() {
+    if (pendingStudyTool?.testId === state.activeTestId) loadStudyTool(pendingStudyTool.action);
+  }
+
   function openTestHub() {
     state.homeActiveView = 'hub';
     hideAllViews();
@@ -683,7 +707,7 @@
 
   // Quiz Solver Modes
   function openTrainingSelectorModal() {
-    if (state.testLoadStatus !== 'ready') return;
+    if (state.testLoadStatus !== 'ready') return loadStudyTool(openTrainingSelectorModal);
     triggerHaptic('light');
     const modal = document.getElementById('modal-training-select');
     const container = document.getElementById('training-options-list');
@@ -729,8 +753,7 @@
       return;
     }
     if (state.testLoadStatus !== 'ready' || !state.currentTestOriginalQuestions.length) {
-      showToast('Подождите загрузки вопросов');
-      return;
+      return loadStudyTool(() => startQuizMode(mode));
     }
     // If starting a new mode and an unfinished attempt exists for this test: prompt confirmation!
     if (mode !== 'errors_solve' && state.activeAttempt && state.activeAttempt.testId === state.activeTestId) {
@@ -1621,8 +1644,7 @@
 
   function openFlashcards() {
     if (state.testLoadStatus !== 'ready' || !state.currentTestOriginalQuestions.length) {
-      showToast('Подождите загрузки карточек');
-      return;
+      return loadStudyTool(openFlashcards);
     }
     triggerHaptic('light');
     state.homeActiveView = 'flashcards';
@@ -1970,6 +1992,7 @@
 
   // LIVE SEARCH
   function openLiveSearch() {
+    if (state.testLoadStatus !== 'ready') return loadStudyTool(openLiveSearch);
     triggerHaptic('light');
     state.homeActiveView = 'search';
     hideAllViews();

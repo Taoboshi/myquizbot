@@ -1014,6 +1014,7 @@
     state.activeTestId = nextError.testId;
     state.activeTestTitle = test.title;
     state.currentTestOriginalQuestions = [...test.questions];
+    state.testLoadStatus = 'ready';
     try {
       state.userErrors = new Set(JSON.parse(localStorage.getItem(`ohtest_errors_${state.activeTestId}`) || '[]'));
       state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${state.activeTestId}`) || '[]'));
@@ -1047,6 +1048,7 @@
     state.activeTestTitle = tData.title;
     state.activeQuestions = [{...q}];
     state.currentTestOriginalQuestions = [...tData.questions];
+    state.testLoadStatus = 'ready';
     try {
       state.userErrors = new Set(JSON.parse(localStorage.getItem(`ohtest_errors_${testId}`) || '[]'));
       state.favorites = new Set(JSON.parse(localStorage.getItem(`ohtest_favs_${testId}`) || '[]'));
