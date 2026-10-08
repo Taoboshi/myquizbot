@@ -381,6 +381,8 @@ const nativeFetch = window.fetch.bind(window);
     const searchBtn = document.getElementById('header-search-btn');
 
     const activeView = getCurrentActiveView();
+    const adminWorkspaceOpen = ['view-admin', 'view-admin-people', 'view-admin-person'].includes(activeView);
+    document.body.classList.toggle('admin-workspace-open', adminWorkspaceOpen);
     const isMainTabRoot = (activeView === 'view-home') ||
                           (activeView === 'view-tab-profile') ||
                           (activeView === 'view-tab-settings');

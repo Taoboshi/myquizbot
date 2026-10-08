@@ -323,6 +323,10 @@
   let homeHeaderControls = null;
 
   function switchTab(tabId) {
+    const modalIsOpen = Array.from(document.querySelectorAll('[id^="modal-"]'))
+      .some(modal => !modal.classList.contains('hidden'));
+    if (modalIsOpen || state.homeActiveView === 'admin') return;
+
     triggerHaptic('light');
 
     if (tabId === 'rating') {

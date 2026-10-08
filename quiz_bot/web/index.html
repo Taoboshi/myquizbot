@@ -949,8 +949,12 @@
       transform-origin: 50% 50%;
     }
     .admin-management-tab { color: var(--text-sub); letter-spacing: 0; }
-    #modal-admin-action { z-index: 60; }
-    #modal-test-access, #modal-admin-user-detail { z-index: 70; }
+    [id^="modal-"].fixed.inset-0 { z-index: 100 !important; }
+    #modal-test-access, #modal-admin-user-detail { z-index: 110 !important; }
+    body.admin-workspace-open nav.glass {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
     .admin-management-tab[aria-selected="true"] {
       background: var(--accent-bg-subtle);
       color: var(--accent-color);
