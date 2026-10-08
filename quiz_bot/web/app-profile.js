@@ -1002,7 +1002,7 @@
     `;
   }
 
-  function startAllErrorsSession() {
+  function startAllErrorsSession(origin = 'profile') {
     triggerHaptic('light');
     const errors = getAllSavedErrors();
     if (errors.length === 0) return;
@@ -1022,11 +1022,17 @@
       state.favorites = new Set();
     }
     startQuizMode('errors_solve');
+    state.errorReviewOrigin = origin;
   }
 
   function returnToProfileErrors() {
     switchTab('profile');
     switchProfileTab('errors');
+  }
+
+  function returnFromErrorReview() {
+    if (state.errorReviewOrigin === 'profile') returnToProfileErrors();
+    else openTestHub();
   }
 
   function solveOneError(testId, qid) {
@@ -1035,6 +1041,7 @@
     if (!tData) return;
     const q = tData.questions.find(item => item.id == qid);
     if (!q) return;
+    state.errorReviewOrigin = 'profile';
 
     state.activeTestId = testId;
     state.activeTestTitle = tData.title;

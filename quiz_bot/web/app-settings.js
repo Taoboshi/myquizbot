@@ -545,6 +545,10 @@
       return;
     }
     if (activeView === 'view-solver' || activeView === 'view-flashcards' || activeView === 'view-search' || activeView === 'view-result') {
+      if (activeView === 'view-result' && state.currentMode === 'errors_solve') {
+        returnFromErrorReview();
+        return;
+      }
       if (state.activeTestId) {
         openTestHub();
       } else {

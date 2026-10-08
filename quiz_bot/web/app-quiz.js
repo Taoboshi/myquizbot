@@ -722,6 +722,9 @@
         return;
       }
       state.activeQuestions = errQs.map(q => ({...q}));
+      if (state.homeActiveView !== 'result') {
+        state.errorReviewOrigin = state.currentTab === 'profile' ? 'profile' : 'hub';
+      }
     } else {
       let qs = state.currentTestOriginalQuestions.map(q => ({...q}));
       if (mode === 'normal') {
@@ -994,10 +997,7 @@
     const answered = Object.keys(state.userAnswers).length;
     const total = state.activeQuestions.length;
     const unanswered = Math.max(0, total - answered);
-    const allAttempted = state.activeQuestions.every(q =>
-      state.userAnswers[q.id] !== undefined || state.revealedAnswers.has(q.id)
-    );
-    if (state.currentMode === 'errors_solve' && allAttempted) {
+    if (['errors_solve', 'training', 'mini10'].includes(state.currentMode)) {
       doFinishQuiz();
       return;
     }
@@ -1205,11 +1205,11 @@
             msgBanner.innerHTML = `<div class="font-bold flex items-center gap-1.5"><svg class="w-4 h-4 text-emerald-400 shrink-0 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Отличная работа!</div><p class="text-[11px] text-emerald-200/90 leading-relaxed">Ошибки этого теста успешно разобраны и усвоены.${remainingAllErrors > 0 ? ` Осталось ошибок в других тестах: ${remainingAllErrors}.` : ''}</p>`;
             if (btnBox) {
               btnBox.innerHTML = `
-                ${remainingAllErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Продолжить разбор ошибок (${remainingAllErrors})</button>` : ''}
+                ${remainingAllErrors > 0 ? `<button onclick="startAllErrorsSession(state.errorReviewOrigin)" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Продолжить разбор ошибок (${remainingAllErrors})</button>` : ''}
                 <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти полный тест заново</button>
-                <button onclick="returnToProfileErrors()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button onclick="returnFromErrorReview()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                  <span>К списку ошибок в профиле</span>
+                  <span>${state.errorReviewOrigin === 'profile' ? 'К списку ошибок в профиле' : 'К карточке теста'}</span>
                 </button>
               `;
             }
@@ -1219,11 +1219,11 @@
             if (btnBox) {
               btnBox.innerHTML = `
                 <button onclick="startQuizMode('errors_solve')" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">Повторить оставшиеся ошибки (${remainingErrors})</button>
-                ${remainingOtherTestErrors > 0 ? `<button onclick="startAllErrorsSession()" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Перейти к ошибкам других тестов (${remainingOtherTestErrors})</button>` : ''}
+                ${remainingOtherTestErrors > 0 ? `<button onclick="startAllErrorsSession(state.errorReviewOrigin)" class="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">Перейти к ошибкам других тестов (${remainingOtherTestErrors})</button>` : ''}
                 <button onclick="startQuizMode('normal')" class="btn-brand w-full py-3.5 rounded-2xl text-white font-bold text-xs active:scale-[0.98] transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">Пройти весь тест заново</button>
-                <button onclick="returnToProfileErrors()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button onclick="returnFromErrorReview()" class="btn-glass-secondary w-full py-3.5 rounded-2xl font-semibold text-xs active:scale-[0.98] transition flex items-center justify-center gap-2">
                   <svg class="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                  <span>К списку ошибок в профиле</span>
+                  <span>${state.errorReviewOrigin === 'profile' ? 'К списку ошибок в профиле' : 'К карточке теста'}</span>
                 </button>
               `;
             }
