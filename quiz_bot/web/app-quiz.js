@@ -659,7 +659,7 @@
       : kind === 'training'
         ? `${bar}<div class="tool-skeleton-options">${[0, 1, 2, 3].map(() => '<div class="tool-skeleton-option"></div>').join('')}</div>`
         : kind === 'quizlet'
-          ? `${bar}<div class="tool-skeleton-card">${bar}${bar}</div><div class="tool-skeleton-controls">${bar}${bar}${bar}</div>`
+          ? `${bar}<div class="tool-skeleton-card">${bar}${bar}</div><div class="tool-skeleton-controls">${bar}${bar}</div>`
           : `${bar}<div class="tool-skeleton-question">${bar}${bar}</div>${[0, 1, 2, 3].map(() => '<div class="tool-skeleton-option"></div>').join('')}`;
     document.getElementById('tool-loading-shapes').innerHTML = shape;
     updateHeaderNavState();
@@ -669,11 +669,12 @@
   async function loadStudyTool(action, kind = 'test') {
     if (['checking', 'loading'].includes(state.testLoadStatus)) return;
     const testId = state.activeTestId;
-    pendingStudyTool = { testId, action, kind };
+    const operation = { testId, action, kind };
+    pendingStudyTool = operation;
     const request = selectTest(testId, { loadQuestions: true });
     showStudyToolLoading(kind);
     await request;
-    if (state.activeTestId !== testId || state.homeActiveView !== 'tool-loading') return;
+    if (pendingStudyTool !== operation || state.activeTestId !== testId || state.homeActiveView !== 'tool-loading') return;
     if (state.testLoadStatus === 'ready') {
       if (document.getElementById('view-tool-loading').classList.contains('hidden')) {
         state.homeActiveView = 'hub';
@@ -693,6 +694,16 @@
 
   function retryStudyTool() {
     if (pendingStudyTool?.testId === state.activeTestId) loadStudyTool(pendingStudyTool.action, pendingStudyTool.kind);
+  }
+
+  function cancelStudyTool() {
+    ++testSelectionRequest;
+    testSelectionController?.abort();
+    testSelectionController = null;
+    pendingStudyTool = null;
+    if (['checking', 'loading'].includes(state.testLoadStatus)) state.testLoadStatus = 'idle';
+    state.testLoadError = '';
+    if (state.homeActiveView === 'tool-loading') state.homeActiveView = 'hub';
   }
 
   function openTestHub() {
@@ -1566,8 +1577,22 @@
   let fcStarredOnlyEnabled = false;
   let fcAutoPlaying = false;
   let fcAutoTimer = null;
+  let fcAutoplayNoticeTimer = null;
+
+  function showFCAutoplayNotice(enabled) {
+    clearTimeout(fcAutoplayNoticeTimer);
+    const label = document.getElementById('fc-autoplay-label');
+    if (!label) return;
+    label.textContent = enabled ? 'Автопроигрывание включено' : 'Автопроигрывание выключено';
+    label.style.visibility = 'visible';
+    fcAutoplayNoticeTimer = setTimeout(() => {
+      label.style.visibility = 'hidden';
+      label.textContent = '';
+    }, 2000);
+  }
 
   function stopFCAutoplay() {
+    const wasPlaying = fcAutoPlaying;
     fcAutoPlaying = false;
     clearTimeout(fcAutoTimer);
     fcAutoTimer = null;
@@ -1579,8 +1604,7 @@
     }
     document.getElementById('fc-autoplay-play')?.classList.remove('hidden');
     document.getElementById('fc-autoplay-pause')?.classList.add('hidden');
-    const label = document.getElementById('fc-autoplay-label');
-    if (label) label.textContent = 'Автопроигрывание выключено';
+    if (wasPlaying) showFCAutoplayNotice(false);
   }
 
   function scheduleFCAutoplay() {
@@ -1609,7 +1633,7 @@
     button.title = 'Приостановить автопроигрывание';
     document.getElementById('fc-autoplay-play').classList.add('hidden');
     document.getElementById('fc-autoplay-pause').classList.remove('hidden');
-    document.getElementById('fc-autoplay-label').textContent = 'Автопроигрывание включено';
+    showFCAutoplayNotice(true);
     scheduleFCAutoplay();
   }
 

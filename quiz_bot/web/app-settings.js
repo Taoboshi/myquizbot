@@ -390,6 +390,7 @@
   let homeHeaderControls = null;
 
   function switchTab(tabId) {
+    if (state.homeActiveView === 'tool-loading' && ['checking', 'loading'].includes(state.testLoadStatus)) cancelStudyTool();
     const modalIsOpen = Array.from(document.querySelectorAll('[id^="modal-"]'))
       .some(modal => !modal.classList.contains('hidden'));
     if (modalIsOpen || state.homeActiveView === 'admin') return;
@@ -538,6 +539,11 @@
   function goBack() {
     triggerHaptic('light');
     const activeView = getCurrentActiveView();
+    if (activeView === 'view-tool-loading') {
+      cancelStudyTool();
+      openTestHub();
+      return;
+    }
     if (activeView === 'view-admin-person' || activeView === 'view-admin-people') {
       backAdminPeople();
       return;

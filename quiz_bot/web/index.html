@@ -1476,13 +1476,10 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a5 5 0 015 5v2m-15-7l4-4m-4 4l4 4"/></svg>
             </button>
 
-            <span id="fc-autoplay-label" class="flex-1 text-center text-xs font-semibold text-slate-400" aria-live="polite">Автопроигрывание выключено</span>
+            <span id="fc-autoplay-label" class="flex-1 text-center text-xs font-semibold text-slate-400" style="visibility: hidden" aria-live="polite"></span>
             <button id="fc-btn-autoplay" type="button" onclick="toggleFCAutoplay()" aria-pressed="false" aria-label="Запустить автопроигрывание" title="Запустить автопроигрывание" class="w-11 h-11 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-200 active:scale-90 transition shrink-0">
               <svg id="fc-autoplay-play" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
               <svg id="fc-autoplay-pause" class="hidden w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
-            </button>
-            <button type="button" onclick="fcSkipNext()" title="Следующая карточка" aria-label="Следующая карточка" class="w-11 h-11 rounded-2xl bg-app-surface border border-app-border flex items-center justify-center text-slate-400 active:scale-90 transition shrink-0">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
             </button>
           </div>
         </div>
