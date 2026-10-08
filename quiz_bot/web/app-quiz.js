@@ -1830,6 +1830,10 @@
 
     const total = state.activeQuestions.length;
     document.getElementById('fc-counter').innerText = `${fcIndex + 1} / ${total}`;
+    const progress = fcIndex / total;
+    document.getElementById('fc-progress-fill').style.transform = `scaleX(${progress})`;
+    document.getElementById('fc-progress').setAttribute('aria-valuenow', String(Math.round(progress * 100)));
+    document.getElementById('fc-progress').setAttribute('aria-valuetext', `${fcIndex} из ${total} карточек пройдено`);
     document.getElementById('fc-front-text').textContent = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : q.question;
     document.getElementById('fc-back-answer').textContent = appPreferences.fcAnswerFirst ? q.question : getQuestionCorrectText(q);
     fitFCCardToContent();

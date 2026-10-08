@@ -1431,6 +1431,10 @@
             </button>
           </div>
 
+          <div id="fc-progress" role="progressbar" aria-label="Прогресс прохождения карточек" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="fc-progress-fill"></div>
+          </div>
+
           <!-- Progress indicators: Quizlet Left (Review/Orange) and Right (Known/Emerald) counters -->
           <div class="flex items-center justify-between px-2 text-xs font-mono font-bold">
             <span class="px-2.5 py-1 rounded-full border border-amber-500/40 text-amber-400 bg-amber-500/10" id="fc-tag-review">0</span>
@@ -2502,6 +2506,9 @@
     #solver-options-box .option-btn-muted { opacity: .75 !important; }
     #view-flashcards > h2 { display: none; }
     #fc-active-deck:not(.hidden) { display: flex; flex-direction: column; gap: 12px; flex: 1 1 0; min-height: 0; }
+    #fc-progress { height: 3px; background: var(--glass-border); overflow: hidden; }
+    #fc-progress-fill { height: 100%; background: var(--accent-color); transform-origin: left; transform: scaleX(0); transition: transform 250ms ease; }
+    @media (prefers-reduced-motion: reduce) { #fc-progress-fill { transition: none; } }
     #fc-active-deck > .perspective-1000 { flex: 1 1 0; min-height: 180px; }
     #fc-card { height: 100% !important; min-height: 180px; }
     #fc-card > div > .flex-1 { display: block; min-height: 0; overflow: hidden; align-content: safe center; padding: 12px 4px; }
