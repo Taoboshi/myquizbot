@@ -22,7 +22,7 @@ class TestCallbackSafety(unittest.TestCase):
         self.assertEqual(safe_callback(short), short)
 
     def test_safe_callback_long_packed_and_unpacked(self):
-        long_data = "admin:assign_test_subject:ochen_dlinnyi_razdel_s_bolshim_nazvaniem:luchevaya_test_blank_super_long_identifier"
+        long_data = "admin:assign_test_subject:ochen_dlinnyi_razdel_s_bolshim_nazvaniem:oziz_module_2_super_long_identifier"
         self.assertGreater(len(long_data.encode("utf-8")), 64)
 
         packed = safe_callback(long_data)
@@ -59,7 +59,7 @@ class TestCallbackSafety(unittest.TestCase):
                 )
 
     def test_admin_add_test_to_subject_keyboard_normal(self):
-        kb = admin_add_test_to_subject_keyboard("luchevaya_diagnostika")
+        kb = admin_add_test_to_subject_keyboard("oziz")
         self._assert_all_buttons_under_64_bytes(kb)
 
     def test_admin_add_test_to_subject_keyboard_cyrillic_long(self):
@@ -83,7 +83,7 @@ class TestCallbackSafety(unittest.TestCase):
         self._assert_all_buttons_under_64_bytes(kb)
 
     def test_admin_move_test_subject_keyboard(self):
-        kb = admin_move_test_subject_keyboard("luchevaya_test_blank")
+        kb = admin_move_test_subject_keyboard("oziz_module_2")
         self._assert_all_buttons_under_64_bytes(kb)
 
 

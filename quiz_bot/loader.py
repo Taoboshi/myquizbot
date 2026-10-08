@@ -103,10 +103,6 @@ def _normalize_subject(subject: Any, path: Path | None = None) -> dict[str, Any]
             subject_id = "oziz"
             title = "ОЗиЗ и здравоохранение"
             emoji = "🏥"
-        elif stem.startswith("luchevaya_"):
-            subject_id = "luchevaya_diagnostika"
-            title = "Основы лучевой диагностики"
-            emoji = "🩻"
         else:
             tests_root = BASE_DIR / "tests"
             try:

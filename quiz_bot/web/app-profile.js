@@ -304,7 +304,6 @@
     const subjects = [
       { id: 'all', title: 'Все дисциплины' },
       ...(adminStore.subjects || [
-        { id: 'luchevaya_diagnostika', title: 'Основы лучевой диагностики' },
         { id: 'oziz', title: 'ОЗ и Здравоохранение' }
       ])
     ];

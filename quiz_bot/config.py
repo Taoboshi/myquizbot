@@ -37,11 +37,6 @@ BOT_TOKEN = get_bot_token(required=False)
 ADMIN_IDS = frozenset(get_env_admin_ids())
 
 SUBJECTS = {
-    "luchevaya_diagnostika": {
-        "title": "Основы лучевой диагностики",
-        "emoji": "🩻",
-        "order": 1,
-    },
     "oziz": {
         "title": "ОЗиЗ и здравоохранение",
         "emoji": "🏥",
