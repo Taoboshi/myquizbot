@@ -371,10 +371,21 @@
         status.classList.add('hidden');
         return;
       }
-      const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
+      if (!isPublic) {
+        const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
+        if (!current()) return;
+        if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
+      }
+      const listUrl = `/api/subjects/${encodeURIComponent(subjectId)}/tests`;
+      let { response, data } = await fetchTestResource(listUrl, { signal: controller.signal });
       if (!current()) return;
-      if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
-      const { response, data } = await fetchTestResource(`/api/subjects/${encodeURIComponent(subjectId)}/tests`, { signal: controller.signal });
+      // A cached public section may have become restricted since the last visit.
+      if (isPublic && response.status === 403) {
+        const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
+        if (!current()) return;
+        if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
+        ({ response, data } = await fetchTestResource(listUrl, { signal: controller.signal }));
+      }
       if (!current()) return;
       if (!response.ok) throw new Error(data.error || 'Не удалось загрузить тесты раздела.');
       if (!Array.isArray(data.items)) throw new Error('Не удалось получить список тестов. Попробуйте ещё раз.');
