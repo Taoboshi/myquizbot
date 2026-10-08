@@ -1118,6 +1118,7 @@
     if (state.currentQIndex < state.activeQuestions.length - 1) {
       state.currentQIndex++;
       renderCurrentQuestion();
+      document.getElementById('view-solver').scrollTop = 0;
     }
   }
 
@@ -1126,6 +1127,7 @@
     if (state.currentQIndex > 0) {
       state.currentQIndex--;
       renderCurrentQuestion();
+      document.getElementById('view-solver').scrollTop = 0;
     }
   }
 
@@ -1846,6 +1848,7 @@
     const q = state.activeQuestions[fcIndex];
     fcFlipped = false;
     lastFlipTime = 0;
+    document.getElementById('view-flashcards').scrollTop = 0;
     scheduleFCAutoplay();
     const card = document.getElementById('fc-card');
     if (card) {
@@ -1857,6 +1860,7 @@
     document.getElementById('fc-counter').innerText = `${fcIndex + 1} / ${total}`;
     document.getElementById('fc-front-text').innerText = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : q.question;
     document.getElementById('fc-back-answer').innerText = appPreferences.fcAnswerFirst ? q.question : getQuestionCorrectText(q);
+    fitFCCardToContent();
     document.getElementById('fc-front-label').innerText = appPreferences.fcAnswerFirst ? 'ОТВЕТ' : 'ВОПРОС';
     document.getElementById('fc-back-label').innerText = appPreferences.fcAnswerFirst ? 'ВОПРОС' : 'ОТВЕТ';
 
@@ -1923,6 +1927,16 @@
 
     renderFCCard();
   }
+
+  function fitFCCardToContent() {
+    const card = document.getElementById('fc-card');
+    if (!card || document.getElementById('view-flashcards').classList.contains('hidden')) return;
+    const textHeight = Math.max(document.getElementById('fc-front-text').scrollHeight,
+      document.getElementById('fc-back-answer').scrollHeight);
+    card.style.height = `${Math.max(360, window.innerHeight - 180, textHeight + 160)}px`;
+  }
+
+  if (typeof window !== 'undefined') window.addEventListener('resize', fitFCCardToContent);
 
   function flipCard(automatic = false) {
     if (!automatic) stopFCAutoplay();

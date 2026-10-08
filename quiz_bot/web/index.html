@@ -2477,10 +2477,10 @@
     #view-solver:not(.hidden), #view-flashcards:not(.hidden) {
       position: fixed; inset: 0; z-index: 60; width: 100%; max-width: 720px; margin: 0 auto;
       height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
-      display: flex; flex-direction: column; gap: 12px; background: var(--bg-canvas); overflow: hidden;
+      display: flex; flex-direction: column; gap: 12px; background: var(--bg-canvas); overflow-y: auto; overscroll-behavior: contain;
     }
     #view-solver > *, #view-flashcards > *, #fc-active-deck > * { margin-top: 0 !important; flex-shrink: 0; }
-    #solver-question-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    #solver-question-scroll { flex: 1 0 auto; overflow: visible; }
     #view-solver > div:first-child > div:first-child { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 8px; }
     #view-solver > div:first-child > div:first-child > div { justify-content: center; flex-wrap: wrap; }
     #solver-counter { white-space: nowrap; }
@@ -2489,12 +2489,12 @@
     .study-assessment { align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
     .study-assessment:not(.hidden) { display: flex; }
     #view-flashcards > h2 { display: none; }
-    #fc-active-deck:not(.hidden) { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
-    #fc-active-deck > .perspective-1000 { flex: 1 1 0; min-height: 0; }
-    #fc-card { height: 100% !important; }
-    #fc-card > div > .flex-1 { display: block; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: safe center; touch-action: pan-y; padding: 12px 4px; }
+    #fc-active-deck:not(.hidden) { display: flex; flex-direction: column; gap: 12px; flex: 1 0 auto; }
+    #fc-active-deck > .perspective-1000 { flex: 1 0 auto; min-height: 360px; }
+    #fc-card { min-height: 360px; }
+    #fc-card > div > .flex-1 { display: block; min-height: 0; overflow: visible; align-content: safe center; touch-action: pan-y; padding: 12px 4px; }
     #fc-front-text, #fc-back-answer { overflow-wrap: anywhere; }
-    #fc-finish-screen { flex: 1 1 0; overflow-y: auto; min-height: 0; }
+    #fc-finish-screen { flex: 1 0 auto; overflow: visible; }
     .tool-skeleton-layout { display: grid; gap: 16px; }
     .tool-skeleton-layout > div { animation: tool-loading-pulse 1.6s ease-in-out infinite; }
     .tool-skeleton-line { height: 12px; width: 65%; border-radius: 6px; background: color-mix(in srgb, var(--text-main, #f1f5f9) 14%, transparent); }
