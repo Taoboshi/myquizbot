@@ -89,6 +89,7 @@ const nativeFetch = window.fetch.bind(window);
     homeActiveView: 'home', // 'home' | 'tests' | 'hub' | 'solver' | 'result' | 'flashcards' | 'search'
     catalogLoaded: initialTestsMeta.length > 0,
     catalogLoadFailed: false,
+    catalogVerified: false,
     activeProfileSubTab: 'favs', // 'favs' | 'errors' | 'history' | 'rating'
     showAllErrors: false,
     activeSubjectId: 'oziz',
@@ -816,6 +817,7 @@ const nativeFetch = window.fetch.bind(window);
             });
           });
           adminStore.testsMeta = loadedMeta;
+          state.catalogVerified = true;
 
           // Persist actual data to localStorage cache
           try {

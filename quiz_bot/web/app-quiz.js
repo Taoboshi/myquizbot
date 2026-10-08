@@ -322,8 +322,9 @@
 
   let subjectSelectionRequest = 0;
   let subjectSelectionController = null;
+  const loadedPublicSubjects = new Set();
 
-  async function openSubjectTests(subjectId, subjectTitle) {
+  async function openSubjectTests(subjectId, subjectTitle, { forceRefresh = false } = {}) {
     if (state.isBlocked) return showToast('Доступ ограничен администратором');
     const requestId = ++subjectSelectionRequest;
     subjectSelectionController?.abort();
@@ -361,6 +362,15 @@
     if (viewStack.at(-1) !== 'tests') viewStack.push('tests');
 
     try {
+      const cachedSubject = adminStore.subjects.find(item => item.id === subjectId);
+      const isPublic = cachedSubject && (cachedSubject.access_type || 'public') === 'public';
+      // Only reuse catalog data confirmed by the server during this session.
+      if (!forceRefresh && isPublic && (state.catalogVerified || loadedPublicSubjects.has(subjectId))) {
+        state.subjectLoadStatus = 'ready';
+        renderSubjectTests(adminStore.testsMeta.filter(test => test.subject_id === subjectId));
+        status.classList.add('hidden');
+        return;
+      }
       const allowed = await ensureSubjectAccess(subjectId, controller.signal, { refreshCatalog: false });
       if (!current()) return;
       if (!allowed) throw new Error('Не удалось открыть раздел. Проверьте доступ и соединение.');
@@ -368,6 +378,7 @@
       if (!current()) return;
       if (!response.ok) throw new Error(data.error || 'Не удалось загрузить тесты раздела.');
       if (!Array.isArray(data.items)) throw new Error('Не удалось получить список тестов. Попробуйте ещё раз.');
+      if (isPublic) loadedPublicSubjects.add(subjectId);
       const ids = new Set(data.items.map(test => test.id));
       adminStore.testsMeta = [
         ...adminStore.testsMeta.filter(test => test.subject_id !== subjectId && !ids.has(test.id)),
