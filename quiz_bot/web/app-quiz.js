@@ -180,7 +180,7 @@
       card.innerHTML = `
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-3">
-            <span class="w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl bg-app-surface border border-app-border text-brand-300 group-hover:scale-110 transition">${renderSubjectIcon(subj.icon_key || suggestSubjectIcon(subj.title || subj.id), subj.emoji)}</span>
+            <span class="w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl bg-app-surface border border-app-border group-hover:scale-110 transition">${renderSubjectIcon(subj.icon_key || suggestSubjectIcon(subj.title || subj.id), subj.emoji)}</span>
             <div>
               <div class="flex items-center gap-1.5">
                 <h3 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${subj.title}</h3>

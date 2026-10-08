@@ -142,6 +142,41 @@
   ];
   const byKey = Object.fromEntries(icons.map(([key, label, group, source]) => [key, { key, label, group, source }]));
 
+  // Subject artwork has its own palette; interface icons still inherit the app accent.
+  const palettes = {
+    coral: ['#fb7185', '#fbbf24', '#be123c', '#a16207'],
+    rose: ['#f472b6', '#c4b5fd', '#be185d', '#7c3aed'],
+    peach: ['#fb923c', '#fda4af', '#c2410c', '#be123c'],
+    gold: ['#fbbf24', '#67e8f9', '#a16207', '#0e7490'],
+    mint: ['#6ee7b7', '#7dd3fc', '#047857', '#0369a1'],
+    forest: ['#a3e635', '#5eead4', '#4d7c0f', '#0f766e'],
+    teal: ['#5eead4', '#93c5fd', '#0f766e', '#1d4ed8'],
+    cyan: ['#67e8f9', '#c4b5fd', '#0e7490', '#7c3aed'],
+    blue: ['#93c5fd', '#5eead4', '#1d4ed8', '#0f766e'],
+    violet: ['#c4b5fd', '#67e8f9', '#7c3aed', '#0e7490'],
+    lilac: ['#d8b4fe', '#f9a8d4', '#9333ea', '#be185d'],
+    ivory: ['#fde68a', '#93c5fd', '#a16207', '#1d4ed8'],
+  };
+  const iconColors = {
+    stethoscope: 'teal', scan: 'cyan', hospital: 'blue', heart: 'coral',
+    brain: 'lilac', bone: 'ivory', lungs: 'cyan', kidney: 'peach',
+    eye: 'blue', tooth: 'teal', ear: 'gold', skin: 'rose', blood: 'coral',
+    pill: 'violet', syringe: 'blue', microscope: 'cyan', dna: 'rose',
+    flask: 'mint', shield: 'gold', clipboard: 'blue', activity: 'coral',
+    baby: 'peach', chart: 'cyan', book: 'violet', surgery: 'blue',
+    emergency: 'coral', 'first-aid': 'coral', nursing: 'rose',
+    gynecology: 'rose', urology: 'blue', oncology: 'gold', psychiatry: 'violet',
+    rehabilitation: 'mint', nutrition: 'forest', endocrinology: 'gold',
+    'intensive-care': 'coral', infection: 'forest', biochemistry: 'cyan',
+    histology: 'lilac', pathology: 'violet', chemistry: 'mint', physics: 'blue',
+    biology: 'forest', ecology: 'mint', imaging: 'violet', ultrasound: 'cyan',
+    thermometer: 'peach', pressure: 'coral', research: 'gold',
+    'medical-record': 'teal', consultation: 'blue', 'public-health': 'teal',
+    prevention: 'mint', hygiene: 'cyan', epidemiology: 'peach', ethics: 'lilac',
+    law: 'ivory', informatics: 'blue', math: 'gold', language: 'teal',
+    psychology: 'rose', history: 'peach', education: 'violet', sports: 'forest',
+  };
+
   function iconSvg(source) {
     return `<svg class="app-line-icon w-6 h-6" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${artwork[source] || artwork.stethoscope}</svg>`;
   }
@@ -184,7 +219,11 @@
   window.SUBJECT_ICON_CATALOG = icons.map(([key, label, group]) => ({ key, label, group }));
   window.renderInterfaceIcon = source => iconSvg(source);
   window.renderSubjectIcon = (key, fallback = '') => {
-    if (byKey[key]) return iconSvg(byKey[key].source);
+    if (byKey[key]) {
+      const [primary, detail, lightPrimary, lightDetail] = palettes[iconColors[key] || 'teal'];
+      const colors = `--subject-primary-dark:${primary};--subject-detail-dark:${detail};--subject-primary-light:${lightPrimary};--subject-detail-light:${lightDetail};--subject-tint:${primary}18`;
+      return `<span class="subject-icon-art" style="${colors}" aria-hidden="true">${iconSvg(byKey[key].source)}</span>`;
+    }
     const safeText = String(fallback || '📚').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     return `<span aria-hidden="true">${safeText}</span>`;
   };

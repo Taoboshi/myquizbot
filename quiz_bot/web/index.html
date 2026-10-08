@@ -2478,22 +2478,33 @@
     .settings-section-link > span:last-child, .settings-action > span:last-child { color: var(--accent-color); font-size: 22px; }
     .settings-section-icon { color: var(--accent-color); width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center; }
     .app-line-icon { display: block; flex-shrink: 0; }
+    .subject-icon-art {
+      --subject-ink: var(--subject-primary-dark);
+      --subject-detail: var(--subject-detail-dark);
+      display: grid; place-items: center; width: 100%; height: 100%;
+      border-radius: inherit; background: var(--subject-tint); color: var(--subject-ink);
+    }
+    .subject-icon-art > svg { color: var(--subject-ink); stroke: var(--subject-ink); }
+    .subject-icon-art > svg > :nth-child(even) { stroke: var(--subject-detail); }
+    body.light-theme .subject-icon-art {
+      --subject-ink: var(--subject-primary-light);
+      --subject-detail: var(--subject-detail-light);
+    }
     .settings-section-link > span:last-child .app-line-icon, .settings-action > span:last-child .app-line-icon { width: 18px; height: 18px; }
     .subject-icon-picker { min-width: 0; }
-    .subject-icon-selection { display: flex; align-items: center; gap: 10px; min-height: 40px; margin-bottom: 10px; color: var(--accent-color); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
-    .subject-icon-preview { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 8px; background: var(--accent-bg-subtle); border: 1px solid var(--accent-border-subtle); }
+    .subject-icon-selection { display: flex; align-items: center; gap: 10px; min-height: 40px; margin-bottom: 10px; color: var(--text-main); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+    .subject-icon-preview { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 8px; background: transparent; border: 1px solid var(--glass-border); }
     .subject-icon-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-bottom: 10px; }
     .subject-icon-filters input, .subject-icon-filters select { min-width: 0; width: 100%; height: 40px; padding: 0 8px; font: inherit; font-size: 12px; color: inherit; background: transparent; border: 1px solid var(--glass-border); border-radius: 8px; }
     .subject-icon-filters select option { background: var(--bg-canvas); color: var(--text-main); }
     .subject-icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; max-height: 224px; overflow-y: auto; overscroll-behavior-y: contain; padding: 3px; scrollbar-width: thin; }
-    .subject-icon-option { display: grid; place-items: center; height: 44px; min-width: 44px; border-radius: 8px; color: #94a3b8; border: 1px solid var(--glass-border); background: transparent; cursor: pointer; transition: color .15s, background .15s, border-color .15s; }
+    .subject-icon-option { display: grid; place-items: center; height: 44px; min-width: 44px; padding: 0; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
     .subject-icon-option[hidden], .subject-icon-empty[hidden] { display: none; }
-    .subject-icon-option[aria-pressed=true] { color: var(--accent-color); border-color: var(--accent-color); background: var(--accent-bg-subtle); }
-    .subject-icon-option:hover { color: var(--accent-color); border-color: var(--accent-border-subtle); }
-    .subject-icon-option:focus-visible, .subject-icon-filters input:focus-visible, .subject-icon-filters select:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+    .subject-icon-option[aria-pressed=true] { border-color: var(--text-main); box-shadow: 0 0 0 1px var(--text-main); }
+    .subject-icon-option:hover { border-color: var(--text-main); }
+    .subject-icon-option:focus-visible { outline: 2px solid var(--text-main); outline-offset: 2px; }
+    .subject-icon-filters input:focus-visible, .subject-icon-filters select:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
     .subject-icon-empty { padding: 16px 0; text-align: center; color: #94a3b8; font-size: 12px; }
-    body.light-theme .subject-icon-option { color: #64748b; }
-    body.light-theme .subject-icon-option[aria-pressed=true], body.light-theme .subject-icon-option:hover { color: var(--accent-color); }
     body.light-theme .subject-icon-filters select option { background: #fff; color: #0f172a; }
     .settings-row-copy { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
     .settings-row-title { font-size: calc(13px * var(--text-scale)); font-weight: 700; color: #f1f5f9; line-height: 1.45; overflow-wrap: anywhere; }

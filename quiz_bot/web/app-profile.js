@@ -171,7 +171,7 @@
       item.innerHTML = `
         <div class="flex items-center justify-between text-xs">
           <div class="min-w-0 flex items-center space-x-2">
-            <span class="w-10 h-10 shrink-0 flex items-center justify-center text-brand-300 rounded-2xl bg-app-surface border border-app-border">${renderSubjectIcon(sub.icon_key || suggestSubjectIcon(sub.title || sub.id), sub.emoji || '📚')}</span>
+            <span class="w-10 h-10 shrink-0 flex items-center justify-center rounded-2xl bg-app-surface border border-app-border">${renderSubjectIcon(sub.icon_key || suggestSubjectIcon(sub.title || sub.id), sub.emoji || '📚')}</span>
             <span class="min-w-0 truncate font-bold text-white">${escapeHtml(sub.title || 'Дисциплина')}</span>
           </div>
           <span class="text-[11px] font-mono font-semibold text-brand-300">${totalTestsCount > 0 ? `${doneTestsCount}/${totalTestsCount} тестов` : 'Нет тестов'}</span>

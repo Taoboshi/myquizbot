@@ -299,7 +299,7 @@
           <div class="p-3.5 rounded-2xl bg-app-surface border border-app-border space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
-                <span class="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-app-card border border-app-border text-brand-300">${renderSubjectIcon(s.icon_key || suggestSubjectIcon(s.title || s.id), s.emoji)}</span>
+                <span class="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg bg-app-card border border-app-border">${renderSubjectIcon(s.icon_key || suggestSubjectIcon(s.title || s.id), s.emoji)}</span>
                 <span class="text-xs font-bold text-white">${s.title}</span>
                 <span class="text-[10px] text-slate-400 font-mono">(${testsInSub.length})</span>
               </div>
