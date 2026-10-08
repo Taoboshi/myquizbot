@@ -85,7 +85,7 @@
     const attempt = state.activeAttempt;
     if (state.activeTestId !== attempt.testId || state.testLoadStatus !== 'ready') {
       if (state.activeTestId !== attempt.testId) await selectTest(attempt.testId);
-      return loadStudyTool(resumeActiveAttempt);
+      return loadStudyTool(resumeActiveAttempt, 'test');
     }
     if (state.activeAttempt !== attempt || state.activeTestId !== attempt.testId || !state.currentTestOriginalQuestions.length) return;
     if (isQuizletOnly()) {
@@ -643,21 +643,56 @@
   }
 
   let pendingStudyTool = null;
-  async function loadStudyTool(action) {
+  function showStudyToolLoading(kind) {
+    const titles = {quizlet: 'Квизлет', test: 'Тест', training: 'Тренировка', errors: 'Разбор ошибок', search: 'Поиск вопросов'};
+    hideAllViews();
+    state.homeActiveView = 'tool-loading';
+    const view = document.getElementById('view-tool-loading');
+    view.classList.remove('hidden');
+    view.dataset.tool = kind;
+    view.setAttribute('aria-busy', 'true');
+    document.getElementById('tool-loading-title').textContent = titles[kind] || 'Тест';
+    document.getElementById('tool-loading-error').classList.add('hidden');
+    const bar = '<div class="tool-skeleton-line"></div>';
+    const shape = kind === 'search'
+      ? `<div class="tool-skeleton-search">${bar}</div>${[0, 1, 2].map(() => `<div class="tool-skeleton-result">${bar}${bar}</div>`).join('')}`
+      : kind === 'training'
+        ? `${bar}<div class="tool-skeleton-options">${[0, 1, 2, 3].map(() => '<div class="tool-skeleton-option"></div>').join('')}</div>`
+        : kind === 'quizlet'
+          ? `${bar}<div class="tool-skeleton-card">${bar}${bar}</div><div class="tool-skeleton-controls">${bar}${bar}${bar}</div>`
+          : `${bar}<div class="tool-skeleton-question">${bar}${bar}</div>${[0, 1, 2, 3].map(() => '<div class="tool-skeleton-option"></div>').join('')}`;
+    document.getElementById('tool-loading-shapes').innerHTML = shape;
+    updateHeaderNavState();
+    updateTelegramBackButton();
+  }
+
+  async function loadStudyTool(action, kind = 'test') {
     if (['checking', 'loading'].includes(state.testLoadStatus)) return;
     const testId = state.activeTestId;
-    pendingStudyTool = { testId, action };
-    await selectTest(testId, { loadQuestions: true });
-    if (state.activeTestId !== testId || state.homeActiveView !== 'hub' ||
-        document.getElementById('view-hub').classList.contains('hidden')) return;
+    pendingStudyTool = { testId, action, kind };
+    const request = selectTest(testId, { loadQuestions: true });
+    showStudyToolLoading(kind);
+    await request;
+    if (state.activeTestId !== testId || state.homeActiveView !== 'tool-loading') return;
     if (state.testLoadStatus === 'ready') {
+      if (document.getElementById('view-tool-loading').classList.contains('hidden')) {
+        state.homeActiveView = 'hub';
+        pendingStudyTool = null;
+        return;
+      }
       pendingStudyTool = null;
+      openTestHub();
       action();
+    } else {
+      const view = document.getElementById('view-tool-loading');
+      view.setAttribute('aria-busy', 'false');
+      document.getElementById('tool-loading-error').classList.remove('hidden');
+      document.getElementById('tool-loading-error-text').textContent = state.testLoadError;
     }
   }
 
   function retryStudyTool() {
-    if (pendingStudyTool?.testId === state.activeTestId) loadStudyTool(pendingStudyTool.action);
+    if (pendingStudyTool?.testId === state.activeTestId) loadStudyTool(pendingStudyTool.action, pendingStudyTool.kind);
   }
 
   function openTestHub() {
@@ -707,7 +742,7 @@
 
   // Quiz Solver Modes
   function openTrainingSelectorModal() {
-    if (state.testLoadStatus !== 'ready') return loadStudyTool(openTrainingSelectorModal);
+    if (state.testLoadStatus !== 'ready') return loadStudyTool(openTrainingSelectorModal, 'training');
     triggerHaptic('light');
     const modal = document.getElementById('modal-training-select');
     const container = document.getElementById('training-options-list');
@@ -753,7 +788,7 @@
       return;
     }
     if (state.testLoadStatus !== 'ready' || !state.currentTestOriginalQuestions.length) {
-      return loadStudyTool(() => startQuizMode(mode));
+      return loadStudyTool(() => startQuizMode(mode), mode === 'errors_solve' ? 'errors' : ['training', 'mini10'].includes(mode) ? 'training' : 'test');
     }
     // If starting a new mode and an unfinished attempt exists for this test: prompt confirmation!
     if (mode !== 'errors_solve' && state.activeAttempt && state.activeAttempt.testId === state.activeTestId) {
@@ -1644,7 +1679,7 @@
 
   function openFlashcards() {
     if (state.testLoadStatus !== 'ready' || !state.currentTestOriginalQuestions.length) {
-      return loadStudyTool(openFlashcards);
+      return loadStudyTool(openFlashcards, 'quizlet');
     }
     triggerHaptic('light');
     state.homeActiveView = 'flashcards';
@@ -1992,7 +2027,7 @@
 
   // LIVE SEARCH
   function openLiveSearch() {
-    if (state.testLoadStatus !== 'ready') return loadStudyTool(openLiveSearch);
+    if (state.testLoadStatus !== 'ready') return loadStudyTool(openLiveSearch, 'search');
     triggerHaptic('light');
     state.homeActiveView = 'search';
     hideAllViews();

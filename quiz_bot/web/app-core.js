@@ -366,7 +366,7 @@ const nativeFetch = window.fetch.bind(window);
     // 3. Check nested views where Back button replaces Logo
     const nestedViews = [
       'view-tests', 'view-hub', 'view-solver', 'view-result',
-      'view-flashcards', 'view-search', 'view-admin'
+      'view-flashcards', 'view-search', 'view-tool-loading', 'view-admin'
     ];
     for (const v of nestedViews) {
       const el = document.getElementById(v);

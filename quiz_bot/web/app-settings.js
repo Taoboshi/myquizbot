@@ -450,7 +450,7 @@
     if (tabId === 'home') {
       const viewIds = {
         home: 'view-home', tests: 'view-tests', hub: 'view-hub', solver: 'view-solver',
-        result: 'view-result', flashcards: 'view-flashcards', search: 'view-search', admin: 'view-admin'
+        result: 'view-result', flashcards: 'view-flashcards', search: 'view-search', 'tool-loading': 'view-tool-loading', admin: 'view-admin'
       };
       const activeView = document.getElementById(viewIds[state.homeActiveView]) ? state.homeActiveView : 'home';
       state.homeActiveView = activeView;
@@ -507,6 +507,7 @@
   function hideAllViews() {
     stopFCAutoplay();
     clearTimeout(autoAdvanceTimer);
+    document.getElementById('view-tool-loading')?.classList.add('hidden');
     const views = ['view-home', 'view-tests', 'view-hub', 'view-solver', 'view-result', 'view-flashcards', 'view-search', 'view-tab-profile', 'view-tab-settings', 'view-admin'];
     views.forEach(v => {
       const el = document.getElementById(v);
@@ -545,7 +546,7 @@
       openSettingsSection(null);
       return;
     }
-    if (activeView === 'view-solver' || activeView === 'view-flashcards' || activeView === 'view-search' || activeView === 'view-result') {
+    if (activeView === 'view-tool-loading' || activeView === 'view-solver' || activeView === 'view-flashcards' || activeView === 'view-search' || activeView === 'view-result') {
       if (activeView === 'view-result' && state.currentMode === 'errors_solve') {
         returnFromErrorReview();
         return;

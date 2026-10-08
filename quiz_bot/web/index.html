@@ -1403,6 +1403,15 @@
       <!-- ========================================== -->
       <!-- VIEW 6: FLASHCARDS (3D КАРТОЧКИ С СИСТЕМОЙ QUIZLET) -->
       <!-- ========================================== -->
+      <section id="view-tool-loading" class="hidden space-y-5" aria-busy="true" aria-labelledby="tool-loading-title">
+        <h2 id="tool-loading-title" class="text-sm font-bold text-white"></h2>
+        <div id="tool-loading-shapes" class="tool-skeleton-layout" aria-hidden="true"></div>
+        <p class="sr-only" role="status">Загрузка материала</p>
+        <div id="tool-loading-error" class="hidden space-y-3" role="alert">
+          <p id="tool-loading-error-text" class="text-xs text-slate-400"></p>
+          <button type="button" onclick="retryStudyTool()" class="btn-glass-secondary px-4 py-3 rounded-lg text-xs font-semibold">Повторить</button>
+        </div>
+      </section>
       <section id="view-flashcards" class="hidden space-y-4">
         <h2 class="text-sm font-bold text-white">Квизлет</h2>
         <!-- Active Deck Section -->
@@ -2448,6 +2457,24 @@
 
   <style>
     body { --text-scale: 1; }
+    .tool-skeleton-layout { display: grid; gap: 16px; }
+    .tool-skeleton-layout > div { animation: tool-loading-pulse 1.6s ease-in-out infinite; }
+    .tool-skeleton-line { height: 12px; width: 65%; border-radius: 6px; background: color-mix(in srgb, var(--text-main, #f1f5f9) 14%, transparent); }
+    .tool-skeleton-layout > .tool-skeleton-line { width: 100%; height: 8px; }
+    .tool-skeleton-card, .tool-skeleton-question, .tool-skeleton-option, .tool-skeleton-result, .tool-skeleton-search {
+      background: color-mix(in srgb, var(--text-main, #f1f5f9) 8%, transparent); border: 1px solid var(--glass-border, rgba(148,163,184,.15));
+      border-radius: 8px; padding: 20px; display: grid; gap: 12px;
+    }
+    .tool-skeleton-card { height: 360px; align-content: center; justify-items: center; }
+    .tool-skeleton-question { min-height: 120px; align-content: center; }
+    .tool-skeleton-option { min-height: 52px; }
+    .tool-skeleton-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .tool-skeleton-controls { display: flex; gap: 16px; justify-content: space-between; padding: 12px; }
+    .tool-skeleton-controls > div { width: 32px; height: 32px; }
+    .tool-skeleton-result { min-height: 84px; }
+    #view-tool-loading[aria-busy="false"] .tool-skeleton-layout > div { animation: none; opacity: .45; }
+    @keyframes tool-loading-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .tool-skeleton-layout > div { animation: none; } }
     body[data-text-size="large"] { --text-scale: 1.12; }
     body[data-text-size="larger"] { --text-scale: 1.25; }
     body[data-text-size] .text-xs { font-size: calc(.75rem * var(--text-scale)); }
