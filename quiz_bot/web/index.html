@@ -950,6 +950,18 @@
     }
     .admin-management-tab { color: var(--text-sub); letter-spacing: 0; }
     [id^="modal-"].fixed.inset-0 { z-index: 100 !important; }
+    html.modal-scroll-locked { overflow: hidden; overscroll-behavior: none; }
+    body.modal-scroll-locked {
+      position: fixed;
+      top: var(--modal-scroll-top);
+      left: 0;
+      right: 0;
+      width: 100%;
+      overflow: hidden;
+      padding-right: var(--modal-scrollbar-width, 0px);
+    }
+    body.modal-scroll-locked #app-body { overflow: hidden !important; overscroll-behavior: none; }
+    [id^="modal-"].fixed.inset-0, [id^="modal-"].fixed.inset-0 * { overscroll-behavior: contain; }
     #modal-test-access, #modal-admin-user-detail { z-index: 110 !important; }
     body.admin-workspace-open nav.glass {
       visibility: hidden !important;

@@ -1,3 +1,70 @@
+  function initializeModalScrollLock() {
+    const modals = [...document.querySelectorAll('[id^="modal-"].fixed.inset-0')];
+    const root = document.documentElement;
+    const body = document.body;
+    const appBody = document.getElementById('app-body');
+    let savedScroll = null;
+    let lastTouch = null;
+
+    function syncScrollLock() {
+      const modalOpen = modals.some(modal => !modal.classList.contains('hidden'));
+      if (modalOpen && !savedScroll) {
+        savedScroll = { x: window.scrollX, y: window.scrollY, appTop: appBody?.scrollTop || 0, appLeft: appBody?.scrollLeft || 0 };
+        body.style.setProperty('--modal-scroll-top', `${-savedScroll.y}px`);
+        body.style.setProperty('--modal-scrollbar-width', `${window.innerWidth - root.clientWidth}px`);
+        root.classList.add('modal-scroll-locked');
+        body.classList.add('modal-scroll-locked');
+      } else if (!modalOpen && savedScroll) {
+        const position = savedScroll;
+        savedScroll = null;
+        root.classList.remove('modal-scroll-locked');
+        body.classList.remove('modal-scroll-locked');
+        body.style.removeProperty('--modal-scroll-top');
+        body.style.removeProperty('--modal-scrollbar-width');
+        if (appBody) appBody.scrollTo({ top: position.appTop, left: position.appLeft, behavior: 'instant' });
+        window.scrollTo({ top: position.y, left: position.x, behavior: 'instant' });
+      }
+    }
+
+    function canScrollModal(target, deltaX, deltaY) {
+      const modal = target instanceof Element ? target.closest('[id^="modal-"].fixed.inset-0:not(.hidden)') : null;
+      if (!modal) return false;
+      const horizontal = Math.abs(deltaX) > Math.abs(deltaY);
+      const delta = horizontal ? deltaX : deltaY;
+      for (let element = target; element; element = element.parentElement) {
+        const style = getComputedStyle(element);
+        const overflow = horizontal ? style.overflowX : style.overflowY;
+        const position = horizontal ? element.scrollLeft : element.scrollTop;
+        const extent = horizontal ? element.scrollWidth - element.clientWidth : element.scrollHeight - element.clientHeight;
+        if (/(auto|scroll|overlay)/.test(overflow) && extent > 1 &&
+            ((delta < 0 && position > 0) || (delta > 0 && position < extent - 1))) return true;
+        if (element === modal) break;
+      }
+      return false;
+    }
+
+    document.addEventListener('touchstart', event => {
+      lastTouch = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
+    }, { passive: true, capture: true });
+    document.addEventListener('touchmove', event => {
+      if (!savedScroll || !lastTouch || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const deltaX = lastTouch.x - touch.clientX;
+      const deltaY = lastTouch.y - touch.clientY;
+      lastTouch = { x: touch.clientX, y: touch.clientY };
+      if (!canScrollModal(event.target, deltaX, deltaY) && event.cancelable) event.preventDefault();
+    }, { passive: false, capture: true });
+    document.addEventListener('wheel', event => {
+      if (savedScroll && !canScrollModal(event.target, event.deltaX, event.deltaY) && event.cancelable) event.preventDefault();
+    }, { passive: false, capture: true });
+
+    const observer = new MutationObserver(syncScrollLock);
+    modals.forEach(modal => observer.observe(modal, { attributes: true, attributeFilter: ['class'] }));
+    syncScrollLock();
+  }
+
+  window.addEventListener('DOMContentLoaded', initializeModalScrollLock, { once: true });
+
 // PRIVACY: TOGGLE HIDE IN LEADERBOARD
   async function toggleHideInRating(checked) {
     triggerHaptic('light');
