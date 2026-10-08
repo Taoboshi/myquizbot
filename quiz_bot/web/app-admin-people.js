@@ -169,8 +169,14 @@ function renderAdminPerson() {
     };
   } else if (adminPeople.tab === 'access') {
     const accesses = adminPeople.data.access;
+    const grantableTests = adminStore.testsMeta
+      .filter(test => ['private','code'].includes(test.access_type) && !accesses.some(access => access.test_id === test.id))
+      .map(test => [test.id, `Тест: ${test.title}`]);
+    const grantableSubjects = adminStore.subjects
+      .filter(subject => ['private','code'].includes(subject.access_type) && !accesses.some(access => access.test_id === `subject:${subject.id}`))
+      .map(subject => [`subject:${subject.id}`, `Раздел: ${subject.title}`]);
     content.innerHTML = `<h3>Персональные доступы</h3>` + (accesses.map(test => `<div class="admin-record admin-access-row"><div><strong>${escapeHtml(test.test_title)}</strong><p class="admin-muted">${test.access_source==='code' ? 'По коду' : 'Выдан администратором'} · ${adminPeopleDate(test.granted_at)}</p></div><button class="admin-command admin-danger" data-action="revoke" data-test="${escapeHtml(test.test_id)}">Отозвать</button></div>`).join('') || '<p class="admin-empty">Персональных доступов нет</p>') +
-      `<h3>Выдать доступ</h3><select id="person-grant-test" aria-label="Тест для выдачи доступа">${adminPeopleOptions([['','Выберите тест'],...adminStore.testsMeta.filter(test=>['private','code'].includes(test.access_type) && !accesses.some(access=>access.test_id===test.id)).map(test=>[test.id,test.title])],'')}</select><button class="admin-command admin-primary" data-action="grant">Выдать доступ</button>`;
+      `<h3>Выдать доступ</h3><select id="person-grant-test" aria-label="Тест или раздел для выдачи доступа">${adminPeopleOptions([['','Выберите тест или раздел'],...grantableTests,...grantableSubjects],'')}</select><button class="admin-command admin-primary" data-action="grant">Выдать доступ</button>`;
   } else if (adminPeople.tab === 'messages') {
     content.innerHTML = `<textarea id="person-message" rows="4" maxlength="4096" aria-label="Сообщение пользователю" placeholder="Сообщение в Telegram"></textarea><button class="admin-command admin-primary" data-action="message">Отправить</button><h3>История отправок</h3>` +
       (adminPeople.data.messages.map(message => `<div class="admin-record"><p>${escapeHtml(message.text)}</p><p class="${message.status==='sent' ? 'admin-success' : 'admin-danger'}">${message.status==='sent' ? 'Отправлено' : 'Не отправлено'} · ${adminPeopleDate(message.created_at)}</p>${message.error ? `<p class="admin-muted">${escapeHtml(message.error)}</p>` : ''}</div>`).join('') || '<p class="admin-empty">Сообщений пока нет</p>') +
@@ -219,7 +225,7 @@ async function handleAdminPeopleClick(event) {
   }
   if (action === 'revoke') {
     payload.test_id=button.dataset.test;
-    if (!confirm('Отозвать персональный доступ? Общедоступные тесты останутся открытыми.')) return;
+    if (!confirm('Отозвать персональный доступ? Общедоступные материалы останутся открытыми.')) return;
   }
   if (action === 'reset') {
     payload.kind=value('person-reset-kind'); payload.test_id=value('person-reset-test');

@@ -751,8 +751,8 @@ const nativeFetch = window.fetch.bind(window);
         const subjects = Array.isArray(data.subjects) ? data.subjects : [];
         const unassignedTests = Array.isArray(data.unassigned_tests) ? data.unassigned_tests : [];
         const catalogTestCount = subjects.reduce((count, subject) => count + (subject.tests || []).length, 0) + unassignedTests.length;
-        const reportedTestCount = Number(data.total_loaded_tests || 0);
-        const hasCatalogPayload = subjects.length > 0 || unassignedTests.length > 0;
+        const reportedTestCount = Number(data.visible_tests_count ?? data.total_loaded_tests ?? 0);
+        const hasCatalogPayload = subjects.length > 0 || unassignedTests.length > 0 || data.visible_tests_count !== undefined;
         const hasCompleteCatalog = hasCatalogPayload && (!reportedTestCount || catalogTestCount >= reportedTestCount);
         if (hasCompleteCatalog) {
           const delSet = new Set(JSON.parse(localStorage.getItem('ohtest_deleted_subjects') || '[]'));
@@ -764,6 +764,9 @@ const nativeFetch = window.fetch.bind(window);
               id: s.id,
               title: s.title,
               emoji: s.emoji || '📚',
+              icon_key: s.icon_key || '',
+              access_type: s.access_type || 'public',
+              access_code: s.access_code || '',
               tests_count: s.tests_count || 0
             }));
 

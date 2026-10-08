@@ -235,6 +235,9 @@
 
       let subjectsHtml = adminStore.subjects.map(s => {
         const testsInSub = adminStore.testsMeta.filter(t => t.subject_id === s.id);
+        const subjectAccessType = s.access_type || 'public';
+        const subjectAccessLabel = { public: 'Открытый', code: 'По коду', private: 'Приватный', admin_only: 'Только админ' }[subjectAccessType] || 'Открытый';
+        const subjectAccessCode = subjectAccessType === 'code' && s.access_code ? ` · Код: ${escapeHtml(s.access_code)}` : '';
         
         let testsListHtml = '';
         if (testsInSub.length === 0) {
@@ -308,6 +311,10 @@
                   Удалить
                 </button>
               </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-app-border/60 text-[11px] gap-2">
+              <span class="text-slate-400">Доступ к разделу: <strong class="text-white">${subjectAccessLabel}${subjectAccessCode}</strong></span>
+              <button onclick="openSubjectAccessModal(${escapeHtml(JSON.stringify(s.id))})" class="shrink-0 text-brand-400 hover:underline font-bold">Изменить</button>
             </div>
             <div class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
               ${testsListHtml}
@@ -1168,43 +1175,50 @@
 
   // TEST ACCESS CLASS MANAGEMENT (ADMIN)
   let currentAccessTestId = null;
+  let currentAccessSubjectId = null;
+
+  function prepareAccessModal(title, accessType, accessCode, targetKind) {
+    const target = targetKind === 'subject'
+      ? { heading: 'разделу', description: 'раздела', codeLabel: 'раздела', openLabel: 'раздела' }
+      : { heading: 'тесту', description: 'теста', codeLabel: 'теста', openLabel: 'теста' };
+    document.getElementById('mta-access-heading').innerText = `Настройка доступа к ${target.heading}`;
+    document.getElementById('mta-access-description').innerText = `Выберите класс доступности ${target.description} для студентов:`;
+    document.getElementById('mta-code-label').innerText = `Секретный код ${target.codeLabel}:`;
+    document.getElementById('mta-code-hint').innerText = `Студент вводит этот код при первом открытии ${target.openLabel}.`;
+    document.getElementById('mta-test-title').innerText = title;
+
+    for (const radio of document.getElementsByName('mta-access-type')) {
+      radio.checked = radio.value === accessType;
+    }
+    const codeInput = document.getElementById('mta-code-input');
+    if (codeInput) codeInput.value = accessCode || '';
+    document.getElementById('mta-code-box')?.classList.toggle('hidden', accessType !== 'code');
+    document.getElementById('modal-test-access').classList.remove('hidden');
+  }
 
   function openAccessModal(testId) {
     triggerHaptic('light');
     currentAccessTestId = testId;
+    currentAccessSubjectId = null;
     const test = adminStore.testsMeta.find(x => x.id === testId);
     if (!test) return;
+    prepareAccessModal(test.title, test.access_type || 'public', test.access_code || '', 'test');
+  }
 
-    const titleEl = document.getElementById('mta-test-title');
-    if (titleEl) titleEl.innerText = test.title;
-
-    const accType = test.access_type || 'public';
-    const radios = document.getElementsByName('mta-access-type');
-    for (let r of radios) {
-      r.checked = (r.value === accType);
-    }
-
-    const codeInput = document.getElementById('mta-code-input');
-    if (codeInput) {
-      codeInput.value = test.access_code || '';
-    }
-
-    const codeBox = document.getElementById('mta-code-box');
-    if (codeBox) {
-      if (accType === 'code') {
-        codeBox.classList.remove('hidden');
-      } else {
-        codeBox.classList.add('hidden');
-      }
-    }
-
-    document.getElementById('modal-test-access').classList.remove('hidden');
+  function openSubjectAccessModal(subjectId) {
+    triggerHaptic('light');
+    currentAccessTestId = null;
+    currentAccessSubjectId = subjectId;
+    const subject = adminStore.subjects.find(item => item.id === subjectId);
+    if (!subject) return;
+    prepareAccessModal(subject.title, subject.access_type || 'public', subject.access_code || '', 'subject');
   }
 
   function closeAccessModal() {
     triggerHaptic('light');
     document.getElementById('modal-test-access').classList.add('hidden');
     currentAccessTestId = null;
+    currentAccessSubjectId = null;
   }
 
   function onAccessTypeRadioChange() {
@@ -1221,35 +1235,49 @@
   }
 
   async function saveTestAccess() {
-    if (!currentAccessTestId) return;
+    if (!currentAccessTestId && !currentAccessSubjectId) return;
     triggerHaptic('light');
 
     const selectedType = document.querySelector('input[name="mta-access-type"]:checked')?.value || 'public';
-    let codeVal = document.getElementById('mta-code-input')?.value?.trim() || '';
+    const codeVal = document.getElementById('mta-code-input')?.value?.trim() || '';
+    const isSubject = Boolean(currentAccessSubjectId);
 
     if (selectedType === 'code' && !codeVal) {
-      alert('Пожалуйста, укажите секретный код для доступа к тесту (например: 1234).');
+      alert(`Пожалуйста, укажите секретный код для доступа к ${isSubject ? 'разделу' : 'тесту'} (например: 1234).`);
       return;
     }
 
-    const t = adminStore.testsMeta.find(x => x.id === currentAccessTestId);
-    if (t) {
-      t.access_type = selectedType;
-      t.access_code = (selectedType === 'code') ? codeVal : '';
-    }
-
     try {
-      await fetch('/api/admin/set_test_access', {
+      const response = await fetch(isSubject ? '/api/admin/set_subject_access' : '/api/admin/set_test_access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: state.userId,
-          test_id: currentAccessTestId,
+          ...(isSubject ? { subject_id: currentAccessSubjectId } : { test_id: currentAccessTestId }),
           access_type: selectedType,
           code: codeVal
         })
       });
-    } catch(e) {}
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Не удалось сохранить доступ');
+
+      if (isSubject) {
+        const subject = adminStore.subjects.find(item => item.id === currentAccessSubjectId);
+        if (subject) {
+          subject.access_type = selectedType;
+          subject.access_code = selectedType === 'code' ? codeVal : '';
+        }
+      } else {
+        const test = adminStore.testsMeta.find(item => item.id === currentAccessTestId);
+        if (test) {
+          test.access_type = selectedType;
+          test.access_code = selectedType === 'code' ? codeVal : '';
+        }
+      }
+    } catch(error) {
+      showToast(error.message || 'Не удалось сохранить доступ');
+      return;
+    }
 
     closeAccessModal();
     openAdminModal('subjects_and_tests');

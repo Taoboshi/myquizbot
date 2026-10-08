@@ -2235,7 +2235,7 @@
           <div class="min-w-0 flex-1 mr-2">
             <h3 class="text-sm font-extrabold text-white flex items-center gap-1.5">
               <svg class="w-4 h-4 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-              <span>Настройка доступа к тесту</span>
+              <span id="mta-access-heading">Настройка доступа к тесту</span>
             </h3>
             <p id="mta-test-title" class="text-[11px] text-brand-300 font-medium truncate">Название теста</p>
           </div>
@@ -2243,7 +2243,7 @@
         </div>
 
         <div class="space-y-2.5 overflow-y-auto hide-scrollbar max-h-[60vh] pr-0.5">
-          <p class="text-[11px] text-slate-400">Выберите класс доступности теста для студентов:</p>
+          <p id="mta-access-description" class="text-[11px] text-slate-400">Выберите класс доступности теста для студентов:</p>
 
           <!-- Class 1: Public -->
           <label class="p-3 rounded-2xl bg-app-surface border border-app-border hover:border-brand-500/50 flex items-start gap-3 cursor-pointer transition">
@@ -2254,7 +2254,7 @@
                 <span>Открытый</span>
                 <span class="text-[10px] px-1.5 py-0.2 rounded bg-brand-500/20 text-brand-300 font-mono">public</span>
               </div>
-              <div class="text-[11px] text-slate-400">Доступен всем ученикам без ограничений. Возле теста отображается «✓ Доступен».</div>
+              <div class="text-[11px] text-slate-400">Доступен всем студентам без ограничений.</div>
             </div>
           </label>
 
@@ -2267,15 +2267,15 @@
                 <span>По коду доступа</span>
                 <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">code</span>
               </div>
-              <div class="text-[11px] text-slate-400">Для запуска студент обязан ввести секретный код или пароль.</div>
+              <div class="text-[11px] text-slate-400">При первом открытии потребуется ввести секретный код.</div>
             </div>
           </label>
 
           <!-- Code input field -->
           <div id="mta-code-box" class="hidden p-3 rounded-2xl bg-amber-950/30 border border-amber-500/40 space-y-1.5 ml-2">
-            <label class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider">Секретный код теста:</label>
+            <label id="mta-code-label" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider">Секретный код теста:</label>
             <input id="mta-code-input" placeholder="Например: 1234 или med2024" class="w-full px-3 py-2 rounded-xl bg-app-card border border-amber-500/40 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-mono">
-            <p class="text-[10px] text-amber-200/80">Студент вводит этот код при первом запуске теста.</p>
+            <p id="mta-code-hint" class="text-[10px] text-amber-200/80">Студент вводит этот код при первом открытии теста.</p>
           </div>
 
           <!-- Class 3: Private -->
@@ -2300,7 +2300,7 @@
                 <span>Только администратор</span>
                 <span class="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-mono">admin_only</span>
               </div>
-              <div class="text-[11px] text-slate-400">Полностью скрыт от обычных студентов в каталоге тестов.</div>
+              <div class="text-[11px] text-slate-400">Скрыт от обычных студентов и доступен администраторам.</div>
             </div>
           </label>
         </div>

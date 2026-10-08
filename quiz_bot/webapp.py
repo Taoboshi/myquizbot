@@ -116,10 +116,23 @@ def register_webapp_routes(app: Any) -> None:
 
     @app.route("/api/tests/<test_id>/access")
     def api_test_access_status(test_id):
-        from .access import can_open_test
+        from .access import can_open_test, effective_access_type
         if test_id not in LOADED_TESTS:
             return jsonify({"error": "Test not found"}), 404
-        return jsonify({"allowed": is_admin_user() or can_open_test(authenticated_user_id(), test_id)})
+        return jsonify({
+            "allowed": is_admin_user() or can_open_test(authenticated_user_id(), test_id),
+            "access_type": effective_access_type(test_id),
+        })
+
+    @app.route("/api/subjects/<subject_id>/access")
+    def api_subject_access_status(subject_id):
+        from .access import can_open_subject, subject_access_type
+        if subject_id not in {item_id for item_id, _ in get_subjects()}:
+            return jsonify({"error": "Subject not found"}), 404
+        return jsonify({
+            "allowed": is_admin_user() or can_open_subject(authenticated_user_id(), subject_id),
+            "access_type": subject_access_type(subject_id),
+        })
 
     @app.before_request
     def require_telegram_identity():
@@ -187,36 +200,50 @@ def register_webapp_routes(app: Any) -> None:
 
         is_admin = is_admin_user(user_id)
 
-        from .access import effective_test_access
+        from .access import can_view_subject, can_view_test, can_open_subject, effective_test_access, subject_access
 
         subjects_data = []
         for s_id, s_info in get_subjects():
+            if not can_view_subject(user_id, s_id):
+                continue
+
+            subject_acc = subject_access(s_id)
+            subject_acc_type = subject_acc.get("type", "public")
+            subject_open = is_admin or can_open_subject(user_id, s_id)
             tests_list = []
-            for t_id, t_info in get_tests_for_subject(s_id):
-                info = effective_test_info(t_id)
-                acc = effective_test_access(t_id)
-                acc_type = acc.get("type", "public")
-                acc_code = acc.get("code", "")
-                tests_list.append({
-                    "id": t_id,
-                    "title": info.get("title", t_id),
-                    "questions_count": len(LOADED_TESTS.get(t_id, [])),
-                    "study_mode": get_test_study_mode(t_id),
-                    "description": info.get("description", ""),
-                    "access_type": acc_type,
-                    "access_code": acc_code if is_admin else "",
-                })
+            subject_tests = get_tests_for_subject(s_id)
+            if subject_open:
+                for t_id, t_info in subject_tests:
+                    if not can_view_test(user_id, t_id):
+                        continue
+                    info = effective_test_info(t_id)
+                    acc = effective_test_access(t_id)
+                    acc_type = acc.get("type", "public")
+                    acc_code = acc.get("code", "")
+                    tests_list.append({
+                        "id": t_id,
+                        "title": info.get("title", t_id),
+                        "questions_count": len(LOADED_TESTS.get(t_id, [])),
+                        "study_mode": get_test_study_mode(t_id),
+                        "description": info.get("description", ""),
+                        "access_type": acc_type,
+                        "access_code": acc_code if is_admin else "",
+                    })
             subjects_data.append({
                 "id": s_id,
                 "title": s_info.get("title", s_id),
                 "emoji": s_info.get("emoji", "📚"),
                 "icon_key": s_info.get("icon_key", ""),
+                "access_type": subject_acc_type,
+                "access_code": subject_acc.get("code", "") if is_admin else "",
                 "tests": tests_list,
-                "tests_count": len(tests_list),
+                "tests_count": len(tests_list) if subject_open else len(subject_tests),
             })
 
         unassigned_data = []
         for t_id, t_info in get_unassigned_tests():
+            if not can_view_test(user_id, t_id):
+                continue
             info = effective_test_info(t_id)
             acc = effective_test_access(t_id)
             acc_type = acc.get("type", "public")
@@ -230,6 +257,8 @@ def register_webapp_routes(app: Any) -> None:
                 "access_type": acc_type,
                 "access_code": acc_code if is_admin else "",
             })
+
+        visible_tests_count = sum(len(subject.get("tests", [])) for subject in subjects_data) + len(unassigned_data)
 
         is_hidden_in_rating = False
         if user_id:
@@ -253,6 +282,7 @@ def register_webapp_routes(app: Any) -> None:
             "user_profile": user_profile,
             "subjects": subjects_data,
             "unassigned_tests": unassigned_data,
+            "visible_tests_count": visible_tests_count,
             "total_loaded_tests": len(LOADED_TESTS),
         })
 
@@ -1408,6 +1438,53 @@ def register_webapp_routes(app: Any) -> None:
             "access_code": new_acc.get("code", ""),
         })
 
+    @app.route("/api/admin/set_subject_access", methods=["POST"])
+    def api_admin_set_subject_access():
+        if not is_admin_user():
+            return jsonify({"error": "Forbidden"}), 403
+
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Некорректные данные"}), 400
+        subject_id = data.get("subject_id")
+        access_type = data.get("access_type", "public")
+        code = data.get("code", "")
+        subjects = dict(get_subjects())
+        if not isinstance(subject_id, str) or subject_id not in subjects:
+            return jsonify({"error": "Раздел не найден"}), 404
+        from .storage import VALID_ACCESS_TYPES, get_subject_setting
+        if not isinstance(access_type, str) or access_type not in VALID_ACCESS_TYPES:
+            return jsonify({"error": "Неизвестный тип доступа"}), 400
+        if not isinstance(code, str) or len(code) > 128:
+            return jsonify({"error": "Код должен быть не длиннее 128 символов"}), 400
+        if access_type == "code" and not code.strip():
+            return jsonify({"error": "Укажите код доступа"}), 400
+
+        from .storage import set_subject_access_setting
+        from .loader import get_subject_info
+        if get_subject_setting(subject_id):
+            set_subject_access_setting(subject_id, access_type, code=code, updated_by=authenticated_user_id())
+        else:
+            info = get_subject_info(subject_id) or subjects[subject_id]
+            set_subject_setting(
+                subject_id=subject_id,
+                title=info.get("title", subject_id),
+                emoji=info.get("emoji", "📚"),
+                icon_key=info.get("icon_key", ""),
+                access_type=access_type,
+                code=code,
+                updated_by=authenticated_user_id(),
+            )
+
+        from .access import subject_access
+        access = subject_access(subject_id)
+        return jsonify({
+            "success": True,
+            "subject_id": subject_id,
+            "access_type": access.get("type", "public"),
+            "access_code": access.get("code", ""),
+        })
+
     @app.route("/api/admin/reset_test_access", methods=["POST"])
     def api_admin_reset_test_access():
         user_id = request.args.get("user_id") or request.headers.get("X-Telegram-User-Id")
@@ -1453,6 +1530,21 @@ def register_webapp_routes(app: Any) -> None:
                 pass
 
         return jsonify({"success": True, "test_id": test_id})
+
+    @app.route("/api/subjects/verify_code", methods=["POST"])
+    def api_verify_subject_code():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"success": False, "error": "Некорректные данные"}), 400
+        subject_id = data.get("subject_id")
+        code = str(data.get("code", "")).strip()
+        if not isinstance(subject_id, str) or subject_id not in {item_id for item_id, _ in get_subjects()} or not code:
+            return jsonify({"success": False, "error": "subject_id and code required"}), 400
+
+        from .access import subject_access_type, verify_subject_access_code
+        if subject_access_type(subject_id) != "code" or not verify_subject_access_code(authenticated_user_id(), subject_id, code):
+            return jsonify({"success": False, "error": "Неверный код доступа"}), 403
+        return jsonify({"success": True, "subject_id": subject_id})
 
     @app.route("/api/admin/reset_user", methods=["POST"])
     def api_admin_reset_user():

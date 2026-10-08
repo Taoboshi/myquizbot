@@ -8,7 +8,7 @@ from flask import jsonify, request
 
 from . import storage
 from .config import ADMIN_IDS, get_bot_token, get_env_admin_ids
-from .loader import LOADED_TESTS
+from .loader import LOADED_TESTS, get_subjects
 
 
 def ensure_people_tables():
@@ -145,10 +145,16 @@ def people_detail(uid):
         items = []
         for row in rows:
             test_id = row["test_id"]
-            try:
-                title = effective_test_info(test_id).get("title", test_id)
-            except KeyError:
-                title = test_id
+            if test_id.startswith("subject:"):
+                subject_id = test_id.removeprefix("subject:")
+                setting = storage.get_subject_setting(subject_id)
+                subject = dict(get_subjects()).get(subject_id, {})
+                title = f"Раздел: {(setting or {}).get('title') or subject.get('title') or subject_id}"
+            else:
+                try:
+                    title = effective_test_info(test_id).get("title", test_id)
+                except KeyError:
+                    title = test_id
             items.append({**dict(row), "test_title": title})
         return items
     error_items = titled(errors)
@@ -245,20 +251,34 @@ def register_people_routes(app):
                     conn.commit()
             elif action in {"grant", "revoke", "reset"}:
                 test_id = payload.get("test_id", "")
-                if not isinstance(test_id, str) or (test_id and test_id not in LOADED_TESTS):
+                if not isinstance(test_id, str):
                     raise ValueError("Тест не найден")
                 if action == "reset":
+                    if test_id and test_id not in LOADED_TESTS:
+                        raise ValueError("Тест не найден")
                     if payload.get("confirmed") is not True:
                         raise ValueError("Подтвердите сброс")
                     reset_progress(uid, payload.get("kind"), test_id)
                 elif not test_id:
-                    raise ValueError("Выберите тест")
+                    raise ValueError("Выберите тест или раздел")
                 elif action == "grant":
-                    from .access import effective_access_type
-                    if effective_access_type(test_id) == "admin_only":
-                        raise ValueError("Этот тест доступен только администраторам")
+                    if test_id.startswith("subject:"):
+                        subject_id = test_id.removeprefix("subject:")
+                        if not subject_id or subject_id not in dict(get_subjects()):
+                            raise ValueError("Раздел не найден")
+                        from .access import subject_access_type
+                        if subject_access_type(subject_id) == "admin_only":
+                            raise ValueError("Этот раздел доступен только администраторам")
+                    else:
+                        if test_id not in LOADED_TESTS:
+                            raise ValueError("Тест не найден")
+                        from .access import effective_access_type
+                        if effective_access_type(test_id) == "admin_only":
+                            raise ValueError("Этот тест доступен только администраторам")
                     storage.grant_user_test_access(uid, test_id, "admin", actor)
                 else:
+                    if not (test_id in LOADED_TESTS or (test_id.startswith("subject:") and len(test_id) > len("subject:"))):
+                        raise ValueError("Тест или раздел не найден")
                     storage.revoke_user_test_access(uid, test_id)
             elif action == "message":
                 text = payload.get("text", "")

@@ -136,9 +136,10 @@
       countLabel.innerText = `${formatTestCount(testCount)} доступно`;
     }
 
-    // Only display subjects that have at least 1 test assigned
+    // Code-protected sections stay visible so students can unlock them.
     const activeSubjects = adminStore.subjects.filter(subj => {
-      return visibleTests.some(test => test.subject_id === subj.id);
+      return visibleTests.some(test => test.subject_id === subj.id) ||
+        (!state.isAdmin && subj.access_type === 'code' && Number(subj.tests_count) > 0);
     });
 
     if (activeSubjects.length === 0) {
@@ -166,6 +167,8 @@
 
     sortedSubjects.forEach(subj => {
       const isPinned = pinnedSubjects.has(subj.id);
+      const isCodeLocked = !state.isAdmin && subj.access_type === 'code' &&
+        !state.personalTestAccess?.has(`subject:${subj.id}`);
       const card = document.createElement('div');
       card.className = "p-4 rounded-3xl bg-app-card border border-app-border hover:border-brand-500/60 active:scale-[0.98] transition cursor-pointer shadow-lg space-y-2 group relative";
       card.onclick = () => openSubjectTests(subj.id, subj.title);
@@ -183,7 +186,7 @@
                 <h3 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${subj.title}</h3>
                 ${isPinned ? '<span class="text-xs" title="Закреплено">📌</span>' : ''}
               </div>
-              <span class="text-[11px] text-slate-400">${testsCount} ${testsCount === 1 ? 'тест' : (testsCount < 5 ? 'теста' : 'тестов')}</span>
+              <span class="text-[11px] ${isCodeLocked ? 'text-amber-300' : 'text-slate-400'}">${isCodeLocked ? 'Доступ по коду' : `${testsCount} ${testsCount === 1 ? 'тест' : (testsCount < 5 ? 'теста' : 'тестов')}`}</span>
             </div>
           </div>
           <span class="text-xs font-bold text-slate-500 group-hover:text-brand-400 group-hover:translate-x-1 transition">→</span>
@@ -226,7 +229,78 @@
   }
 
   // Subject Tests View
-  function openSubjectTests(subjectId, subjectTitle) {
+  async function ensureSubjectAccess(subjectId) {
+    if (state.isAdmin) return true;
+    const subject = adminStore.subjects.find(item => item.id === subjectId);
+    if (!subject) return false;
+
+    let access;
+    try {
+      const response = await fetch(`/api/subjects/${encodeURIComponent(subjectId)}/access`);
+      access = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(access.error || 'access check failed');
+    } catch (error) {
+      showToast('Не удалось проверить доступ к разделу. Проверьте соединение.');
+      return false;
+    }
+
+    const accessType = access.access_type || subject.access_type || 'public';
+    const accessKey = `subject:${subjectId}`;
+    if (access.allowed) {
+      state.personalTestAccess ||= new Set();
+      state.personalTestAccess.add(accessKey);
+      const hasLoadedSectionTests = adminStore.testsMeta.some(test => test.subject_id === subjectId);
+      if (accessType !== 'public' && !hasLoadedSectionTests && Number(subject.tests_count) > 0) {
+        await checkBootstrapAndAdmin();
+        if (state.catalogLoadFailed) {
+          showToast('Не удалось загрузить тесты раздела. Попробуйте ещё раз.');
+          return false;
+        }
+        renderHomeSubjects();
+      }
+      return true;
+    }
+
+    if (accessType === 'code') {
+      const code = prompt(`Раздел «${subject.title}» защищён кодом.\n\nВведите код доступа:`);
+      if (!code?.trim()) return false;
+      try {
+        const response = await fetch('/api/subjects/verify_code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject_id: subjectId, code: code.trim() })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+          alert('Неверный код доступа. Проверьте код или обратитесь к администратору.');
+          return false;
+        }
+        state.personalTestAccess ||= new Set();
+        state.personalTestAccess.add(accessKey);
+        await checkBootstrapAndAdmin();
+        if (state.catalogLoadFailed) {
+          showToast('Код принят, но не удалось загрузить тесты. Попробуйте открыть раздел ещё раз.');
+          return false;
+        }
+        renderHomeSubjects();
+        showToast('Доступ к разделу открыт');
+        return true;
+      } catch (error) {
+        showToast('Не удалось проверить код. Проверьте соединение.');
+        return false;
+      }
+    }
+
+    if (accessType === 'private') {
+      alert('Этот раздел приватный. Доступ может выдать администратор (@issdm).');
+    } else if (accessType === 'admin_only') {
+      alert('Этот раздел доступен только администраторам.');
+    }
+    return false;
+  }
+
+  async function openSubjectTests(subjectId, subjectTitle) {
+    if (!await ensureSubjectAccess(subjectId)) return;
     triggerHaptic('light');
     const testsSearch = document.getElementById('subject-tests-search');
     const testsSearchWrap = document.getElementById('subject-tests-search-wrap');
@@ -320,16 +394,27 @@
     if (state.isBlocked) return showToast('Доступ ограничен администратором');
 
     const testMeta = adminStore.testsMeta.find(t => t.id === testId);
-    const accType = testMeta ? (testMeta.access_type || 'public') : 'public';
-    if (!state.isAdmin && ['private','code'].includes(accType)) {
+    let accType = testMeta ? (testMeta.access_type || 'public') : 'public';
+    if (!state.isAdmin && testMeta?.subject_id && testMeta.subject_id !== 'default') {
+      if (!await ensureSubjectAccess(testMeta.subject_id)) return;
+    }
+    let testAccessAllowed = state.isAdmin;
+    if (!state.isAdmin) {
       try {
         const response = await fetch(`/api/tests/${encodeURIComponent(testId)}/access`);
         if (!response.ok) throw new Error();
         const access = await response.json();
+        accType = access.access_type || accType;
+        testAccessAllowed = Boolean(access.allowed);
         if (!state.personalTestAccess) state.personalTestAccess = new Set();
         if (access.allowed) state.personalTestAccess.add(testId);
         else { state.personalTestAccess.delete(testId); state.unlockedCodeTests.delete(testId); }
       } catch(e) { return showToast('Не удалось проверить доступ. Проверьте соединение.'); }
+    }
+
+    if (!testAccessAllowed && !['private', 'code', 'admin_only'].includes(accType)) {
+      alert('Доступ к этому материалу закрыт. Обратитесь к администратору.');
+      return;
     }
 
     if (accType === 'admin_only' && !state.isAdmin) {
@@ -370,7 +455,7 @@
         localStorage.setItem('ohtest_unlocked_tests', JSON.stringify([...state.unlockedCodeTests]));
       } catch(e) {}
       alert('✓ Код принят! Доступ к тесту открыт.');
-      openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
+      await openSubjectTests(state.activeSubjectId, state.activeSubjectTitle);
     }
 
     state.activeTestId = testId;
