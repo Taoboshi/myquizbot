@@ -159,24 +159,29 @@
     tissue: ['#fda4af', '#fb7185', '#be123c', '#9f1239'],
     skin: ['#fdba9e', '#fda4af', '#b45335', '#be123c'],
     steel: ['#cbd5e1', '#93c5fd', '#475569', '#1d4ed8'],
+    medical: ['#cbd5e1', '#fb7185', '#475569', '#be123c'],
+    capsule: ['#f1f5f9', '#fb7185', '#64748b', '#be123c'],
+    instrument: ['#cbd5e1', '#7dd3fc', '#475569', '#0369a1'],
+    glass: ['#bae6fd', '#6ee7b7', '#0369a1', '#047857'],
+    ribbon: ['#f472b6', '#f472b6', '#be185d', '#be185d'],
     apple: ['#fb7185', '#86efac', '#be123c', '#15803d'],
   };
   const iconColors = {
-    stethoscope: 'steel', scan: 'cyan', hospital: 'steel', heart: 'coral',
+    stethoscope: 'instrument', scan: 'cyan', hospital: 'medical', heart: 'coral',
     brain: 'tissue', bone: 'ivory', lungs: 'tissue', kidney: 'coral',
     eye: 'steel', tooth: 'ivory', ear: 'skin', skin: 'skin', blood: 'coral',
-    pill: 'blue', syringe: 'steel', microscope: 'steel', dna: 'blue',
-    flask: 'mint', shield: 'gold', clipboard: 'blue', activity: 'coral',
+    pill: 'capsule', syringe: 'instrument', microscope: 'instrument', dna: 'blue',
+    flask: 'glass', shield: 'gold', clipboard: 'steel', activity: 'coral',
     baby: 'skin', chart: 'cyan', book: 'blue', surgery: 'steel',
-    emergency: 'coral', 'first-aid': 'coral', nursing: 'steel',
-    gynecology: 'rose', urology: 'blue', oncology: 'gold', psychiatry: 'violet',
+    emergency: 'medical', 'first-aid': 'medical', nursing: 'medical',
+    gynecology: 'rose', urology: 'blue', oncology: 'ribbon', psychiatry: 'tissue',
     rehabilitation: 'blue', nutrition: 'apple', endocrinology: 'gold',
     'intensive-care': 'coral', infection: 'forest', biochemistry: 'cyan',
-    histology: 'lilac', pathology: 'violet', chemistry: 'mint', physics: 'blue',
+    histology: 'tissue', pathology: 'steel', chemistry: 'glass', physics: 'blue',
     biology: 'forest', ecology: 'mint', imaging: 'violet', ultrasound: 'cyan',
-    thermometer: 'coral', pressure: 'steel', research: 'steel',
-    'medical-record': 'steel', consultation: 'blue', 'public-health': 'blue',
-    prevention: 'mint', hygiene: 'cyan', epidemiology: 'peach', ethics: 'lilac',
+    thermometer: 'medical', pressure: 'medical', research: 'steel',
+    'medical-record': 'medical', consultation: 'blue', 'public-health': 'skin',
+    prevention: 'medical', hygiene: 'cyan', epidemiology: 'blue', ethics: 'steel',
     law: 'ivory', informatics: 'blue', math: 'gold', language: 'teal',
     psychology: 'rose', history: 'gold', education: 'steel', sports: 'steel',
   };
@@ -185,11 +190,22 @@
   const detailParts = {
     eye: [1], nutrition: [1], heart: [1], stethoscope: [4],
     microscope: [4, 5], hospital: [0, 3], 'medical-record': [2, 3],
+    pill: [1], syringe: [3], flask: [1], chemistry: [4, 5],
+    'first-aid': [0, 1], nursing: [1, 2], prevention: [1, 2],
+    emergency: [0, 2, 3, 4, 5, 6, 7], thermometer: [1], pressure: [0],
+    psychiatry: [7, 8, 9, 10, 11, 12, 13, 14, 15],
   };
 
-  function iconSvg(source, coloredParts = []) {
+  // Some library paths combine different objects; split only the subject version.
+  const subjectArtwork = {
+    pill: '<path d="m8.5 8.5-5 5a4.95 4.95 0 1 0 7 7l5-5Z"/><path d="m8.5 8.5 5-5a4.95 4.95 0 1 1 7 7l-5 5Z"/>',
+    nursing: '<path d="M12 5c2.941 0 6.685 1.537 9 3l-2 11H5L3 8c2.394-1.513 6.168-3.005 9-3Z"/><path d="M10 12h4"/><path d="M12 10v4"/>',
+    thermometer: '<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/><path d="M12 10v8"/>',
+  };
+
+  function iconSvg(source, coloredParts = [], subjectKey = '') {
     let partIndex = 0;
-    const drawing = (artwork[source] || artwork.stethoscope).replace(/<(?:path|circle|line|rect|polygon)\b/g, tag => {
+    const drawing = (subjectArtwork[subjectKey] || artwork[source] || artwork.stethoscope).replace(/<(?:path|circle|line|rect|polygon)\b/g, tag => {
       const isDetail = coloredParts.includes(partIndex++);
       return isDetail ? `${tag} class="subject-icon-detail"` : tag;
     });
@@ -237,7 +253,7 @@
     if (byKey[key]) {
       const [primary, detail, lightPrimary, lightDetail] = palettes[iconColors[key] || 'teal'];
       const colors = `--subject-primary-dark:${primary};--subject-detail-dark:${detail};--subject-primary-light:${lightPrimary};--subject-detail-light:${lightDetail};--subject-tint:${primary}18`;
-      return `<span class="subject-icon-art" style="${colors}" aria-hidden="true">${iconSvg(byKey[key].source, detailParts[key])}</span>`;
+      return `<span class="subject-icon-art" style="${colors}" aria-hidden="true">${iconSvg(byKey[key].source, detailParts[key], key)}</span>`;
     }
     const safeText = String(fallback || '📚').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     return `<span aria-hidden="true">${safeText}</span>`;
