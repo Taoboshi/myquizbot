@@ -1160,7 +1160,19 @@
     adminTestOrderBusy = true;
     const buttons = list.querySelectorAll('[data-order-direction]');
     buttons.forEach(button => { button.disabled = true; });
+    const previousTests = [...tests];
+    const previousOrders = tests.map(test => test.sort_order);
+    const rows = new Map([...list.querySelectorAll('[data-admin-order-test]')].map(row => [row.dataset.adminOrderTest, row]));
+    const applyRows = orderedTests => orderedTests.forEach((test, position) => {
+      const row = rows.get(test.id);
+      if (!row) return;
+      row.querySelector('[data-order-position]').textContent = `Позиция ${position + 1} из ${orderedTests.length}`;
+      list.appendChild(row);
+    });
     [tests[index], tests[target]] = [tests[target], tests[index]];
+    tests.forEach((test, position) => { test.sort_order = position; });
+    applyRows(tests);
+    triggerHaptic('light');
     try {
       const response = await fetch('/api/admin/reorder_tests', {
         method: 'POST',
@@ -1169,17 +1181,11 @@
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || 'Не удалось сохранить порядок');
-      const rows = new Map([...list.querySelectorAll('[data-admin-order-test]')].map(row => [row.dataset.adminOrderTest, row]));
-      tests.forEach((test, position) => {
-        test.sort_order = position;
-        const row = rows.get(test.id);
-        row.querySelector('[data-order-position]').textContent = `Позиция ${position + 1} из ${tests.length}`;
-        list.appendChild(row);
-      });
       try { localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta)); } catch(e) {}
-      triggerHaptic('light');
       showToast('Порядок сохранён');
     } catch(error) {
+      previousTests.forEach((test, position) => { test.sort_order = previousOrders[position]; });
+      applyRows(previousTests);
       showToast(error.message || 'Не удалось сохранить порядок');
     } finally {
       adminTestOrderBusy = false;
