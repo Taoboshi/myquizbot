@@ -185,11 +185,11 @@
 
       card.innerHTML = `
         <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-3">
+          <div class="flex items-center space-x-3 min-w-0">
             <span class="w-11 h-11 shrink-0 flex items-center justify-center rounded-2xl bg-app-surface border border-app-border group-hover:scale-110 transition">${renderSubjectIcon(subj.icon_key || suggestSubjectIcon(subj.title || subj.id), subj.emoji)}</span>
-            <div>
+            <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <h3 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${subj.title}</h3>
+                <h3 class="text-sm font-bold text-white group-hover:text-brand-300 transition subject-title">${renderSubjectTitle(subj.title)}</h3>
                 ${isPinned ? '<span class="text-xs" title="Закреплено">📌</span>' : ''}
               </div>
               <span class="text-[11px] ${isCodeLocked ? 'text-amber-300' : 'text-slate-400'}">${isCodeLocked ? 'Доступ по коду' : `${testsCount} ${testsCount === 1 ? 'тест' : (testsCount < 5 ? 'теста' : 'тестов')}`}</span>

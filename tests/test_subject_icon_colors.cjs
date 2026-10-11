@@ -20,3 +20,10 @@ assert.equal((capsule.match(/<path /g) || []).length, 2);
 assert.equal((capsule.match(/class="subject-icon-detail"/g) || []).length, 1);
 assert(!window.renderInterfaceIcon('pill').includes('subject-icon-detail'));
 console.log(`Passed: ${window.SUBJECT_ICON_CATALOG.length} subject icons, medical crosses, capsule halves, interface isolation.`);
+for (const title of ['Анатомия экзамен', 'Биология (модуль)', 'Анатомия — модуль + экзамен', 'Биология: МОДУЛЬ']) {
+  assert(window.renderSubjectTitle(title).includes('subject-study-tag'), title);
+}
+assert.equal(window.renderSubjectTitle('Модульная анатомия'), 'Модульная анатомия');
+assert.equal(window.renderSubjectTitle('Анатомия'), 'Анатомия');
+assert(!window.renderSubjectTitle('<img> экзамен').includes('<img>'));
+console.log('Passed: subject suffix badges and HTML escaping.');
