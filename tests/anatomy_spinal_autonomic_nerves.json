@@ -1,0 +1,1261 @@
+{
+  "id": "anatomy_spinal_autonomic_nerves",
+  "title": "Спинномозговые нервы и вегетативная нервная система",
+  "description": "",
+  "subject": {
+    "id": "unassigned",
+    "title": "Не привязан",
+    "order": 100
+  },
+  "study_mode": "test",
+  "questions": [
+    {
+      "question": "Укажите какие волокна содержатся в передних корешках, формирующих 3-ий шейный спинномозговой нерв: Выберите один ответ:",
+      "options": [
+        "двигательные парасимпатические",
+        "чувствительные специфические",
+        "чувствительные",
+        "двигательные соматические",
+        "двигательные симпатические"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какие волокна содержатся в передних корешках, формирующих 4-ый поясничный спинномозговой нерв: Выберите один ответ:",
+      "options": [
+        "двигательные симпатические",
+        "чувствительные",
+        "двигательные парасимпатические",
+        "чувствительные специфические",
+        "двигательные соматические"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования nn. clunei superiores: Выберите один ответ:",
+      "options": [
+        "задние ветви LIV-LV спинномозговых нервов",
+        "латеральные ветви задних ветвей LI-LIII спинномозговых нервов",
+        "n. ischiadicus",
+        "n. pudendus",
+        "медиальные ветви задних ветвей LI-LIII спинномозговых нервов"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования nn. clunei mediales: Выберите один ответ:",
+      "options": [
+        "латеральные ветви задних ветвей SI-SIII спинномозговых нервов",
+        "n. pudendus",
+        "n. isciadicus",
+        "медиальные ветви задних ветвей SI-SIII спинномозговых нервов",
+        "задние ветви SIV-SV спинномозговых нервов"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу, получающую иннервацию от мышечных ветвей шейного сплетения: Выберите один ответ:",
+      "options": [
+        "m. geniohyoideus",
+        "m. pectoralis minor",
+        "m. sternocleidomastoideus",
+        "m. splenius cervicis",
+        "m. digastricus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу, получающую иннервацию от ansa cervicalis: Выберите один ответ:",
+      "options": [
+        "m. thyrohyoideus",
+        "m. sternocleidomastoideus",
+        "m. geniohyoideus",
+        "m. digastricus",
+        "m. splenius cervicis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "От ansa cervicalis получают иннервацию все мышцы, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. omohyoideus",
+        "m. thyrohyoideu",
+        "m. sternothyroideus",
+        "m. genioglossus",
+        "m. sternohyoideus"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Мышечные ветви шейного сплетения иннервируют все мышцы, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. scalenius anterior",
+        "m. digastricus",
+        "m. longus capitis",
+        "m. sternocleidomastoideus",
+        "m. trapezius"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К чувствительным ветвям шейного сплетения относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "nn. suprascapulares",
+        "n. transversus coli",
+        "n. auricularis magnus",
+        "n. occipitalis major",
+        "n. occipitalis minor"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв проходит кпереди от корня легкого и по боковой поверхности перикарда: Выберите один ответ:",
+      "options": [
+        "n. splanchnicus major",
+        "n. phrenicus",
+        "n. vagus",
+        "radix inferior ansa cervicalis",
+        "n. laryngeus inferior"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования radix superior ansae cervicalis: Выберите один ответ:",
+      "options": [
+        "rami dorsales nn. spinales cervicales",
+        "n. vagus",
+        "n. hypoglossus",
+        "n. accessorius",
+        "n. glossopharyngeus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования radix inferior ansae cervicalis: Выберите один ответ:",
+      "options": [
+        "rami dorsales nn. spinales cervicales",
+        "plexus cervicalis",
+        "n. hypoglossus",
+        "n. accessorius",
+        "n. vagus"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв относится к коротким ветвям plexus brachialis: Выберите один ответ:",
+      "options": [
+        "n. cutaneus brachii medialis",
+        "n. thoracicus longus",
+        "n. vagus",
+        "n. phrenicus",
+        "n. accessorius"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К коротким ветвям plexus brachialis относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "nn. pectorales lateralis et medialis",
+        "n. dorsalis scapulae",
+        "nn. supraclaviculares",
+        "n. subclavius",
+        "n. suprascapularis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует mm. rhomboidei: Выберите один ответ:",
+      "options": [
+        "n. dorsalis scapulae",
+        "nn. supraclaviculare",
+        "rr. dorsales nn. spinales",
+        "n. suprascapularis",
+        "n. axillaris"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует m. latissimus dorsi: Выберите один ответ:",
+      "options": [
+        "n. thoracodorsalis",
+        "rr. dorsales nn. spinales",
+        "n. thoracicus longus",
+        "n. dorsalis scapulae",
+        "n. suprascapularis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует m. serratus anterior: Выберите один ответ:",
+      "options": [
+        "n. dorsalis scapulae",
+        "rr. dorsales nn. spinales",
+        "n. subscapularis",
+        "n. thoracicus longus",
+        "n. axillaris"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует m. infraspinatus: Выберите один ответ:",
+      "options": [
+        "n. dorsalis scapulae",
+        "n. subscapularis",
+        "rr. dorsales nn. spinales",
+        "n. thoracicus longus",
+        "n. suprascapularis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует m. supraspinatus: Выберите один ответ:",
+      "options": [
+        "n. thoracicus longus",
+        "n. subscapularis",
+        "n. dorsalis scapulae",
+        "rr. dorsales nn. spinales",
+        "n. suprascapularis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует m. teres major: Выберите один ответ:",
+      "options": [
+        "rr. dorsales nn. spinales",
+        "n. subscapularis",
+        "n. thoracicus longus",
+        "n. dorsalis scapulae",
+        "n. suprascapularis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует m. teres minor: Выберите один ответ:",
+      "options": [
+        "rr. dorsales nn. spinales",
+        "n. suprascapularis",
+        "n. dorsalis scapulae",
+        "n. axillaris",
+        "n. subscapularis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв проходит через foramen quadrilaterum: Выберите один ответ:",
+      "options": [
+        "n. dorsalis scapulae",
+        "n. radialis",
+        "n. ulnaris",
+        "n. subscapularis",
+        "n. axillaris"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. cutaneus brachii lateralis superior: Выберите один ответ:",
+      "options": [
+        "n. subscapularis",
+        "n. medianus",
+        "n. musculocutaneus",
+        "n. dorsalis scapulae",
+        "n. axillaris"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, берущий начало от fasciculus lateralis plexus brachialis: Выберите один ответ:",
+      "options": [
+        "n. pectoralis medialis",
+        "n. musculocutaneus",
+        "n. radialis",
+        "n. cutaneus brachii medialis",
+        "n. ulnaris"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, берущий начало от fasciculus posterior plexus brachialis: Выберите один ответ:",
+      "options": [
+        "n. ulnaris",
+        "n. cutaneous brachii medialis",
+        "n. musculocutaneus",
+        "n. radialis",
+        "n. pectoralis lateralis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, берущий начало от fasciculus medialis plexus brachialis: Выберите один ответ:",
+      "options": [
+        "n. radialis",
+        "n. musculocutaneus",
+        "n. pectoralis lateralis",
+        "n. axillaris",
+        "n. ulnaris"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. coracobrachialis: Выберите один ответ:",
+      "options": [
+        "n. medianus",
+        "n. axillaris",
+        "n. dorsalis scapulae",
+        "n. musculocutaneus",
+        "n. radialis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. cutaneus antebrachii lateralis: Выберите один ответ:",
+      "options": [
+        "n. radialis",
+        "n. medianus",
+        "n. axillaris",
+        "n. musculocutaneus",
+        "n. dorsalis scapulae"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. interosseus anterior на предплечье: Выберите один ответ:",
+      "options": [
+        "n. medianus",
+        "n. ulnaris",
+        "n. musculocutaneus",
+        "n. axillaris",
+        "n. radialis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи переднелатеральной поверхности предплечья: Выберите один ответ:",
+      "options": [
+        "n. radialis",
+        "n. dorsalis scapulae",
+        "n. musculocutaneus",
+        "n. axillaris",
+        "n. medianus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. pronator quadratus: Выберите один ответ:",
+      "options": [
+        "n. musculocutaneus",
+        "n. radialis",
+        "n. axillaris",
+        "n. medianus",
+        "n. ulnaris"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. palmaris longus: Выберите один ответ:",
+      "options": [
+        "n. medianus",
+        "n. axillaris",
+        "n. radialis",
+        "n. ulnaris",
+        "n. musculocutaneus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. abductor pollicis brevis: Выберите один ответ:",
+      "options": [
+        "n. axillaris",
+        "n. radialis",
+        "n. musculocutaneus",
+        "n. medianus",
+        "n. ulnaris"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи дорсальной поверхности средней фаланги указательного пальцаs: Выберите один ответ:",
+      "options": [
+        "n. radialis",
+        "n. musculocutaneus",
+        "n. axillaris",
+        "n. ulnaris",
+        "n. medianus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи дорсальной поверхности плеча: Выберите один ответ:",
+      "options": [
+        "n. radialis",
+        "n. dorsalis scapulae",
+        "n. ulnaris",
+        "n. musculocutaneus",
+        "n. medianus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. abductor pollicis longus: Выберите один ответ:",
+      "options": [
+        "n. medianus",
+        "n. ulnaris",
+        "n. musculocutaneus",
+        "n. radialis",
+        "n. axillaris"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. extensor digiti minimi: Выберите один ответ:",
+      "options": [
+        "n. ulnaris",
+        "n. medianus",
+        "n. axillaris",
+        "n. musculocutaneus",
+        "n. radialis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. interosseus posterior на предплечье: Выберите один ответ:",
+      "options": [
+        "n. musculocutaneus",
+        "n. medianus",
+        "n. axillaris",
+        "n. radialis",
+        "n. ulnaris"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. cutaneous brachii posterior на предплечье: Выберите один ответ:",
+      "options": [
+        "n. medianus",
+        "n. axillaris",
+        "n. musculocutaneus",
+        "n. radialis",
+        "n. ulnaris"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. cutaneous antebrachii posterior на предплечье: Выберите один ответ:",
+      "options": [
+        "n. radialis",
+        "n. medianus",
+        "n. ulnaris",
+        "n. musculocutaneus",
+        "n. axillaris"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. subcostalis: Выберите один ответ:",
+      "options": [
+        "n. axillaris",
+        "n. ulnaris",
+        "nn. intercostales",
+        "n. medianus",
+        "n. musculocutaneus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу, иннервируемую rr. musculares plexus lumbalis: Выберите один ответ:",
+      "options": [
+        "m. obturatorius internus",
+        "m. obliquus internus abdominis",
+        "diaphragma",
+        "m. transversus abdominis",
+        "m. psoas major"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу, иннервируемую rr. musculares plexus lumbalis: Выберите один ответ:",
+      "options": [
+        "m. transversus abdominis",
+        "m. obturatorius externus",
+        "m. quadratus lumborum",
+        "m. obliquus internus abdominis",
+        "mm. subcostales"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи надлобковой области: Выберите один ответ:",
+      "options": [
+        "n. cutaneus femoris lateralis",
+        "n. genitofemoralis",
+        "n. obturatorius",
+        "n. ilioinguinalis",
+        "n. iliohypogastricus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи верхнелатеральной части ягодичной области: Выберите один ответ:",
+      "options": [
+        "n. iliohypogastricus",
+        "n. genitofemoralis",
+        "n. ilioinguinalis",
+        "n. saphenus",
+        "n. obturatorius"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва являются nn. scrotales anteriores / nn. labiales anteriores: Выберите один ответ:",
+      "options": [
+        "n. ilioinguinalis",
+        "n. iliohypogastricus",
+        "n. saphenus",
+        "n. obturatorius",
+        "n. genitofemoralis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи в области hiatus saphenus: Выберите один ответ:",
+      "options": [
+        "r. femoralis n. genitofemoralis",
+        "n. saphenus",
+        "n. ilioinguinalis",
+        "r. inguinalis n. genitofemoralis",
+        "n. obturatorius"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации m. cremaster: Выберите один ответ:",
+      "options": [
+        "n. obturatorius",
+        "r. femoralis n. genitofemoralis",
+        "n. ilioinguinalis",
+        "n. saphenus",
+        "r. inguinalis n. genitofemoralis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник иннервации кожи задненижней части ягодичной области: Выберите один ответ:",
+      "options": [
+        "n. genitofemoralis",
+        "n. cutaneus femoris lateralis",
+        "n. ilioinguinalis",
+        "n. iliohypogastricus",
+        "n. saphenus"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, проходящий в пределах lacuna vasorum: Выберите один ответ:",
+      "options": [
+        "n. genitofemoralis",
+        "n. iliohypogastricus",
+        "n. ischiadicus",
+        "nn. cluneii mediales",
+        "n. ilioinguinalis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, проходящий в пределах foramen suprapiriforme: Выберите один ответ:",
+      "options": [
+        "n. femoralis",
+        "n. gluteus inferior",
+        "n. genitofemoralis",
+        "n. gluteus superior",
+        "n. cutaneus femoris lateralis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий кожу передней поверхности бедра: Выберите один ответ:",
+      "options": [
+        "n. iliohypogastricus",
+        "n. gluteus superior",
+        "n. cutaneus femoris lateralis",
+        "n. saphenus",
+        "n. femoralis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий кожу медиальной поверхности бедра: Выберите один ответ:",
+      "options": [
+        "n. saphenus",
+        "n. femoralis",
+        "n. gluteus superior",
+        "n. iliohypogastricus",
+        "n. obturatorius"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий кожу задней поверхности бедра: Выберите один ответ:",
+      "options": [
+        "n. ischiadicus",
+        "n. obturatorius",
+        "n. iliohypogastricus",
+        "n. femoralis",
+        "n. gluteus superior"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, проходящий через canalis adductorius: Выберите один ответ:",
+      "options": [
+        "n. genitofemoralis",
+        "n. femoralis",
+        "n. ilioinguinalis",
+        "n. saphenus",
+        "n. obturatorius"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва являются rr. cutanei cruris mediales: Выберите один ответ:",
+      "options": [
+        "n. peroneus superficialis",
+        "n. peroneus profundus",
+        "n. tibialis",
+        "n. suralis",
+        "n. saphenus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий кожу переднемедиальной поверхности голени: Выберите один ответ:",
+      "options": [
+        "n. peroneus profundus",
+        "n. saphenus",
+        "n. peroneus superficialis",
+        "n. tibialis",
+        "n. suralis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий кожу переднелатеральной поверхности голени: Выберите один ответ:",
+      "options": [
+        "n. peroneus profundus",
+        "n. tibialis",
+        "n. suralis",
+        "n. peroneus superficialis",
+        "n. saphenus"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва являeтся n. cutaneus surae medialis: Выберите один ответ:",
+      "options": [
+        ". peroneus communis",
+        "n. suralis",
+        "n. saphenus",
+        "n. tibialis",
+        "n. peroneus superficialis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва являeтся n. cutaneus surae lateralis: Выберите один ответ:",
+      "options": [
+        "n. peroneus communis",
+        "n. suralis",
+        "n. peroneus superficialis",
+        "n. saphenus",
+        "n. tibialis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу, которую иннервирует n. gluteus inferior: Выберите один ответ:",
+      "options": [
+        "m. quadratus femoris",
+        "m. gluteus minimus",
+        "m. tensor fascia latae",
+        "m. gluteus medius",
+        "m. gluteus maximus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва являются nn. scrotales posteriores / nn. labiales posteriores: Выберите один ответ:",
+      "options": [
+        "n. pudendus",
+        "n. ilioinguinalis",
+        "n. obturatorius",
+        "rr. dorsales nn. spinales",
+        "n. genitofemoralis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "кажите ветвью какого нерва является n. dorsalis penis (clitoridis): Выберите один ответ:",
+      "options": [
+        "n. obturatorius",
+        "n. genitofemoralis",
+        "rr. dorsales nn. spinales",
+        "n. pudendus",
+        "n. ilioinguinalis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, который иннервируюет m. sphincter ani externus: Выберите один ответ:",
+      "options": [
+        "n. gluteus inferior",
+        "rr. dorsales nn. spinales",
+        "n. ischiadicus",
+        "n. pudendus",
+        "n. obturatorius"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, проходящий по латеральной стенке fossa ischiorectalis: Выберите один ответ:",
+      "options": [
+        "n. gluteus inferior",
+        "n. obturatorius",
+        "n. piriformis",
+        "n. ischiadicus",
+        "n. pudendus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвями какого нерва являются nn. clunei inferiores: Выберите один ответ:",
+      "options": [
+        "n. cutaneus femoris posterior",
+        "n. pudendus",
+        "n. ischiadicus",
+        "rr. dorsales nn. spinales",
+        "n. obturatorius"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвями какого нерва являются nn. clunei inferiores: Выберите один ответ:",
+      "options": [
+        "n. plantaris medialis",
+        "n. suralis",
+        "n. plantaris lateralis",
+        "n. peroneus profundus",
+        "n. peroneus superficialis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий mm. interossei стопы: Выберите один ответ:",
+      "options": [
+        "n. peroneus superficialis",
+        "n. suralis",
+        "n. plantaris lateralis",
+        "n. plantaris medialis",
+        "n. peroneus profundus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий m. quadratus plantaris: Выберите один ответ:",
+      "options": [
+        "n. suralis",
+        "n. plantaris medialis",
+        "n. peroneus profundus",
+        "n. peroneus superficialis",
+        "n. plantaris lateralis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите нерв, иннервирующий m. extensor hallucis brevis: Выберите один ответ:",
+      "options": [
+        "n. peroneus superficialis",
+        "n. plantaris lateralis",
+        "n. peroneus profundus",
+        "n. suralis",
+        "n. plantaris medialis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. сutaneus dorsalis medialis на стопе: Выберите один ответ:",
+      "options": [
+        "n. plantaris lateralis",
+        "n. suralis",
+        "n. peroneus superficialis",
+        "n. peroneus profundus",
+        "n. plantaris medialis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. сutaneus dorsalis intermedius на стопе: Выберите один ответ:",
+      "options": [
+        "n. plantaris lateralis",
+        "n. peroneus superficialis",
+        "n. plantaris medialis",
+        "n. suralis",
+        "n. peroneus profundus"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва являются rr. calcanei lateralis на стопе: Выберите один ответ:",
+      "options": [
+        "n. peroneus profundus",
+        "n. suralis",
+        "n. peroneus superficialis",
+        "n. plantaris medialis",
+        "n. plantaris lateralis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. hallucis lateralis: Выберите один ответ:",
+      "options": [
+        "n. suralis",
+        "n. plantaris medialis",
+        "n. plantaris lateralis",
+        "n. peroneus superficialis",
+        "n. peroneus profundus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите ветвью какого нерва является n. digiti secundi lateralis: Выберите один ответ:",
+      "options": [
+        "n. plantaris lateralis",
+        "n. plantaris medialis",
+        "n. peroneus profundus",
+        "n. suralis",
+        "n. peroneus superficialis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует кожу обращенной друг к другу дорсальной поверхности II и III пальцев: Выберите один ответ:",
+      "options": [
+        "n. сutaneus dorsalis intermedius",
+        "n. сutaneus dorsalis medialis",
+        "n. plantaris lateralis",
+        "n. plantaris medialis",
+        "n. сutaneus dorsalis lateralis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует кожу обращенной друг к другу дорсальной поверхности III и IV пальцев: Выберите один ответ:",
+      "options": [
+        "n. сutaneus dorsalis intermedius",
+        "n. plantaris medialis",
+        "n. сutaneus dorsalis medialis",
+        "n. plantaris lateralis",
+        "n. сutaneus dorsalis lateralis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой нерв иннервирует кожу обращенной друг к другу дорсальной поверхности I и II пальцев: Выберите один ответ:",
+      "options": [
+        "n. сutaneus dorsalis lateralis",
+        "n. сutaneus dorsalis intermedius",
+        "n. сutaneus dorsalis medialis",
+        "n. peroneus profundus",
+        "n. plantaris medialis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите на уровне каких сегментов спинного мозга располагаются nuclei parasympathetici sacrales: Выберите один ответ:",
+      "options": [
+        "LV-SII",
+        "SII-SIV",
+        "SI-SII",
+        "SI-SV",
+        "SIV-SV"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите на уровне каких сегментов спинного мозга располагается substantia intermediolateralis: Выберите один ответ:",
+      "options": [
+        "CVIII-LII",
+        "SI-SVCII-CVIII",
+        "CI-ThII",
+        "SII-SIV",
+        "LII-SIV"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой тип волокон содержат rr. communicantes grisei: Выберите один ответ:",
+      "options": [
+        "постганглионарные симпатические волокна",
+        "преганглионарные парасимпатические волокна",
+        "преганглионарные симпатические волокна",
+        "двигательные соматические волокна",
+        "постганглионарные парасимпатические волокна"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой тип волокон содержат rr. communicantes albae: Выберите один ответ:",
+      "options": [
+        "преганглионарные симпатические волокна",
+        "двигательные соматические волокна",
+        "преганглионарные парасимпатические волокна",
+        "постганглионарные симпатические волокна",
+        "постганглионарные парасимпатические волокна"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования n. petrosus profundus: Выберите один ответ:",
+      "options": [
+        "plexus caroticus externus",
+        "ganglion oticum",
+        "plexus caroticus internus",
+        "ganglion ciliare",
+        "n. jugularis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите в составе какого нерва IX, X и XII пары черепных нервов получают в свой состав симпатическую порцию волокон: Выберите один ответ:",
+      "options": [
+        "n. facialis",
+        "n. jugularis",
+        "rr. communicantes grisei",
+        "n. canalis pterigoidei",
+        "n. splanchnicus major"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования rr. laryngopharyngei для симпатической иннервации гортани: Выберите один ответ:",
+      "options": [
+        "n. jugularis",
+        "ganglion cervicale medium",
+        "ganglion cervicothoracicum",
+        "rr. communicantes grisei",
+        "ganglion cervicale superium"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования n. jugularis: Выберите один ответ:",
+      "options": [
+        "ganglion cervicale medium",
+        "ganglion cervicale superium",
+        "n. vagus",
+        "ganglion cervicothoracicum",
+        "rr. communicantes grisei"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования n. vertebralis: Выберите один ответ:",
+      "options": [
+        "ganglion cervicothoracicum",
+        "ganglion cervicale medium",
+        "n. vagus",
+        "rr. communicantes grisei",
+        "ganglion cervicale superius"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования plexus subclavius: Выберите один ответ:",
+      "options": [
+        "ganglion cervicale medium",
+        "rr. communicantes grisei",
+        "ganglion cervicale superium",
+        "ganglion cervicothoracicum",
+        "n. vagus"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования plexus subclavius: Выберите один ответ:",
+      "options": [
+        "n. vagus",
+        "ganglion cervicale medium",
+        "rr. communicantes grisei",
+        "ganglion cervicothoracicum",
+        "ganglion cervicale superium"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования n. splanchnicus major: Выберите один ответ:",
+      "options": [
+        "ganglia thoracica 5-9",
+        "ganglion cervicothoracicum",
+        "rr. communicantes grisei",
+        "ganglia thoracica 10-12",
+        "n. vagus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования n. splanchnicus minor: Выберите один ответ:",
+      "options": [
+        "ganglia thoracica 5-9",
+        "ganglion thoracicum 12",
+        "rr. communicantes grisei",
+        "n. vagus",
+        "ganglia thoracica 10-11"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник формирования n. splanchnicus imus: Выберите один ответ:",
+      "options": [
+        "rr. communicantes grisei",
+        "ganglia thoracica 5-9",
+        "n. vagus",
+        "ganglion thoracicum 12",
+        "ganglia lumbalia 1-2"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник симпатических волокон для формирования plexus coeliacus: Выберите один ответ:",
+      "options": [
+        "n. vagus",
+        "n. splanchnicus minor",
+        "n. splanchnicus major",
+        "n. splanchnicus imus",
+        "rr. communicantes grisei"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой преимущественный тип волокон содержит n. splanchnicus major: Выберите один ответ:",
+      "options": [
+        "постганглионарные симпатические волокна",
+        "двигательные соматические волокна",
+        "постганглионарные парасимпатические волокна",
+        "преганглионарные симпатические волокна",
+        "преганглионарные парасимпатические волокна"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой тип волокон содержит n. splanchnicus sacralis: Выберите один ответ:",
+      "options": [
+        "преганглионарные симпатические волокна",
+        "постганглионарные симпатические волокна",
+        "двигательные соматические волокна",
+        "преганглионарные парасимпатические волокна",
+        "постганглионарные парасимпатические волокна"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какой тип волокон содержат nn. splanchnici pelvini: Выберите один ответ:",
+      "options": [
+        "двигательные соматические волокна",
+        "постганглионарные парасимпатические волокна",
+        "преганглионарные симпатические волокна",
+        "преганглионарные парасимпатические волокна",
+        "постганглионарные симпатические волокна"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации сигмовидной ободочной кишки: Выберите один ответ:",
+      "options": [
+        "n. splanchnicus imus",
+        "nn. splanchnici pelvini",
+        "n. splanchnicus sacralis",
+        "n. vagus",
+        "plexus hypogastricus inferior"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации прямой кишки: Выберите один ответ:",
+      "options": [
+        "n. splanchnicus imus",
+        "n. pudendus",
+        "n. splanchnicus sacralis",
+        "n. vagus",
+        "nn. splanchnici pelvini"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации бульбоуретральной железы: Выберите один ответ:",
+      "options": [
+        "n. vagus",
+        "n. splanchnicus imus",
+        "n. splanchnicus sacralis",
+        "nn. splanchnici pelvini",
+        "n. pudendus"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации слизистой полости носа: Выберите один ответ:",
+      "options": [
+        "ganglion oticum",
+        "n. petrosus profundus",
+        "ganglion pterygopalatinum",
+        "ganglion trigeminale",
+        "plexus caroticus externus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации слизистой мягкого неба: Выберите один ответ:",
+      "options": [
+        "plexus caroticus externus",
+        "ganglion trigeminale",
+        "rr. ganglionares n. trigemini",
+        "n. petrosus profundus",
+        "ganglion pterygopalatinum"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации glandula vestibuli majoris: Выберите один ответ:",
+      "options": [
+        "n. vagus",
+        "n. splanchnicus imus",
+        "nn. splanchnici pelvini",
+        "n. pudendus",
+        "n. splanchnicus sacralis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации слезной железы: Выберите один ответ:",
+      "options": [
+        "ganglion trigeminale",
+        "ganglion pterygopalatinum",
+        "n. petrosus profundus",
+        "rr. ganglionares n. trigemini",
+        "ganglion ciliare"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите источник парасимпатических волокон для иннервации ресничного тела: Выберите один ответ:",
+      "options": [
+        "ganglion ciliare",
+        "rr. ganglionares n. trigemini",
+        "ganglion trigeminale",
+        "n. petrosus profundus",
+        "ganglion pterygopalatinum"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    }
+  ]
+}
