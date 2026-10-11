@@ -760,7 +760,7 @@
     const totalQ = state.currentTestOriginalQuestions.length;
 
     const defaultCount = Math.min(totalQ, appPreferences.trainingCount);
-    const counts = [...new Set([10, 20, 30, 50, defaultCount].filter(c => c < totalQ))].sort((a, b) => a - b);
+    const counts = [...new Set([10, 20, 30, 50, 100, defaultCount].filter(c => c < totalQ))].sort((a, b) => a - b);
     counts.push(totalQ);
 
     container.innerHTML = '';
