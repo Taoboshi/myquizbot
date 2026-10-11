@@ -191,7 +191,13 @@
           if (data.items && data.items.length > 0) {
             const delSet = new Set(JSON.parse(localStorage.getItem('ohtest_deleted_subjects') || '[]'));
             const unSet = new Set(JSON.parse(localStorage.getItem('ohtest_unassigned_tests') || '[]'));
+            const localOrders = new Map(adminStore.testsMeta.map(test => [test.id, test]));
             data.items.forEach(t => {
+              const local = localOrders.get(t.id);
+              const orderStatus = adminOrderStates.get(t.subject_id);
+              if (local?.subject_id === t.subject_id && ['saving', 'error'].includes(orderStatus)) {
+                t.sort_order = local.sort_order;
+              }
               if (unSet.has(t.id) || delSet.has(t.subject_id)) {
                 t.subject_id = 'default';
                 t.subject_title = 'Не привязан';
@@ -332,6 +338,7 @@
                 <span>Тесты · ${testsInSub.length}</span>
                 <span class="admin-subject-chevron">${renderInterfaceIcon('chevron-right')}</span>
               </summary>
+              <div data-admin-order-status="${escapeHtml(s.id)}" class="text-[11px] text-slate-400" role="status">${renderAdminOrderStatus(s.id)}</div>
               <div data-admin-order-subject="${escapeHtml(s.id)}" class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
                 ${testsListHtml}
               </div>
@@ -1148,53 +1155,82 @@
   }
 
   let adminTestOrderBusy = false;
+  const adminOrderQueue = new Map();
+  const adminOrderStates = new Map();
+
+  function renderAdminOrderStatus(subjectId) {
+    const status = adminOrderStates.get(subjectId);
+    if (status === 'saving') return 'Сохраняем порядок…';
+    if (status === 'error') return `Порядок не сохранён. <button type="button" class="underline text-amber-400" onclick="retryAdminTestOrder(${escapeHtml(JSON.stringify(subjectId))})">Повторить</button>`;
+    return '';
+  }
+
+  function updateAdminOrderStatus(subjectId, status) {
+    adminOrderStates.set(subjectId, status);
+    document.querySelectorAll('[data-admin-order-status]').forEach(element => {
+      if (element.dataset.adminOrderStatus === subjectId) element.innerHTML = renderAdminOrderStatus(subjectId);
+    });
+  }
+
+  function retryAdminTestOrder(subjectId) {
+    const tests = adminStore.testsMeta.filter(test => test.subject_id === subjectId).sort(compareSubjectTestOrder);
+    adminOrderQueue.set(subjectId, tests.map(test => test.id));
+    updateAdminOrderStatus(subjectId, 'saving');
+    void saveAdminTestOrders();
+  }
+
+  async function saveAdminTestOrders() {
+    if (adminTestOrderBusy) return;
+    adminTestOrderBusy = true;
+    try {
+      while (adminOrderQueue.size) {
+        const [subjectId, testIds] = adminOrderQueue.entries().next().value;
+        adminOrderQueue.delete(subjectId);
+        try {
+          const response = await fetch('/api/admin/reorder_tests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subject_id: subjectId, test_ids: testIds })
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success) throw new Error(result.error || 'Не удалось сохранить порядок');
+          if (!adminOrderQueue.has(subjectId)) {
+            updateAdminOrderStatus(subjectId, 'saved');
+            if (!adminOrderQueue.size && ![...adminOrderStates.values()].includes('error')) {
+              try { localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta)); } catch(e) {}
+            }
+          }
+        } catch(error) {
+          if (!adminOrderQueue.has(subjectId)) updateAdminOrderStatus(subjectId, 'error');
+        }
+      }
+    } finally {
+      adminTestOrderBusy = false;
+    }
+  }
 
   async function moveAdminTest(subjectId, testId, direction) {
-    if (adminTestOrderBusy || ![-1, 1].includes(direction)) return;
+    if (![-1, 1].includes(direction)) return;
     const tests = adminStore.testsMeta.filter(test => test.subject_id === subjectId).sort(compareSubjectTestOrder);
     const index = tests.findIndex(test => test.id === testId);
     const target = index + direction;
     if (index < 0 || target < 0 || target >= tests.length) return;
     const list = [...document.querySelectorAll('[data-admin-order-subject]')].find(item => item.dataset.adminOrderSubject === subjectId);
     if (!list) return;
-    adminTestOrderBusy = true;
-    const buttons = list.querySelectorAll('[data-order-direction]');
-    buttons.forEach(button => { button.disabled = true; });
-    const previousTests = [...tests];
-    const previousOrders = tests.map(test => test.sort_order);
     const rows = new Map([...list.querySelectorAll('[data-admin-order-test]')].map(row => [row.dataset.adminOrderTest, row]));
     const applyRows = orderedTests => orderedTests.forEach((test, position) => {
       const row = rows.get(test.id);
       if (!row) return;
       row.querySelector('[data-order-position]').textContent = `Позиция ${position + 1} из ${orderedTests.length}`;
+      row.querySelector('[data-order-direction="-1"]').disabled = position === 0;
+      row.querySelector('[data-order-direction="1"]').disabled = position === orderedTests.length - 1;
       list.appendChild(row);
     });
     [tests[index], tests[target]] = [tests[target], tests[index]];
     tests.forEach((test, position) => { test.sort_order = position; });
     applyRows(tests);
     triggerHaptic('light');
-    try {
-      const response = await fetch('/api/admin/reorder_tests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject_id: subjectId, test_ids: tests.map(test => test.id) })
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || 'Не удалось сохранить порядок');
-      try { localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta)); } catch(e) {}
-      showToast('Порядок сохранён');
-    } catch(error) {
-      previousTests.forEach((test, position) => { test.sort_order = previousOrders[position]; });
-      applyRows(previousTests);
-      showToast(error.message || 'Не удалось сохранить порядок');
-    } finally {
-      adminTestOrderBusy = false;
-      const rows = [...list.querySelectorAll('[data-admin-order-test]')];
-      rows.forEach((row, position) => {
-        row.querySelector('[data-order-direction="-1"]').disabled = position === 0;
-        row.querySelector('[data-order-direction="1"]').disabled = position === rows.length - 1;
-      });
-    }
+    retryAdminTestOrder(subjectId);
   }
 
   async function setTestStudyMode(testId, select) {

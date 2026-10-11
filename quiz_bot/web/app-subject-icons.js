@@ -262,7 +262,7 @@
   window.renderSubjectTitle = title => {
     const text = String(title || '').trim();
     const safe = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-    const match = text.match(/^(.+?)(?:\s*[-–—:|·(]\s*|\s+)(модуль\s*\+\s*экзамен|экзамен\s*\+\s*модуль|модуль|экзамен)\s*\)?$/i);
+    const match = text.match(/^(.+?)(?:\s*[-–—:|·(]\s*|\s+)(модул[ьи]\s*\+\s*экзамен|экзамен\s*\+\s*модул[ьи]|модул[ьи]|экзамен)\s*\)?$/i);
     if (!match) return safe(text);
     return `${safe(match[1].trim())} <span class="subject-study-tag">${safe(match[2].replace(/\s*\+\s*/g, ' + '))}</span>`;
   };
