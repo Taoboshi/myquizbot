@@ -1,0 +1,3540 @@
+{
+  "id": "anatomy_digestive_respiratory",
+  "title": "Спланхнология: пищеварительная и дыхательная системы",
+  "description": "",
+  "subject": {
+    "id": "unassigned",
+    "title": "Не привязан",
+    "order": 100
+  },
+  "study_mode": "test",
+  "questions": [
+    {
+      "question": "Проток околоушной слюнной железы открывается в полость рта: Выберите один ответ:",
+      "options": [
+        "на уровне второго верхнего премоляра",
+        "на уровне второго верхнего моляра",
+        "вдоль подъязычной складки",
+        "на корне языка",
+        "на подъязычном сосочке"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Коронка зуба имеет все поверхности, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "окклюзионной (жевательной)",
+        "контактной",
+        "язычной",
+        "вестибулярной",
+        "нёбной"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Наиболее поздним прорезыванием из постоянных зубов характеризуются: Выберите один ответ:",
+      "options": [
+        "dentes molares",
+        "dentes serotines",
+        "dentes incisivi",
+        "dentes canini",
+        "dentes premolares"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "На поверхности языка присутствуют все сосочки, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "papillae palmatae",
+        "papillae vallatae",
+        "papillae conicae",
+        "papillae filiforme",
+        "papillae foliatae"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К собственным мышцам языка относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. verticalis",
+        "m. longitudinalis inferior",
+        "m. transversus",
+        "m. longitudinalis superior",
+        "m. diagonalis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "К скелетным мышцам языка относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. palatoglossus",
+        "m. genioglossus",
+        "m. hyoglossus",
+        "m. styloglossus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К малым слюнным железам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "glandulae labiales",
+        "glandulae molares",
+        "glandulae linguales",
+        "glandulae sublinguales",
+        "glandulae palatinae"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Проток поднижнечелюстной слюнной железы открывается в полость рта: Выберите один ответ:",
+      "options": [
+        "на уровне второго верхнего премоляра",
+        "вдоль подъязычной складки",
+        "на корне языка",
+        "на уровне второго верхнего моляра",
+        "на подъязычном сосочке"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "К мышцам мягкого неба относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. palatoglossus",
+        "m. transversus velli palatini",
+        "m. levator velli palatini",
+        "m. uvulae",
+        "m. tensor velli palatini"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К мышцам мягкого неба относится: Выберите один ответ:",
+      "options": [
+        "m. longitudinalis superior",
+        "m. transversus velli palatini",
+        "m. verticalis",
+        "m. tensor membrana tympani",
+        "m. palatopharingeus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "К мышцам мягкого неба относится: Выберите один ответ:",
+      "options": [
+        "m. verticalis",
+        "m. palatoglossus",
+        "m. longitudinalis superior",
+        "m. transversus velli palatini",
+        "m. tensor membrana tympani"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Сонная артерия, внутренняя яремная вена и блуждающий нерв располагаются относительно глотки: Выберите один ответ:",
+      "options": [
+        "в spatium previscerale",
+        "в spatium retropharyngeum",
+        "в fornix pharyngis",
+        "в spatium peripharyngeum",
+        "в cavitas infraglottica"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Свод глотки формируется: Выберите один ответ:",
+      "options": [
+        "в spatium previscerale",
+        "на задней стенке глотки",
+        "на стыке латеральной и передней стенки глотки",
+        "на верхней стенке глотки",
+        "в spatium retropharyngeum"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Глоточная миндалина расположена: Выберите один ответ:",
+      "options": [
+        "на латеральной стенке носоглотки",
+        "на верхней стенке носоглотки",
+        "в заглоточном пространстве",
+        "на стыке латеральной и передней стенки носоглотки",
+        "на нижней стенке носоглотки"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Ostium pharyngeum tubae auditivae расположено: Выберите один ответ:",
+      "options": [
+        "на латеральной стенке носоглотки",
+        "на нижней стенке носоглотки",
+        "на задней стенке носоглотки",
+        "на передней стенке носоглотки",
+        "на верхней стенке носоглотки"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Torus tubarius можно обнаружить на: Выберите один ответ:",
+      "options": [
+        "на передней стенке носоглотки",
+        "на задней стенке носоглотки",
+        "на нижней стенке носоглотки",
+        "на верхней стенке носоглотки",
+        "на латеральной стенке носоглотки"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Tonsilla tubaria расположена: Выберите один ответ:",
+      "options": [
+        "на передней стенке носоглотки",
+        "на латеральной стенке носоглотки",
+        "на нижней стенке носоглотки",
+        "на верхней стенке носоглотки",
+        "на задней стенке носоглотки"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Кольцо Пирогова-Вальдейера включает все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "tonsilla lingualis",
+        "tonsilla laryngea",
+        "tonsilla pharyngealis",
+        "tonsilla palatina",
+        "tonsilla tubaria"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К кольцу Пирогова-Вальдейера относится: Выберите один ответ:",
+      "options": [
+        "tonsilla parotidea",
+        "tonsilla gingivalis",
+        "tonsilla laryngea",
+        "tonsilla tubaria",
+        "tonsilla sublingualis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое образование располагается латерально и книзу от черпаловидного хряща в гортанной части глотки: Выберите один ответ:",
+      "options": [
+        "recessus piriformis",
+        "tonsilla laryngea",
+        "epiglotis",
+        "tubae auditivae",
+        "ventriculus laryngis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место начала верхнего констриктора глотки: Выберите один ответ:",
+      "options": [
+        "подъязычная кость",
+        "перстневидный хрящ",
+        "щитовидный хрящ",
+        "шов глотки",
+        "медиальная пластинка крыловидного отростка"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место начала среднего констриктора глотки: Выберите один ответ:",
+      "options": [
+        "медиальная пластинка крыловидного отростка",
+        "шов глотки",
+        "щитовидный хрящ",
+        "перстневидный хрящ",
+        "подъязычная кость"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место начала нижнего констриктора глотки: Выберите один ответ:",
+      "options": [
+        "нижняя челюсть",
+        "шов глотки",
+        "подъязычная кость",
+        "медиальная пластинка крыловидного отростка",
+        "щитовидный хрящ"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место, где соединяются друг с другом все констрикторы глотки: Выберите один ответ:",
+      "options": [
+        "нижняя челюсть",
+        "подъязычная кость",
+        "шов глотки",
+        "щитовидный хрящ",
+        "медиальная пластинка крыловидного отростка"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите продольные (подниматели) мышцы глотки: Выберите один ответ:",
+      "options": [
+        "m. constrictor pharynges superior",
+        "m. constrictor pharynges medius",
+        "m. stylohyoideus",
+        "m. constrictor pharynges inferior",
+        "m. stylopharingeus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие зубы отсутствуют среди dentes decidui: Выберите один ответ:",
+      "options": [
+        "dentes incisivi",
+        "dentes molares на нижней челюсти",
+        "dentes premolares",
+        "dentes molares на верхней челюсти",
+        "dentes canini"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие зубы отсутствуют среди dentes decidui: Выберите один ответ:",
+      "options": [
+        "dentes serotines",
+        "dentes canini",
+        "dentes incisivi",
+        "dentes molares на верхней челюсти",
+        "dentes molares на нижней челюсти"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, в каком отделе средостения располагается грудная часть пищевода: Выберите один ответ:",
+      "options": [
+        "переднее нижнее средостение",
+        "среднее верхнее средостение",
+        "заднее нижнее средостение",
+        "переднее верхнее средостение",
+        "среднее нижнее средостение"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, к чему спереди прилежит брюшная часть пищевода: Выберите один ответ:",
+      "options": [
+        "к поджелудочной железе",
+        "к квадратной доле печени",
+        "к селезенке",
+        "к хвостатой доле печени",
+        "к поперечной ободочной кишке"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К оболочкам глотки относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "серозной оболочки",
+        "слизистой оболочки",
+        "мышечной оболочки",
+        "подслизистой оболочки",
+        "адвентициальной оболочки"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К частям желудка относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "тела",
+        "дна",
+        "кардиальной части",
+        "пилорической части",
+        "верхушки"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Желудок соприкасается со всеми органами, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "поперечной ободочной кишки",
+        "печени",
+        "восходящей ободочной кишки",
+        "селезенки",
+        "диафрагмы"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Желудок соприкасается со всеми органами, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "нисходящей ободочной кишки",
+        "печени",
+        "левой почки",
+        "диафрагмы",
+        "селезенки"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К оболочкам желудка относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "подслизистой оболочки",
+        "мышечной оболочки",
+        "слизистой оболочки",
+        "серозной оболочки",
+        "адвентициальной оболочки"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Слизистая оболочка желудка образует все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "foveolae gаstricae",
+        "vаlvula pylorica",
+        "plicae gаstricae",
+        "area gastricae",
+        "villi gаstricae"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "В двенадцатиперстной кишке выделяют все части, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "pars inferior",
+        "pars superior",
+        "pars horizontalis",
+        "pars descendens",
+        "pars ascendens"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, в какую часть двенадцатиперстной кишки открывается papilla duodeni major: Выберите один ответ:",
+      "options": [
+        "pars descendens",
+        "иногда в pars horizontalis, реже в pars ascendens",
+        "pars superior",
+        "pars ascendens",
+        "pars horizontalis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какая часть двенадцатиперстной кишки пересекает сзади нижнюю полую вену: Выберите один ответ:",
+      "options": [
+        "никакая",
+        "pars ascendens",
+        "pars descendens",
+        "pars horizontalis",
+        "pars superior"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, в какую часть двенадцатиперстной кишки открывается papilla duodeni minor: Выберите один ответ:",
+      "options": [
+        "pars superior",
+        "pars descendens",
+        "pars horizontalis",
+        "pars ascendens",
+        "иногда в pars horizontalis, реже в pars ascendens"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "На слизистой оболочке двенадцатиперстной кишки можно обнаружить все образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "plicae semilunares",
+        "plicae circulares",
+        "plica longitudinalis",
+        "papilla duodeni major",
+        "papilla duodeni minor"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, к какому морфологическому образованию прикрепляется m. suspensorius duodeni: Выберите один ответ:",
+      "options": [
+        "pars descendens duodeni",
+        "pars ascendens duodeni",
+        "flexura duodenojejunalis",
+        "pars horizontalis duodeni",
+        "pars superior duodeni"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, для какой части кишечной трубки характерно наличие множественных noduli lymphatici aggregati: Выберите один ответ:",
+      "options": [
+        "ileum",
+        "esophagus",
+        "jejunum",
+        "duodenum",
+        "gaster"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Appendices epiploicae - это: Выберите один ответ:",
+      "options": [
+        "вырост на подвздошной кишке, синоним дивертикула Меркеля",
+        "синоним червеобразного отростка",
+        "производные плевры",
+        "выпячивания брюшины на толстой кишке, содержащие жировую ткань",
+        "скопление жировой клетчатки на задней стенке живота"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает слепая кишка: Выберите один ответ:",
+      "options": [
+        "мезоперитонеальное",
+        "интраперитонеальное, имеет собственную брыжейку",
+        "не имеет контакта с брюшиной",
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "ретроперитонеальное"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место схождения всех лент ободочной кишки: Выберите один ответ:",
+      "options": [
+        "передняя поверхность colon transversum",
+        "латеральная поверхность colon sigmoideum",
+        "медиальная поверхность colon ascendens",
+        "заднемедиальная поверхность caecum",
+        "ileum"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, отдел кишечной трубки, который располагается между flexura coli sinistra et dextra: Выберите один ответ:",
+      "options": [
+        "caecum",
+        "colon transversum",
+        "colon descendens",
+        "colon sigmoideum",
+        "colon ascendens"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает поперечная ободочная кишка: Выберите один ответ:",
+      "options": [
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "интраперитонеальное, имеет собственную брыжейку",
+        "ретроперитонеальное",
+        "не имеет контакта с брюшиной",
+        "мезоперитонеальное"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает восходящая ободочная кишка: Выберите один ответ:",
+      "options": [
+        "ретроперитонеальное",
+        "мезоперитонеальное",
+        "интраперитонеальное, имеет собственную брыжейку",
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "не имеет контакта с брюшиной"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает нисходящая ободочная кишка: Выберите один ответ:",
+      "options": [
+        "ретроперитонеальное",
+        "не имеет контакта с брюшиной",
+        "мезоперитонеальное",
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "интраперитонеальное, имеет собственную брыжейку"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает сигмовидная ободочная кишка: Выберите один ответ:",
+      "options": [
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "интраперитонеальное, имеет собственную брыжейку",
+        "ретроперитонеальное",
+        "не имеет контакта с брюшиной",
+        "мезоперитонеальное"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает сигмовидная кишка: Выберите один ответ:",
+      "options": [
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "не имеет контакта с брюшиной",
+        "мезоперитонеальное",
+        "интраперитонеальное, имеет собственную брыжейку",
+        "ретроперитонеальное"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомические образования, которые располагаются спереди от прямой кишки у мужчин: Выберите один ответ:",
+      "options": [
+        "крестец и копчик",
+        "мочевой пузырь, предстательная железа",
+        "матка и влагалище",
+        "промежность",
+        "подвздошно-крестцовое сочленение"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомические образования, которые располагаются спереди от прямой кишки у женщин: Выберите один ответ:",
+      "options": [
+        "промежность",
+        "подвздошно-крестцовое сочленение",
+        "мочевой пузырь, предстательная железа",
+        "матка и влагалище",
+        "крестец и копчик"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, наличие какого морфологического образования НЕ характерно для прямой кишки: Выберите один ответ:",
+      "options": [
+        "ampulla recti",
+        "flexura sacralis",
+        "canalis analis",
+        "flexura perinealis",
+        "taniae colli"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, наличие какого морфологического образования НЕ характерно для слизистой оболочки прямой кишки: Выберите один ответ:",
+      "options": [
+        "villi anales",
+        "valvulae anales",
+        "sinus anales",
+        "columnae anales",
+        "plicae transversae"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К связкам печени относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lig. falciforme hepatis",
+        "lig. triangulare superior",
+        "lig. teres hepatis",
+        "lig. triangulare sinistrum",
+        "lig. triangulare dextrum"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К связкам печени относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lig. teres hepatis",
+        "lig. falciforme hepatis",
+        "lig. аrteriosum",
+        "lig. triangulare dextrum",
+        "lig. venosum"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К связкам печени относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lig. triangulare dextrum",
+        "lig. coronarium",
+        "lig. teres hepatis",
+        "lig. suspensorium hepatis",
+        "lig. falciforme hepatis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какая связка печени является заросшей пупочной веной: Выберите один ответ:",
+      "options": [
+        "lig. teres hepatis",
+        "lig. triangulare dextrum",
+        "lig. falciforme hepatis",
+        "lig. coronarium",
+        "lig. venosum"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какая связка печени является заросшим венозным протоком: Выберите один ответ:",
+      "options": [
+        "lig. teres hepatis",
+        "lig. coronarium",
+        "lig. venosum",
+        "lig. triangulare dextrum",
+        "lig. falciforme hepatis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К долям печени относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lobus caudatus",
+        "lobus hepatis sinister",
+        "lobus quadratus",
+        "lobus papillaris",
+        "lobus hepatis dexter"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "В воротах печени можно обнаружить все образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "v. centralis",
+        "ductus hepaticus communis",
+        "v. portae",
+        "лимфтические сосуды",
+        "a. hepatica"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какая складку формирует слизистая оболочка в шейке желчного пузыря: Выберите один ответ:",
+      "options": [
+        "plica longitudinalis",
+        "plica fimbriate",
+        "plica spiralis",
+        "plica diagonalis",
+        "plicae circulares"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на каком уровне располагается поджелудочная железа: Выберите один ответ:",
+      "options": [
+        "на уровне II-III поясничного позвонка",
+        "на уровне III-IV поясничного позвонка",
+        "на уровне XI-XII грудного позвонка",
+        "на уровне I-II поясничного позвонка",
+        "на уровне XII грудного - I поясничного позвонка"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение к брюшине занимает поджелудочная железа: Выберите один ответ:",
+      "options": [
+        "интраперитонеальное, не имеет собственной брыжейки",
+        "ретроперитонеальное",
+        "интраперитонеальное, имеет собственную брыжейку",
+        "мезоперитонеальное",
+        "головка интраперитонеальное, тело и хвост - мезоперитонеальное"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое образование располагается на передней поверхности тела поджелудочной железы: Выберите один ответ:",
+      "options": [
+        "papilla duodeni major",
+        "papilla duodeni minor",
+        "tuberculum gastricum",
+        "processus uncinatus",
+        "tuber omentale"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какую функцию выполняют островки Лангерганса поджелудочной железы: Выберите один ответ:",
+      "options": [
+        "образование пепсиногена и гастрина",
+        "образование химозина и инулина",
+        "образование липазы",
+        "образование трипсиногена и амилазы",
+        "образование инсулина и глюкагона"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие образования прилежат к задней поверхности тела поджелудочной железы: Выберите один ответ:",
+      "options": [
+        "аорта, нижняя полая вена, чревное сплетение",
+        "верхняя, нисходящая и горизонтальная части двенадцатиперстной кишки",
+        "хвостатая доля печени",
+        "правая почка и надпочечник",
+        "ворота селезенки"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, анатомическое образование, которое располагается между внутрибрюшинной фасцией и брюшиной на задней брюшной стенке: Выберите один ответ:",
+      "options": [
+        "spatium previscerale",
+        "recessus omentalis superior",
+        "peritoneum viscerale",
+        "cavitas peritonei",
+        "spatium retroperitoneale"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите верное определение: « Полость брюшины - это ...: Выберите один ответ:",
+      "options": [
+        "пространство между mesocolon transversum et mesocolon sigmoidei",
+        "пространство между peritoneum parietale diaphragmatis et mesocolon transversum",
+        "это синоним cavitas pelvina",
+        "пространство между peritoneum parietale et viscerale",
+        "это синоним cavitas abdominale"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К забрюшинным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "печени",
+        "почек",
+        "горизонтальной части двенадцатиперстной кишки",
+        "влагалища",
+        "надпочечников"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К забрюшинным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "влагалища",
+        "надпочечников",
+        "желудока",
+        "нисходящей части двенадцатиперстной кишки",
+        "нижней трети прямой кишки"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К мезоперитонеальным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "нисходящей ободочной кишки",
+        "восходящей ободочной кишки",
+        "средней трети прямой кишки",
+        "наполненного мочевого пузыря",
+        "надпочечников"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "К мезоперитонеальным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "восходящей ободочной кишки",
+        "поперечной ободочной кишки",
+        "матки",
+        "нисходящей ободочной кишки",
+        "средней трети прямой кишки"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К интраперитонеальным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "сигмовидной ободочной кишки",
+        "поперечной ободочной кишки",
+        "верхней трети прямой кишки",
+        "восходящей ободочной кишки",
+        "желудка"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К интраперитонеальным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "сигмовидной ободочной кишки",
+        "подвздошной кишки",
+        "червеобразного отростка",
+        "надпочечников",
+        "желудка"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К интраперитонеальным органам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "червеобразного отростка",
+        "селезенки",
+        "мочевого пузыря",
+        "верхней трети прямой кишки",
+        "сигмовидной ободочной кишки"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К интраперитонеальным органам, имеющим брыжейку, относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "сигмовидной ободочной кишки",
+        "поперечной ободочной кишки",
+        "слепой кишки",
+        "тощей кишки",
+        "червеобразного отростка"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К интраперитонеальным органам, имеющим брыжейку, относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "тощей кишки",
+        "двенадцатиперстной кишки",
+        "сигмовидной ободочной кишки",
+        "червеобразного отростка",
+        "подвздошной кишки"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К интраперитонеальным органам, имеющим брыжейку, относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "поперечной ободочной кишки",
+        "прямой кишки",
+        "тощей кишки",
+        "подвздошной кишки",
+        "червеобразного отростка"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Брюшина на внутренней поверхности передней стенки живота образует все складки, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "plica umbilicalis centralis",
+        "plica umbilicalis lateralis sinistra",
+        "plica umbilicalis medialis dextra",
+        "plica umbilicalis mediana",
+        "plica umbilicalis lateralis dextra"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Брюшина на внутренней поверхности передней стенки живота образует все образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "fossa hypogastrica medialis",
+        "plica umbilicalis medialis",
+        "plica umbilicalis mediana",
+        "fossa inguinalis medialis",
+        "fossa supravesicalis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Брюшина на внутренней поверхности передней стенки живота образует все образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "fossa femoralis",
+        "fossa inguinalis medialis",
+        "fossa inguinalis lateralis",
+        "plica umbilicalis medialis",
+        "fossa supravesicalis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите проекцию корня брыжейки тонкой кишки: Выберите один ответ:",
+      "options": [
+        "горизонтально на уровне II поясничного позвонка",
+        "справа от тела II поясничного позвонка до левого крестцово-подвздошного сустава",
+        "вдоль позвоночного столба от I поясничного позвонка до основания крестца",
+        "слева от тела II поясничного позвонка до правого крестцово-подвздошного сустава",
+        "горизонтально на уровне III поясничного позвонка"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите связки, участвующие в образовании omentum minus: Выберите один ответ:",
+      "options": [
+        "ligg. triangularia dextrum et sinistrum",
+        "lig. gastrocolicum",
+        "lig. coronarium et ligg. triangularia dextrum et sinistrum",
+        "lig. falciforme hepatis",
+        "lig. hepatoduodenale et hepatogastricum"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, сколько листков брюшины участвует в образовании большого сальника: Выберите один ответ:",
+      "options": [
+        "6",
+        "4",
+        "5",
+        "3",
+        "2"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "В верхнем этаже брюшинной полости расположены все органы, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "селезенки",
+        "тощей кишки",
+        "печени",
+        "желудка",
+        "желчного пузыря"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют заднюю стенку преджелудочной сумки: Выберите один ответ:",
+      "options": [
+        "paries anterior gastrici et omentum minus",
+        "селезенка",
+        "peritoneum parietale",
+        "colon transversum et mesocolon transversum",
+        "hepar et vesica fellea"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют нижнюю стенку сальниковой сумки: Выберите один ответ:",
+      "options": [
+        "lien",
+        "peritoneum parietale",
+        "colon transversum et mesocolon transversum",
+        "paries anterior gastrici et omentum minus",
+        "hepar et vesica fellea"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют медиальную стенку преджелудочной сумки: Выберите один ответ:",
+      "options": [
+        "colon transversum et mesocolon transversum",
+        "lig. falciforme hepatis",
+        "facies visceralis hepatis et vesica fellea",
+        "peritoneum parietale",
+        "paries anterior gastrici et omentum minus"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют верхнюю стенку преджелудочной сумки: Выберите один ответ:",
+      "options": [
+        "diaphragmа",
+        "lig. falciforme hepatis",
+        "facies visceralis hepatis et vesica fellea",
+        "peritoneum parietale",
+        "paries anterior gastrici et omentum minus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют переднюю стенку сальниковой сумки: Выберите один ответ:",
+      "options": [
+        "paries posterior gastrici et omentum minus",
+        "peritoneum parietale",
+        "lobus caudatus hepatis",
+        "lien",
+        "colon transversum et mesocolon transversum"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют верхнюю стенку сальниковой сумки: Выберите один ответ:",
+      "options": [
+        "lien",
+        "paries posterior gastrici et omentum minus",
+        "peritoneum parietale",
+        "lobus caudatus hepatis",
+        "colon transversum et mesocolon transversum"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют заднюю стенку сальниковой сумки: Выберите один ответ:",
+      "options": [
+        "colon transversum et mesocolon transversum",
+        "paries posterior gastrici et omentum minus",
+        "lien",
+        "lobus caudatus hepatis",
+        "peritoneum parietale"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют медиальную стенку печеночной сумки: Выберите один ответ:",
+      "options": [
+        "lig. falciforme hepatis",
+        "facies visceralis hepatis et vesica fellea",
+        "diaphragm",
+        "paries anterior gastrici et omentum minus",
+        "peritoneum parietale"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования образуют латеральную стенку печеночной сумки: Выберите один ответ:",
+      "options": [
+        "paries anterior gastrici et omentum minus",
+        "diaphragmа",
+        "lig. falciforme hepatis",
+        "peritoneum parietale",
+        "facies visceralis hepatis et vesica fellea"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, каким анатомическим образованием образована верхняя граница foramen epiploicum (- сальникового отверстия): Выберите один ответ:",
+      "options": [
+        "lobus quadratus hepatis",
+        "pars superior duodeni",
+        "lig. hepatoduodenale",
+        "lobus cudatus hepatis",
+        "peritoneum parietale"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, каким анатомическим образованием образована передняя граница foramen epiploicum: Выберите один ответ:",
+      "options": [
+        "lobus cudatus hepatis",
+        "lig. hepatoduodenale",
+        "lobus quadratus hepatis",
+        "peritoneum parietale",
+        "pars superior duodeni"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположен средний этаж брюшинной полости: Выберите один ответ:",
+      "options": [
+        "diaphragmа et radix mesenterii",
+        "diaphragmа et mesocolon transversum",
+        "radix mesenterii et perineum",
+        "mesocolon transversum et linea terminalis pelvis",
+        "linea terminalis pelvis et perineum"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположен верхний этаж брюшинной полости: Выберите один ответ:",
+      "options": [
+        "radix mesenterii et perineum",
+        "linea terminalis pelvis et perineum",
+        "diaphragmа et radix mesenterii",
+        "diaphragmа et mesocolon transversum",
+        "mesocolon transversum et linea terminalis pelvis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологические образование, которое располагается по бокам от трахеи: Выберите один ответ:",
+      "options": [
+        "glandula thyroidea",
+        "bronchi principales",
+        "сосудисто-нервный пучок",
+        "esophagus",
+        "larynx"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничен сзади вход в гортань: Выберите один ответ:",
+      "options": [
+        "plicae vocales",
+        "cartilago arytenoidea",
+        "epiglottis",
+        "plicae vestibulares",
+        "plicae aryepiglotticae"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу гортани, расширяющую голосовую щель: Выберите один ответ:",
+      "options": [
+        "m. arytenoideus obliquus",
+        "m. arytenoideus transversus",
+        "m. thyroarytenoideus",
+        "m. cricoarytenoideus lateralis",
+        "m. cricoarytenoideus posterior"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологические образование, которое располагается впереди трахеи: Выберите один ответ:",
+      "options": [
+        "glandula thyroidea",
+        "larynx",
+        "bronchi principales",
+        "pharynx",
+        "esophagus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите отдел дыхательных путей, в стенках которого имеются хрящевые полукольца: Выберите один ответ:",
+      "options": [
+        "трахея",
+        "альвеолярные ходы",
+        "концевые бронхиолы",
+        "сегментарные бронхи",
+        "гортань"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое углубление характерно для нижнего этажа брюшинной полости в мужском тазе: Выберите один ответ:",
+      "options": [
+        "recessus intersigmoidei",
+        "recessus ileocaecalis inferior",
+        "recessus ileocaecalis superior",
+        "excavatio rectovesicalis",
+        "recessus retrocaecalis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К органам нижнего средостения относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "плечеголовного ствола",
+        "главных бронхов",
+        "нижней полой вены",
+        "легочных вен",
+        "грудной части нисходящей аорты"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Надгортанник закрывает вход в гортань при: Выберите один ответ:",
+      "options": [
+        "чихании",
+        "кашле",
+        "вдохе",
+        "глотании",
+        "выдохе"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, которое располагается позади гортани: Выберите один ответ:",
+      "options": [
+        "поверхностная и предтрахеальная пластинка шейной фасции",
+        "щитовидная железа",
+        "гортанная часть глотки",
+        "сосудисто-нервный пучок",
+        "трахея"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу гортани, напрягающую голосовые связки: Выберите один ответ:",
+      "options": [
+        "m. thyroarytenoideus",
+        "m. cricoarytenoideus lateralis",
+        "m. arytenoideus posterior",
+        "m. arytenoideus obliquus",
+        "m. vocalis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, посредством каких анатомических образований соединяются хрящи трахеи между собой: Выберите один ответ:",
+      "options": [
+        "carinae trachea",
+        "ligg. anularia",
+        "ligg. suspensoria",
+        "ligg. circularia",
+        "ligg. intertrachealia"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "В строении перстневидного хряща присутствуют все анатомические образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "facies articularis arytenoidea",
+        "facies articularis thyroidea",
+        "arcus cartilaginis cricoidea",
+        "basis cartilaginis cricoidea",
+        "lamina cartilaginis cricoidea"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, образуемое верхним краем conus elasticus: Выберите один ответ:",
+      "options": [
+        "epiglottis",
+        "lig. vestibulare",
+        "cartilago arytenoidea",
+        "lig. vocale",
+        "plicae aryepiglottica"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите верное определение: «Сavitas pleuralis - это...»: Выберите один ответ:",
+      "options": [
+        "это синоним cavitas thoracicus",
+        "пространство между peritoneum parietale et viscerale",
+        "пространство между area interpleuralis superior et inferior",
+        "пространство между pleura parietale et viscerale",
+        "пространство между pleura mediastinalis dextra et sinistra"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположена правая околоободочная борозда: Выберите один ответ:",
+      "options": [
+        "linea terminalis pelvis et perineum",
+        "radix mesenterii et colon descendens",
+        "colon ascendens и латеральной стенкой брюшной полости",
+        "colon descendens и латеральной стенкой брюшной полости",
+        "colon ascendens et radix mesenterii"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие бронхи располагаются на границе между бронхиальным и альвеолярным деревом: Выберите один ответ:",
+      "options": [
+        "bronchi lobulares",
+        "bronchi terminales",
+        "bronchi respiratorii",
+        "bronchi lobares",
+        "bronchi segmentales"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какому уровню соответствует скелетотопия гортани: Выберите один ответ:",
+      "options": [
+        "от III шейного до V шейного позвонка",
+        "от V шейного до I грудного позвонка",
+        "от VI шейного до II грудного позвонка",
+        "от IV шейного до VI-VII шейного позвонка",
+        "от II шейного до V шейного позвонка"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, сколько листков брюшины участвует в образовании малого сальника: Выберите один ответ:",
+      "options": [
+        "6",
+        "2",
+        "5",
+        "3",
+        "4"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу гортани, осуществляющую движение в articulatio crycothyroidea: Выберите один ответ:",
+      "options": [
+        "m. cricothyroideus",
+        "m. thyroarytenoideus",
+        "m. arytenoideus transversus",
+        "m. cricoarytenoideus lateralis",
+        "m. arytenoideus obliquus"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу гортани, напрягающую голосовые связки: Выберите один ответ:",
+      "options": [
+        "m. arytenoideus transversus",
+        "m. thyroarytenoideus",
+        "m. cricothyroideus",
+        "m. cricoarytenoideus lateralis",
+        "m. cricoarytenoideus posterior"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Внутренний слой мышечной оболочки какого органа представлен косыми мышечными волокнами? Выберите один ответ:",
+      "options": [
+        "тонкой кишки",
+        "пищевода",
+        "матки",
+        "трахеи",
+        "желудка"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите границу между передним и задним средостением в клинической классификации: Выберите один ответ:",
+      "options": [
+        "пространство кпереди от перикарда",
+        "пространство кзади от перикарда",
+        "линия между углом грудины до тела VI грудного позвонка",
+        "линия между углом грудины до хряща между IV и V грудными позвонками",
+        "фронтальная плоскость, проведенная через корни легких и трахею"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничена rima vestibuli гортани: Выберите один ответ:",
+      "options": [
+        "plicae vestibulares",
+        "plicae aryepiglotticae",
+        "cartilago cricoidea",
+        "plicae vocales",
+        "epiglottis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничена rima glottidis гортани: Выберите один ответ:",
+      "options": [
+        "plicae aryepiglotticae",
+        "epiglottis",
+        "plicae vocales",
+        "plicae vestibulares",
+        "cartilago cricoidea"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологические образование, которое располагается впереди трахеи: Выберите один ответ:",
+      "options": [
+        "pharynx",
+        "bronchi principales",
+        "esophagus",
+        "thymus",
+        "larynx"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "В каком отделе кишечника встречается дивертикул Меккеля: Выберите один ответ:",
+      "options": [
+        "двенадцатиперстной кишке",
+        "поперечной ободочной кишке",
+        "подвздошной кишке",
+        "прямой кишке",
+        "сигмовидной кишке"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К синдесмозам гортани относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lig. hyoepiglotticum",
+        "lig. cricotracheale",
+        "lig. vocale",
+        "lig. thyroepiglotticum",
+        "membrana thyrohyoidea"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, в какой части гортани залегает membrana quadrangularis: Выберите один ответ:",
+      "options": [
+        "vestibulum laryngis",
+        "во всей полости cavitas laryngis",
+        "cavitas infraglottica",
+        "ventriculus laryngis",
+        "отсутствует в гортани"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу гортани, продолжающуюся в m. aryepiglotticus: Выберите один ответ:",
+      "options": [
+        "m. arytenoideus obliquus",
+        "m. cricothyroideus",
+        "m. arytenoideus transversus",
+        "m. thyroarytenoideus",
+        "m. cricoarytenoideus lateralis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое из соединений между хрящами гортани относится к диартрозам: Выберите один ответ:",
+      "options": [
+        "membrana thyrohyoidea",
+        "lig. cricothyroideum",
+        "lig. thyroepiglotticum",
+        "lig. cricotracheale",
+        "articulatio cricoarytenoidea"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "В строении щитовидного хряща присутствуют все анатомические образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "linea obliqua",
+        "arcus cartilaginis thyroidea",
+        "lamina dextra et sinistra",
+        "incisura thyroidea superior",
+        "cornu inferius"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите порядок расположения анатомических образований ворот правого легкого сверху вниз: Выберите один ответ:",
+      "options": [
+        "легочная артерия, главный бронх, легочные вены",
+        "легочная артерия, легочные вены, главный бронх",
+        "главный бронх, легочная артерия, легочные вены",
+        "легочные вены, легочная артерия, главный бронх",
+        "главный бронх, легочные вены, легочная артерия"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите орган, в строении которого принимает участие поперечнополосатая (исчерченная) мышечная ткань: Выберите один ответ:",
+      "options": [
+        "гортань",
+        "мочевой пузырь",
+        "двенадцатиперстная кишка",
+        "печень",
+        "матка"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, связку брюшины, участвующую в образовании малого сальника: Выберите один ответ:",
+      "options": [
+        "венечная связка печени",
+        "двенадцатиперстно-почечная",
+        "печеночно-желудочная",
+        "желудочно-ободочная",
+        "печеночно-почечная"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничен спереди вход в гортань: Выберите один ответ:",
+      "options": [
+        "plicae vestibulares",
+        "epiglottis",
+        "plicae aryepiglotticae",
+        "cartilago arytenoidea",
+        "plicae vocales"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничено преддверие гортани спереди: Выберите один ответ:",
+      "options": [
+        "cartilago cricoidea",
+        "plicae aryepiglotticae",
+        "plicae vocales",
+        "plicae vestibulares",
+        "epiglottis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "К синдесмозам гортани относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lig. cricothyroideum",
+        "membrana thyrohyoidea",
+        "articulatio cricothyroidea",
+        "lig. thyrohyoidea medianum",
+        "lig. hyoepiglotticum"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничен по бокам вход в гортань: Выберите один ответ:",
+      "options": [
+        "plicae vocales",
+        "epiglottis",
+        "plicae vestibulares",
+        "plicae aryepiglotticae",
+        "cartilago arytenoidea"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на уровне какого порядка ветвления в стенке бронхов исчезают хрящевые элементы: Выберите один ответ:",
+      "options": [
+        "bronchi lobulares",
+        "bronchi principales",
+        "bronchi segmentales",
+        "bronchi lobares",
+        "bronchi terminales"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите порядок расположения анатомических образований ворот левого легкого сверху вниз: Выберите один ответ:",
+      "options": [
+        "легочная артерия, главный бронх, легочные вены",
+        "главный бронх, легочная артерия, легочные вены",
+        "главный бронх, легочные вены, легочная артерия",
+        "легочная артерия, легочные вены, главный бронх",
+        "легочные вены, легочная артерия, главный бронх"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К мышцам, суживающим голосовую щель относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. arytenoideus obliquus",
+        "m. cricoarytenoideus posterior",
+        "m. arytenoideus transversus",
+        "m. thyroarytenoideus",
+        "m. cricoarytenoideus lateralis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположен sinus mesentericus sinister: Выберите один ответ:",
+      "options": [
+        "radix mesenterii, colon ascendens et transversum",
+        "radix mesenterii, colon sigmoideum et descendens",
+        "linea terminalis pelvis et perineum",
+        "colon descendens и латеральной стенкой брюшной полости",
+        "colon ascendens и латеральной стенкой брюшной полости"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К хрящам наружного носа относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "cartilago septi nasi",
+        "cartilago alaris minor",
+        "cartilago alaris major",
+        "cartilago nasi lateralis",
+        "cartilago nasi medialis"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место расположения язычной миндалины: Выберите один ответ:",
+      "options": [
+        "край языка",
+        "нижняя поверхность языка",
+        "корень языка",
+        "спинка языка",
+        "верхушка языка"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположен sinus mesentericus dexter: Выберите один ответ:",
+      "options": [
+        "colon descendens и латеральной стенкой брюшной полости",
+        "linea terminalis pelvis et perineum",
+        "colon ascendens и латеральной стенкой брюшной полости",
+        "radix mesenterii, colon ascendens et transversum",
+        "radix mesenterii, colon sigmoideum et descendens"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К органам верхнего средостения относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "верхней части верхней полой вены",
+        "правой и левой плечеголовных вен",
+        "дуги аорты",
+        "тимуса",
+        "нижней полой вены"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу гортани, при сокращении которой голосовая щель расширяется: Выберите один ответ:",
+      "options": [
+        "косая черпаловидная",
+        "перстнещитовидная",
+        "поперечная черпаловидная",
+        "голосовая",
+        "задняя перстнечерпаловидная мышца"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место перехода париетальной плевры в висцеральную: Выберите один ответ:",
+      "options": [
+        "верхушка легкого",
+        "косая щель",
+        "корень легкого",
+        "сегмент легкого",
+        "основание легкого"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите количество молочных зубов: Выберите один ответ:",
+      "options": [
+        "20",
+        "24",
+        "36",
+        "32",
+        "22"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "К желчевыводящим путям относятся все перечисленные образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "общего желчного протока",
+        "венозного протока",
+        "правого печеночного протока",
+        "левого печеночного протока",
+        "пузырного протока"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "К хрящам гортани относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "cartilagо cuneiformis",
+        "cartilagо impar",
+        "cartilagо thyroidea",
+        "cartilagо corniculata",
+        "cartilagо arytenoidea"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Общий желчный проток открывается вместе с протоком поджелудочной железы отверстием в: Выберите один ответ:",
+      "options": [
+        "верхнюю часть двенадцатиперстной кишки",
+        "восходящую часть двенадцатиперстной кишки",
+        "тощую кишку",
+        "пилорическую часть желудка",
+        "нисходящую часть двенадцатиперстной кишки"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположен нижний этаж брюшинной полости: Выберите один ответ:",
+      "options": [
+        "diaphragmа et radix mesenterii",
+        "mesocolon transversum et linea terminalis pelvis",
+        "linea terminalis pelvis et perineum",
+        "radix mesenterii et perineum",
+        "diaphragmа et mesocolon transversum"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите структуры, при делении которых образуются дыхательные бронхиолы: Выберите один ответ:",
+      "options": [
+        "долевые бронхи",
+        "дольковые бронхи",
+        "концевые бронхиолы",
+        "сегментарные бронхи",
+        "главные бронхи"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К носовым ходам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "meatus nasalis superior",
+        "meatus nasalis suprema",
+        "meatus nasalis media",
+        "meatus nasalis anterior",
+        "meatus nasalis inferior"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, в какой части гортани залегает conus elasticus: Выберите один ответ:",
+      "options": [
+        "отсутствует в гортани",
+        "во всей полости cavitas laryngis",
+        "vestibulum laryngis",
+        "ventriculus laryngis",
+        "cavitas infraglottica"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какой тип эпителия образует слизистую полости носа: Выберите один ответ:",
+      "options": [
+        "кубический эпителий",
+        "переходный эпителий",
+        "многослойный плоский ороговевающий эпителий",
+        "многослойный плоский неороговевающий эпителий",
+        "мерцательный эпителий"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "В строении черпаловидного хряща присутствуют все анатомические образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "basis cartilaginis arytenoidea",
+        "processus muscularis",
+        "facies articularis thyroidea",
+        "apex cartilaginis arytenoidea",
+        "processus vocalis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите верное определение: «Средостение - это ...» Выберите один ответ:",
+      "options": [
+        "комплекс всех органов грудной полости",
+        "комплекс органов между правой и левой плевральной полостями",
+        "комплекс органов грудной полости выше уровня IV грудного позвонка",
+        "пространство между pleura parietale et viscerale",
+        "комплекс органов грудной полости, относящихся к дыхательной системе"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие анатомические образования открываются в альвеолярные мешочки: Выберите один ответ:",
+      "options": [
+        "bronchi segmentales",
+        "bronchi respiratorii",
+        "bronchi lobulares",
+        "bronchi terminales",
+        "ductuli alveolares"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологические образование, которое располагается позади трахеи: Выберите один ответ:",
+      "options": [
+        "glandula thyroidea",
+        "bronchi principales",
+        "esophagus",
+        "larynx",
+        "pharynx"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Radix pulmonis образуют все перечисленные морфологические образования, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "a. pulmonalis",
+        "v. pulmonalis",
+        "n. phrenicus",
+        "vasa lymphatica",
+        "bronchus principalis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Серозная оболочка лёгкого называется: Выберите один ответ:",
+      "options": [
+        "плеврой",
+        "эпикардом",
+        "брюшиной",
+        "перикардом",
+        "адвентицией"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какой из плевральных синусов является наиболее глубоким: Выберите один ответ:",
+      "options": [
+        "все синусы одинаково глубокие",
+        "recessus costodiaphragmaticus",
+        "recessus phrenicocostalis",
+        "recessus costomediastinalis",
+        "recessus phrenicomediastinalis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими образованиями расположена левая околоободочная борозда: Выберите один ответ:",
+      "options": [
+        "linea terminalis pelvis et perineum",
+        "radix mesenterii et colon descendens",
+        "colon ascendens et radix mesenterii",
+        "colon descendens и латеральной стенкой брюшной полости",
+        "colon ascendens и латеральной стенкой брюшной полости"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К верхним дыхательным путям относятся все органы, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "laryngopharynx",
+        "cavitas nasi",
+        "oropharynx",
+        "meatus nasales",
+        "nasopharynx"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите часть дыхательной системы, которая входят в состав нижних дыхательных путей Выберите один ответ:",
+      "options": [
+        "нижний носовой ход",
+        "носовая часть глотки",
+        "ротовая часть глотки",
+        "трахея",
+        "полость носа"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое углубление характерно для нижнего этажа брюшинной полости в женском тазу: Выберите один ответ:",
+      "options": [
+        "recessus intersigmoidei",
+        "recessus ileocaecalis superior",
+        "excavatio rectouterina",
+        "recessus retrocaecalis",
+        "recessus duodenalis inferior"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К синдесмозам гортани относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "lig. cricoarytenoideum",
+        "membrana thyrohyoidea",
+        "lig. hyoepiglotticum",
+        "ligg. thyrohyoidea lateralia",
+        "lig. thyrohyoidea medianum"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, которое располагается спереди гортани: Выберите один ответ:",
+      "options": [
+        "трахея",
+        "гортанная часть глотки",
+        "подъязычная кость",
+        "сосудисто-нервный пучок",
+        "щитовидная железа"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Какие анатомические образования формируют границу между преддверьем и собственно полостью рта? Выберите один ответ:",
+      "options": [
+        "губы",
+        "щёки",
+        "твёрдое небо",
+        "диафрагма рта",
+        "зубы"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, которое располагается спереди гортани: Выберите один ответ:",
+      "options": [
+        "трахея",
+        "гортанная часть глотки",
+        "предпозвоночная пластинка шейной фасции",
+        "поверхностная и предтрахеальная пластинка шейной фасции",
+        "сосудисто-нервный пучок"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Серозная оболочка, покрывающая органы и стенки брюшной полости называется: Выберите один ответ:",
+      "options": [
+        "плеврой",
+        "эпикардом",
+        "брюшиной",
+        "адвентицией",
+        "перикардом"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К мышцам, суживающим голосовую щель относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "m. cricoarytenoideus lateralis",
+        "m. arytenoideus transversus",
+        "m. cricothyroideus",
+        "m. thyroarytenoideus",
+        "m. arytenoideus obliquus"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, которое располагается по бокам от гортани: Выберите один ответ:",
+      "options": [
+        "гортанная часть глотки",
+        "сосудисто-нервный пучок",
+        "щитовидная железа",
+        "поверхностная и предтрахеальная пластинка шейной фасции",
+        "трахея"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Какие анатомические структуры образуют стенки преддверия рта? Выберите один ответ:",
+      "options": [
+        "язык",
+        "мягкое нёбо",
+        "диафрагма рта",
+        "зубы",
+        "твёрдое нёбо"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, чем ограничено преддверие гортани сзади: Выберите один ответ:",
+      "options": [
+        "plicae vestibulares",
+        "cartilago cricoidea",
+        "epiglottis",
+        "cartilago arytenoidea",
+        "plicae vocales"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое из соединений между хрящами гортани относится к диартрозам: Выберите один ответ:",
+      "options": [
+        "lig. cricothyroideum",
+        "lig. thyrohyoidea medianum",
+        "articulatio cricothyroidea",
+        "lig. hyoepiglotticum",
+        "membrana thyrohyoidea"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Для горизонтальной щели легкого характерны все утверждения, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "заканчивается в воротах легкого",
+        "отсекает от верхней доли правого легкого среднюю долю",
+        "отсекает от верхней доли левого легкого среднюю долю",
+        "начинается от середины fissura obliqua",
+        "на реберной поверхности направляется вперед вдоль IV ребра"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К носовым ходам относятся все, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "meatus nasalis inferior",
+        "meatus nasalis suprema",
+        "meatus nasalis media",
+        "meatus nasalis maxillaries",
+        "meatus nasalis communis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К пищеварительной системе относятся все органы, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "слюнных желез",
+        "полости рта",
+        "глотки",
+        "печени",
+        "гортани"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Пища подвергается биологической обработке в: Выберите один ответ:",
+      "options": [
+        "тонкой кишке",
+        "пищеводе",
+        "толстой кишке",
+        "желудке",
+        "двенадцатиперстной кишке"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "К пищеварительной системе относятся все перечисленные ниже железы, кроме: Выберите один ответ:",
+      "options": [
+        "вилочковой",
+        "околоушной",
+        "подъязычной",
+        "поджелудочной",
+        "печени"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите через какое отверстие полость рта сообщается с глоткой: Выберите один ответ:",
+      "options": [
+        "rima oris",
+        "vestibulum oris",
+        "choanae",
+        "fauces",
+        "ostium pharingeum tubae auditivae"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологические образования, которые ограничивают вход в преддверие рта: Выберите один ответ:",
+      "options": [
+        "нёбно-глоточные дужки",
+        "губы",
+        "щёки",
+        "зубы",
+        "нёбно-язычные дужки"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите волокнами какой мышцы преимущественно образована основа губ: Выберите один ответ:",
+      "options": [
+        "m. mentalis",
+        "m. orbicularis oris",
+        "m. orbicularis oculi",
+        "m. depressor labii inferioris",
+        "m. levator labii superioris"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, как называется морфологическое образование, которое образуется в углах рта при переходе верхней губы в нижнюю: Выберите один ответ:",
+      "options": [
+        "rima oris",
+        "frenulum labii superioris",
+        "fauces",
+        "frenulum labii inferioris",
+        "comissura labiorum"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите волокна какой мышцы преимущественно образуют толщу щеки: Выберите один ответ:",
+      "options": [
+        "m. levatorlabiisuperioris",
+        "m. orbicularis oris",
+        "m. zygomaticus minor",
+        "m. zygomaticus major",
+        "m. buccinator"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какие зубы отсутствуют среди молочных зубов: Выберите один ответ:",
+      "options": [
+        "большие коренные зубы",
+        "медиальные резцы",
+        "латеральные резцы",
+        "клыки",
+        "малые коренные зубы"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите общее количество постоянных зубов: Выберите один ответ:",
+      "options": [
+        "34",
+        "36",
+        "32",
+        "20",
+        "30"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите общее количество резцов у человека: Выберите один ответ:",
+      "options": [
+        "8",
+        "10",
+        "4",
+        "6",
+        "2"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите общее количество резцов на нижней челюсти: Выберите один ответ:",
+      "options": [
+        "6",
+        "2",
+        "10",
+        "8",
+        "4"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите зубную формулу молочных зубов (цифры означают число и последовательность зубов на половине верхней и нижней челюсти): Выберите один ответ:",
+      "options": [
+        "2-1-2-0",
+        "2-1-1-3",
+        "2-1-0-3",
+        "2-1-1-2",
+        "2-1-0-2"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите вещество, заполняющее полость зуба: Выберите один ответ:",
+      "options": [
+        "cementum",
+        "periodontium",
+        "enamelum",
+        "pulpa dentis",
+        "dentinum"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите вещество, покрывающее снаружи коронку зуба: Выберите один ответ:",
+      "options": [
+        "cementum",
+        "pulpa dentis",
+        "enamelum",
+        "dentinum",
+        "periodontium"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите какая часть зуба охватывается десной: Выберите один ответ:",
+      "options": [
+        "корень зуба",
+        "верхушка корня зуба",
+        "корневой канал",
+        "шейка зуба",
+        "коронка зуба"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Для какого вида зубов характерна долотообразная коронка: Выберите один ответ:",
+      "options": [
+        "клыков",
+        "нижних больших коренных зубов",
+        "верхних малых коренных зубов",
+        "нижних малых коренных зубов",
+        "резцов"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Коронка зуба имеет все поверхности, КРОМЕ: Выберите один ответ:",
+      "options": [
+        "окклюзионной (жевательной)",
+        "вестибулярной",
+        "нёбной",
+        "контактной",
+        "язычной"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какие из постоянных зубов характеризуются наиболее поздним прорезыванием: Выберите один ответ:",
+      "options": [
+        "dentes canini",
+        "dentes serotines",
+        "dentes molares",
+        "dentes premolars",
+        "dentes incisivi"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите вещество, которое составляет твёрдую основу зуба: Выберите один ответ:",
+      "options": [
+        "periodontium",
+        "pulpa dentis",
+        "enamelum",
+        "cementum",
+        "dentinum"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Рыхлая волокнистая соединительная ткань, заполняющая полость зуба, с большим количеством кровеносных и лимфатических сосудов, и нервов называется: Выберите один ответ:",
+      "options": [
+        "дентином",
+        "пульпой",
+        "цементом",
+        "периодонтом",
+        "эмалью"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Как называется плотная соединительная ткань, выстилающая внутренние стенки альвеол и играющая значительную роль в укреплении зубов: Выберите один ответ:",
+      "options": [
+        "cementum",
+        "pulpa dentis",
+        "periodontium",
+        "enamelum",
+        "dentinum"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Твёрдая ткань зуба, составляющая его основную массу - это: Выберите один ответ:",
+      "options": [
+        "периодонт",
+        "эмаль",
+        "цемент",
+        "парадонт",
+        "дентин"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место расположения tonsilla lingualis: Выберите один ответ:",
+      "options": [
+        "radix linguae",
+        "facies inferior linguae",
+        "margo linguae",
+        "dorsum linguae",
+        "apex linguae"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите вкусовые сосочки, расположенные на границе тела и корня языка: Выберите один ответ:",
+      "options": [
+        "papillae foliatae",
+        "papillae vallatae",
+        "papillae conicae",
+        "papillaefungiformes",
+        "papillae filiformes"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите вкусовые сосочки, расположенные преимущественно в области верхушки и по краям языка: Выберите один ответ:",
+      "options": [
+        "papillae fungiformes",
+        "papillae vallatae",
+        "papillae conicae",
+        "papillae foliatae",
+        "papillae filiformes"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологическое образование, расположенное между arcus palatoglossus и arcus palatopharyngeus: Выберите один ответ:",
+      "options": [
+        "tonsillapharyngea",
+        "tonsilla palatina",
+        "uvula",
+        "septum linguae",
+        "tonsilla lingualis"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу языка, которая тянет язык назад и вверх: Выберите один ответ:",
+      "options": [
+        "мusculus levator veli palatine",
+        "musculus hyoglossus",
+        "musculus palatoglossus",
+        "musculus genioglossus",
+        "musculus styloglossus"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу языка, которая тянет язык вперёд: Выберите один ответ:",
+      "options": [
+        "musculus hyoglossus",
+        "musculus genioglossus",
+        "musculus palatoglossus",
+        "musculus styloglossus",
+        "musculus longitudinalis superior"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите скелетную мышцу языка, продолжением которой в толще языка является m. verticalis: Выберите один ответ:",
+      "options": [
+        "musculus styloglossus",
+        "musculus genioglossus",
+        "musculus hyoglossus",
+        "musculus palatoglossus",
+        "мusculus stylopharyngeus"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу мягкого нёба, при сокращении которой нёбная занавеска опускается и суживается отверстие зева: Выберите один ответ:",
+      "options": [
+        "m. palatipharingeus",
+        "m. tensor veli palatini",
+        "m. uvule",
+        "m. palatoglossus",
+        "m. levator veli palatini"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "К скелетным мышцам языка относится: Выберите один ответ:",
+      "options": [
+        "нижняя продольная мышца",
+        "верхняя продольная мышца",
+        "подбородочно-язычная мышца",
+        "поперечная мышца",
+        "вертикальная мышца"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу языка, достигающую наивысшего развития только у человека в связи с появлением членораздельной речи: Выберите один ответ:",
+      "options": [
+        "musculus styloglossus",
+        "musculuspalatoglossus",
+        "мusculusstylopharyngeus",
+        "musculus genioglossus",
+        "musculus hyoglossus"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите мышцу языка, достигающую наивысшего развития только у человека в связи с появлением членораздельной речи: Выберите один ответ:",
+      "options": [
+        "шилоязычная",
+        "подъязычно-язычная",
+        "поперечная",
+        "вертикальная",
+        "подбородочно-язычная"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Для какого вида сосочков языка локализация соответствует пограничной борозде языка: Выберите один ответ:",
+      "options": [
+        "конусовидных",
+        "грибовидных",
+        "желобовидных",
+        "листовидных",
+        "нитевидных"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Проток околоушной слюнной железы открывается: Выберите один ответ:",
+      "options": [
+        "в преддверие рта на уровне 3-го верхнего большого коренного зуба",
+        "в собственно полость рта на уровне 2-го нижнего большого коренного зуба",
+        "в преддверие рта на уровне 2-го верхнего большого коренного зуба",
+        "в преддверие рта на уровне 2-го верхнего малого коренного зуба",
+        "в собственно полость рта на уровне 2-го верхнего малого коренного зуба"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, ограничивающее зев сверху: Выберите один ответ:",
+      "options": [
+        "radix linguae",
+        "аrcuspalatopharyngeus",
+        "velum palatinum",
+        "fossa tonsillaris",
+        "apexlinguae"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, ограничивающее зев снизу: Выберите один ответ:",
+      "options": [
+        "radix linguae",
+        "velum palatinum",
+        "apexlinguae",
+        "аrcuspalatopharyngeus",
+        "fossa tonsillaris"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на каком уровне по отношению к позвоночному столбу глотка переходит в пищевод: Выберите один ответ:",
+      "options": [
+        "VIII шейного позвонка",
+        "V-VI шейного позвонка",
+        "VI-VII шейного позвонка",
+        "VII-VIII шейного позвонка",
+        "IV шейного позвонка"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите фасцию, которая непосредственно покрывает заднюю поверхность глотки: Выберите один ответ:",
+      "options": [
+        "lamina profunla fascia cilli propriae",
+        "fascia colli superficialis",
+        "fasciaendocervicalis",
+        "fascia prevertebralis",
+        "fasciapectoralis"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, где в глотке находится глоточное отверстие слуховой трубы: Выберите один ответ:",
+      "options": [
+        "на латеральной стенке ротовой части",
+        "на задней стенке носовой части",
+        "по средней линии перехода свода глотки в заднюю стенку",
+        "на латеральной стенке носовой части",
+        "на верхней стенке"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, с каким морфологическим образованием сообщается носовая часть глотки через глоточное отверстие слуховой трубы: Выберите один ответ:",
+      "options": [
+        "с наружным слуховым проходом",
+        "с внутренним ухом",
+        "с каналом улитки",
+        "с перилимфатическим пространством",
+        "с барабанной полостью"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, где находится tonsilla pharyngea: Выберите один ответ:",
+      "options": [
+        "на задней стенке ротовой части глотки",
+        "между нёбно-язычной и нёбно-глоточной дужками",
+        "по средней линии на границе между верхней и задней стенками глотки",
+        "на латеральной стенке носовой части глотки",
+        "на задней стенке гортанной части глотки"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, где находится tonsilla tubaria: Выберите один ответ:",
+      "options": [
+        "на задней стенке ротовой части глотки",
+        "между нёбно-язычной и нёбно-глоточной дужками",
+        "по средней линии на границе между верхней и задней стенками глотки",
+        "вокруг глоточного отверстия слуховой трубы",
+        "на задней стенке гортанной части глотки"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, где находится tonsilla palatina: Выберите один ответ:",
+      "options": [
+        "вокруг глоточного отверстия слуховой трубы",
+        "между нёбно-язычной и нёбно-глоточной дужками",
+        "на задней стенке гортанной части глотки",
+        "на задней стенке ротовой части глотки",
+        "по средней линии на границе между верхней и задней стенками глотки"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, через какое отверстие глотка сообщается с полостью носа: Выберите один ответ:",
+      "options": [
+        "adituslaryngis",
+        "choanae",
+        "fauces",
+        "ostium pharyngeum tubae auditivae",
+        "aperturapiriformisnasi"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, через какое отверстие глотка сообщается с барабанной полостью: Выберите один ответ:",
+      "options": [
+        "fauces",
+        "aperturapiriformisnasi",
+        "adituslaryngis",
+        "ostium pharyngeum tubae auditivae",
+        "choanae"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, через какое отверстие глотка сообщается с полостью рта: Выберите один ответ:",
+      "options": [
+        "fauces",
+        "ostium pharyngeum tubae auditivae",
+        "aditus laryngis",
+        "apertura piriformis nasi",
+        "choanae"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, образующее заднюю стенку сальниковой сумки: Выберите один ответ:",
+      "options": [
+        "париетальный листок брюшины, покрывающий поджелудочную железу",
+        "малый сальник",
+        "хвостатая доля печени",
+        "задняя пластинка большого сальника",
+        "задняя поверхность желудка"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Линия прикрепления корня брыжейки тонкой кишки к задней брюшной стенке преимущественно проходит: Выберите один ответ:",
+      "options": [
+        "косо от левой стороны III поясничного позвонка до правой подвздошной ямки",
+        "косо от левой стороны II поясничного позвонка до правой подвздошной ямки",
+        "вертикально вдоль позвоночного столба от II-поясничного позвонка до входа в малый таз",
+        "косо от правой стороны II поясничного позвонка до правой подвздошной ямки",
+        "вертикально вдоль позвоночного столба от II-поясничного позвонка до IV крестцового"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое из перечисленных ниже образований брюшины носит название Дугласово пространство: Выберите один ответ:",
+      "options": [
+        "excavatio rectovesicalis",
+        "excavatio rectouterina",
+        "excavatiovesicouterina",
+        "recessus ileocecalis inferior",
+        "sinus mesentericus dexter"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомические образования, ограничивающие вход в гортань спереди: Выберите один ответ:",
+      "options": [
+        "epiglottis",
+        "plicae aryepiglotticae",
+        "cartilago arytenoidea",
+        "cartilago cricoidea",
+        "plicae vocales"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомические образования, ограничивающие вход в гортань c боков: Выберите один ответ:",
+      "options": [
+        "plicae vestibularis",
+        "plicae aryepiglotticae",
+        "plicae vocales",
+        "epiglottis",
+        "cartilago arytenoidea"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите околоносовые пазухи, которые открываются в верхний носовой ход: Выберите один ответ:",
+      "options": [
+        "лобная пазуха",
+        "средние ячейки (пазухи) решётчатой кости",
+        "задние ячейки (пазухи) решётчатой кости",
+        "верхнечелюстная пазуха",
+        "передние ячейки (пазухи) решётчатой кости"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на каком уровне по отношению к позвоночному столбу располагается гортань у взрослого человека: Выберите один ответ:",
+      "options": [
+        "от II до V шейного позвонка",
+        "от II до VI - VII шейного позвонка",
+        "от IV до нижнего края VI шейного позвонка",
+        "от IV шейного до I - II грудного позвонка",
+        "от III до V- VI шейного позвонка"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, с каким анатомическим образованием соприкасается гортань сзади: Выберите один ответ:",
+      "options": [
+        "pars laryngea phariyngis",
+        "lamina prevertebralis fasciae colli",
+        "glandula thyroidea",
+        "musculi infrahyoidei",
+        "parsnasalisphariyngis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, между какими анатомическими структурами находится межхрящевая часть голосовой щели: Выберите один ответ:",
+      "options": [
+        "cartilago corniculata",
+        "plicae vocales",
+        "plicae vestibulares",
+        "cartilago arytenoidea",
+        "plicae vestibularis et vocalis"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите скелетотопию бифуркации трахеи: Выберите один ответ:",
+      "options": [
+        "верхний край VI грудного позвонка",
+        "верхний край V грудного позвонка",
+        "нижний край III грудного позвонка",
+        "верхний край IV грудного позвонка",
+        "нижний край V грудного позвонка"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите общее количество молочных зубов: Выберите один ответ:",
+      "options": [
+        "30",
+        "22",
+        "20",
+        "10",
+        "32"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите морфологическое образование, составляющее основу стенки глотки: Выберите один ответ:",
+      "options": [
+        "m. constrictor pharyngis superior",
+        "fascia pharyngobasilaris",
+        "tunica mucosa",
+        "tunicamuscularis",
+        "adventitia"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомические образования, располагающиеся по бокам от глотки: Выберите один ответ:",
+      "options": [
+        "гортань",
+        "полость рта",
+        "сосудисто-нервный пучок",
+        "заглоточное пространство",
+        "полость носа"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Выберите наиболее точное утверждение: «Заглоточное пространство располагается между ...» : Выберите один ответ:",
+      "options": [
+        "задней стенкой глотки, покрытой внутришейной фасцией и предпозвоночной фасцией",
+        "задней стенкой глотки и предпозвоночной фасцией",
+        "задней стенкой глотки и предпозвоночными мышцами",
+        "задней стенкой глотки и телами шейных позвонков",
+        "задней стенкой глотки и внутришейной фасцией"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Сонная артерия, внутренняя яремная вена и блуждающий нерв располагаются относительно глотки: Выберите один ответ:",
+      "options": [
+        "в cavitas infraglottica",
+        "в fornix pharynges",
+        "в spatium previscerale",
+        "в spatium peripharyngeum",
+        "в spatium retropharyngeum"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Где в глотке совершается перекрест пищеварительных и дыхательных путей: Выберите один ответ:",
+      "options": [
+        "в области свода глотки",
+        "в дистальных отделах гортанной части глотки",
+        "в носовой части глотки",
+        "в ротовой части глотки",
+        "в гортанной части"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на уровне какого позвонка проецируется верхняя граница пищевода: Выберите один ответ:",
+      "options": [
+        "II-III шейного",
+        "I-II шейного",
+        "IV-V шейного",
+        "III-IV шейного",
+        "VI-VII шейного"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на уровне какого позвонка проецируется нижняя граница пищевода: Выберите один ответ:",
+      "options": [
+        "IX грудного",
+        "VI-VII грудного",
+        "X-XI грудного",
+        "XII грудного",
+        "III поясничного"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, прилежащее к пищеводу спереди на уровне IV грудного позвонка: Выберите один ответ:",
+      "options": [
+        "непарная вена",
+        "нисходящая часть аорты",
+        "правый бронх",
+        "бифуркация трахеи",
+        "дуга аорты"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, прилежащее к пищеводу спереди на уровне V грудного позвонка: Выберите один ответ:",
+      "options": [
+        "дуга аорты",
+        "бифуркация трахеи",
+        "правый бронх",
+        "нисходящая часть аорты",
+        "непарная вена"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите наружную оболочку брюшной части пищевода: Выберите один ответ:",
+      "options": [
+        "tunica mucosa",
+        "tunica muscularis",
+        "tunica adventitia",
+        "tunica serosa",
+        "tela submucosa"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите наружную оболочку грудной части пищевода: Выберите один ответ:",
+      "options": [
+        "tunica adventitia",
+        "tela submucosa",
+        "tunica serosa",
+        "tunica muscularis",
+        "tunica mucosa"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "На каком уровне по отношению к позвоночному столбу располагается диафрагмальное сужение пищевода? Выберите один ответ:",
+      "options": [
+        "на уровне X-XI грудных позвонков",
+        "XI-XII грудных позвонков",
+        "на уровне XII грудного - I поясничного позвонка",
+        "VIII-IX грудных позвонков",
+        "I поясничного позвонка"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Выберите утверждение, правильно характеризующее мышечную оболочку верхней трети пищевода: Выберите один ответ:",
+      "options": [
+        "состоит из наружных продольных и внутренних циркулярных неисчерченных (не произвольных) мышечных волокон",
+        "состоит из наружных продольных и внутренних циркулярных исчерченных (произвольных) мышечных волокон",
+        "состоит из продольных, циркулярных и косых мышечных волокон",
+        "состоит только из наружных циркулярных мышечных волокон",
+        "состоит только из наружных продольных мышечных волокон Отзыв"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Выберите утверждение, правильно характеризующее мышечную оболочку нижней трети пищевода: Выберите один ответ:",
+      "options": [
+        "состоит из наружных продольных и внутренних циркулярных исчерченных (произвольных) мышечных волокон",
+        "состоит только из наружных продольных мышечных волокон",
+        "состоит только из наружных циркулярных мышечных волокон",
+        "состоит из наружных продольных и внутренних циркулярных неисчерченных (не произвольных) мышечных волокон",
+        "состоит из продольных, циркулярных и косых мышечных волокон"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите как называется наружная оболочка брюшной части пищевода: Выберите один ответ:",
+      "options": [
+        "peritoneum",
+        "pleura",
+        "tunica mucosa",
+        "tunica adventitia",
+        "tunica muscularis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Из каких оболочек состоит стенка брюшной части пищевода: Выберите один ответ:",
+      "options": [
+        "слизистой, мышечной и серозной",
+        "мышечной и серозной",
+        "слизистой и мышечной",
+        "слизистой и адвентициальной",
+        "слизистой, мышечной и адвентициальной"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Сколько физиологических сужений имеет пищевод? Выберите один ответ:",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "5",
+        "4"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Из каких оболочек состоит стенка грудной части пищевода: Выберите один ответ:",
+      "options": [
+        "слизистой, мышечной и серозной",
+        "мышечной и серозной",
+        "слизистой и мышечной",
+        "слизистой и адвентициальной",
+        "слизистой, мышечной и адвентициальной"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Назовите анатомические сужения пищевода: Выберите один ответ:",
+      "options": [
+        "фарингеальное, бронхиальное",
+        "глоточно-пищеводное, кардиальное",
+        "шейное, грудное, брюшное",
+        "фарингеальное, бронхиальное, диафрагмальное",
+        "аортальное, диафрагмальное, кардиальное"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Назовите особенность строения мышечной оболочки стенки желудка в сравнении с мышечной оболочкой стенки тонкой кишки: Выберите один ответ:",
+      "options": [
+        "мышечная оболочка представлена исчерченной (скелетной) мышечной тканью",
+        "отсутствие циркулярного мышечного слоя волокон",
+        "неравномерное распределение продольных мышечных волокон по поверхности стенки желудка",
+        "отсутствие продольного мышечного слоя волокон",
+        "наличие косых мышечных волокон"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Что из перечисленного является морфологической особенностью только желудка: Выберите один ответ:",
+      "options": [
+        "наличие ворсинок слизистой оболочки",
+        "интраперитонеальное положение",
+        "наличие складок слизистой",
+        "наличие сальниковых отростков (выпячивания серозной оболочки)",
+        "наличие косых волокон в мышечной оболочке"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Внутренний (антианемический) фактор Касла связывается с витамином: Выберите один ответ:",
+      "options": [
+        "В 6",
+        "В 12",
+        "В 5",
+        "В 1",
+        "В 3"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Серозная оболочка, покрывающая стенки и органы брюшной полости, называется: Выберите один ответ:",
+      "options": [
+        "эндокардом",
+        "эпикардом",
+        "плеврой",
+        "перикардом",
+        "брюшиной"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Пища подвергается биологической обработке в: Выберите один ответ:",
+      "options": [
+        "пищеводе",
+        "желудке",
+        "двенадцатиперстной кишке",
+        "толстой кишке",
+        "тонкой кишке"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Химическая обработка пищи в желудке в норме происходит в условиях: Выберите один ответ:",
+      "options": [
+        "нейтральной",
+        "слабо щелочной среды",
+        "щелочной среды",
+        "слабо кислой среде",
+        "кислой среды"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите,слизистая оболочка какого органа вырабатывает внутренний (антианемический) фактор Касла: Выберите один ответ:",
+      "options": [
+        "тонкой кишки",
+        "пищевода",
+        "желудка",
+        "полости рта",
+        "толстой кишки"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Назовите греческий термин тонкой кишки: Выберите один ответ:",
+      "options": [
+        "proktos",
+        "gaster",
+        "typhlon",
+        "enteron",
+        "odont"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Назовите части желудочно-кишечного тракта, которые относятся к тонкой кишке: Выберите один ответ:",
+      "options": [
+        "двенадцатиперстная и слепая кишка",
+        "двенадцатиперстная и тощая кишка",
+        "слепая кишка, восходящая и нисходящая ободочная кишка",
+        "двенадцатиперстная и подвздошная кишка",
+        "двенадцатиперстная, тощая и подвздошная кишка"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Какая часть двенадцатиперстной кишки занимает интраперитонеальное положение: Выберите один ответ:",
+      "options": [
+        "ампула (луковица)",
+        "такой части в двенадцатиперстной кишке нет",
+        "нисходящая часть",
+        "восходящая часть",
+        "горизонтальная часть"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите последовательность расположения частей двенадцатиперстной кишки, начиная от желудка: Выберите один ответ:",
+      "options": [
+        "верхняя, нижняя, горизонтальная, восходящая",
+        "верхняя, вертикальная, горизонтальная, нижняя",
+        "верхняя, нисходящая, горизонтальная, восходящая",
+        "верхняя, нижняя, горизонтальная, нисходящая",
+        "верхняя, нисходящая, вертикальная, восходящая"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "На вершине малого сосочка двенадцатиперстной кишки открывается: Выберите один ответ:",
+      "options": [
+        "добавочный проток поджелудочной железы",
+        "пузырный проток",
+        "общий желчный проток",
+        "правый печёночны проток",
+        "общий печёночный проток"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Двенадцатиперстно-тощий изгиб (условная граница между двенадцатиперстной и тощей кишкой) находится на уровне тела: Выберите один ответ:",
+      "options": [
+        "II поясничного позвонка слева",
+        "XII грудного позвонка",
+        "I поясничного позвонка справа",
+        "III поясничного позвонка слева",
+        "II поясничного позвонка справа"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какая часть двенадцатиперстной кишки своей верхней поверхностью прилежит к квадратной доле печени: Выберите один ответ:",
+      "options": [
+        "горизонтальная",
+        "восходящая",
+        "верхняя",
+        "нисходящая",
+        "нижняя"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "В какой части двенадцатиперстной кишки наряду с циркулярными складками слизистой оболочки имеется продольная складка: Выберите один ответ:",
+      "options": [
+        "в горизонтальной части",
+        "в восходящей части",
+        "в верхней части",
+        "в нисходящей части",
+        "в ампуле"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите отдел кишечной трубки, в слизистой оболочке которого расположены групповые лимфатические фолликулы: Выберите один ответ:",
+      "options": [
+        "двенадцатиперстная кишка",
+        "подвздошная кишка",
+        "прямая кишка",
+        "поперечная ободочная кишка",
+        "тощая кишка"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Назовите греческий термин слепой кишки: Выберите один ответ:",
+      "options": [
+        "enteron",
+        "caecum",
+        "typhlon",
+        "proktos",
+        "gaster"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, куда открывается главный проток поджелудочной железы: Выберите один ответ:",
+      "options": [
+        "в начальный отдел тощей кишки",
+        "в ампулу двенадцатиперстной кишки",
+        "в нисходящую часть двенадцатиперстной кишки",
+        "в восходящую часть двенадцатиперстной кишки",
+        "в пилорическую часть желудка"
+      ],
+      "correct_index": 2,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, в какой части тонкой кишки имеется продольная складка слизистой оболочки: Выберите один ответ:",
+      "options": [
+        "в проксимальном отделе тощей кишки",
+        "в нисходящей части двенадцатиперстной кишки",
+        "в горизонтальной части двенадцатиперстной кишки",
+        "в восходящей части двенадцатиперстной кишки",
+        "в подвздошной кишке"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, слизистая оболочка какого отдела кишечной трубки характеризуется наличием хорошо выраженных кишечных ворсинок: Выберите один ответ:",
+      "options": [
+        "сигмовидная кишка",
+        "прямая кишка",
+        "слепая кишка",
+        "тонкая кишка",
+        "поперечная оболочная кишка"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите связку брюшины, прикрепляющуюся к малой кривизне желудка: Выберите один ответ:",
+      "options": [
+        "ligamentum falciforme",
+        "ligamentum hepatoduodenale",
+        "ligamentum coronarium",
+        "ligamentum hepatogastricum",
+        "ligamentum gastrolienale"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите связку брюшины, принимающую участие в образовании малого сальника: Выберите один ответ:",
+      "options": [
+        "ligamentum hepatorenale",
+        "ligamentum hepatoduodenale",
+        "ligamentum falciforme",
+        "ligamentum gastrolienale",
+        "ligamentum coronarium"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Сколько листков брюшины образуют малый сальник: Выберите один ответ:",
+      "options": [
+        "пять",
+        "два",
+        "три",
+        "один",
+        "четыре"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Из скольких листков брюшины состоит большой сальник: Выберите один ответ:",
+      "options": [
+        "четырёх",
+        "трёх",
+        "шести",
+        "двух",
+        "одного"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое положение по отношению к брюшине занимает поджелудочная железа: Выберите один ответ:",
+      "options": [
+        "разное (в зависимости от наполнения желудка)",
+        "разные части железы относятся к брюшине различно",
+        "интраперитонеальное",
+        "экстраперитонеальное",
+        "мезоперитонеальное"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, какое из перечисленных ниже морфологических образований принадлежит верхнему этажу полости брюшины: Выберите один ответ:",
+      "options": [
+        "правая околоободочная борозда",
+        "левый брыжеечный синус",
+        "левая околоободочная борозда",
+        "преджелудочная сумка",
+        "правый брыжеечный синус"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите отдел полости брюшины, который выделяют в верхнем её этаже: Выберите один ответ:",
+      "options": [
+        "sinus mesentericus dexter",
+        "sulcus paracolicus dexter",
+        "sulcus paracolicus sinister",
+        "sinus mesentericus sinister",
+        "bursa hepatica"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите анатомическое образование, образующее верхнюю стенку bursaomentalis: Выберите один ответ:",
+      "options": [
+        "lobus caudatus hepatis",
+        "omentum minus",
+        "mesocolon",
+        "paries posterior ventriculi",
+        "lobus sinister hepatis"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, морфологическое образование, которое разделяет правый и левый брыжеечные синусы: Выберите один ответ:",
+      "options": [
+        "mesocolon",
+        "mesappendix",
+        "omentum minus",
+        "plica umbilicflis mediana",
+        "radix mesenterii"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите отдел кишечника, в котором встречается дивертикул Меккеля: Выберите один ответ:",
+      "options": [
+        "ileum",
+        "colon ascendens",
+        "colon transversum",
+        "duodenum",
+        "colon sigmoideum"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на каком уровне по отношению к позвоночному столбу располагается трахея: Выберите один ответ:",
+      "options": [
+        "от III шейного до VI грудного позвонка",
+        "от верхнего края V шейного - VII грудного позвонка",
+        "от IV до VII шейного позвонка",
+        "от нижнего края VII шейного до V грудного позвонка",
+        "от нижнего края VI шейного позвонка до верхнего края V грудного позвонка"
+      ],
+      "correct_index": 4,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, с какой бронхиолы начинается альвеолярное дерево легкого: Выберите один ответ:",
+      "options": [
+        "дольковой",
+        "дыхательной",
+        "долевой",
+        "сегментарной",
+        "конечной"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите отделы бронхиального дерева, НЕ содержащие в строении своих стенок хряща: Выберите один ответ:",
+      "options": [
+        "bronchioli respiratorii",
+        "bronchioli terminals",
+        "sacculi alveolares",
+        "ductuli alveolares",
+        "bronchi segmentales"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите, на уровне какого ребра проецируется нижняя граница правого легкого по linea axillaris media: Выберите один ответ:",
+      "options": [
+        "сosta VI",
+        "сostaXI",
+        "сostaIX",
+        "сosta VIII",
+        "сosta VII"
+      ],
+      "correct_index": 3,
+      "explanation": ""
+    },
+    {
+      "question": "Укажите место расположения верхнего межплеврального поля: Выберите один ответ:",
+      "options": [
+        "позади рукоятки грудины",
+        "позади мечевидного отростка грудины",
+        "около правого края грудины",
+        "позади верхней половины тела грудины",
+        "позади нижней половины тела грудины"
+      ],
+      "correct_index": 0,
+      "explanation": ""
+    },
+    {
+      "question": "Выберите правильное утверждение: «Левая и правая плевральные полости ...»: Выберите один ответ:",
+      "options": [
+        "сообщаются между собой с помощью трахеи",
+        "полностью изолированы",
+        "сообщаются между собой с помощью главных бронхов",
+        "сообщаются между собой во время вдоха",
+        "сообщаются между собой во время выдоха"
+      ],
+      "correct_index": 1,
+      "explanation": ""
+    }
+  ]
+}

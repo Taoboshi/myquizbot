@@ -1811,6 +1811,14 @@
     fcHistoryStack = [];
   }
 
+  function getFCQuestionText(q) {
+    const question = String(q.question || '');
+    if (!Array.isArray(q.options) || q.options.length < 2 ||
+        !/выбер|отметьте|из списка|из перечислен|из предложенн|кроме/i.test(question) ||
+        /^\s*[a-eа-д][.)]\s/m.test(question)) return question;
+    return `${question}\n\n${q.options.map((option, index) => `${String.fromCharCode(97 + index)}. ${option}`).join('\n')}`;
+  }
+
   function renderFCCard() {
     if (!state.activeQuestions || state.activeQuestions.length === 0) {
       showFCFinishScreen();
@@ -1834,8 +1842,8 @@
     document.getElementById('fc-progress-fill').style.transform = `scaleX(${progress})`;
     document.getElementById('fc-progress').setAttribute('aria-valuenow', String(Math.round(progress * 100)));
     document.getElementById('fc-progress').setAttribute('aria-valuetext', `${fcIndex} из ${total} карточек пройдено`);
-    document.getElementById('fc-front-text').textContent = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : q.question;
-    document.getElementById('fc-back-answer').textContent = appPreferences.fcAnswerFirst ? q.question : getQuestionCorrectText(q);
+    document.getElementById('fc-front-text').textContent = appPreferences.fcAnswerFirst ? getQuestionCorrectText(q) : getFCQuestionText(q);
+    document.getElementById('fc-back-answer').textContent = appPreferences.fcAnswerFirst ? getFCQuestionText(q) : getQuestionCorrectText(q);
     fitFCCardToContent();
     document.getElementById('fc-front-label').innerText = appPreferences.fcAnswerFirst ? 'ОТВЕТ' : 'ВОПРОС';
     document.getElementById('fc-back-label').innerText = appPreferences.fcAnswerFirst ? 'ВОПРОС' : 'ОТВЕТ';
