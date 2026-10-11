@@ -41,3 +41,12 @@ In cranial nerves questions 128, 154, 228 and CNS question 7, the answer option
 missing from the question column was restored from the explicitly lettered
 answer column. Spinal nerves question 140 repeats the same answer twice;
 the duplicate was removed. No answer keys were medically reinterpreted.
+
+## Comprehensive Exam
+
+Source: `Карточки анат 1000 вопросов док _ Quizlet.pdf`.
+The source advertises 1021 terms, and all 1021 were imported into
+`anatomy_comprehensive`. Numeric source answer keys were converted to zero-based
+indices. Source option separators in entries 39 and 578 were restored from
+embedded separator characters. All source options are retained in flashcards
+as well as in the test. No medical answer-key corrections were applied.
