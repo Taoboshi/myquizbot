@@ -2575,6 +2575,11 @@
       --subject-detail: var(--subject-detail-light);
     }
     .settings-section-link > span:last-child .app-line-icon, .settings-action > span:last-child .app-line-icon { width: 18px; height: 18px; }
+    .admin-subject-tests > summary { list-style: none; min-height: 44px; }
+    .admin-subject-tests > summary::-webkit-details-marker { display: none; }
+    .admin-subject-tests > summary:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+    .admin-subject-chevron { transition: transform .15s ease; }
+    .admin-subject-tests[open] > summary .admin-subject-chevron { transform: rotate(90deg); }
     .subject-icon-picker { min-width: 0; }
     .subject-icon-selection { display: flex; align-items: center; gap: 10px; min-height: 40px; margin-bottom: 10px; color: var(--text-main); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
     .subject-icon-preview { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 8px; background: transparent; border: 1px solid var(--glass-border); }

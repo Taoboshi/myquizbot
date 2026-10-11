@@ -327,9 +327,15 @@
               <span class="text-slate-400">Доступ к разделу: <strong class="text-white">${subjectAccessLabel}${subjectAccessCode}</strong></span>
               <button onclick="openSubjectAccessModal(${escapeHtml(JSON.stringify(s.id))})" class="shrink-0 text-brand-400 hover:underline font-bold">Изменить</button>
             </div>
-            <div data-admin-order-subject="${escapeHtml(s.id)}" class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
-              ${testsListHtml}
-            </div>
+            <details class="admin-subject-tests" ${expandedAdminSubjects.has(s.id) ? 'open' : ''} ontoggle="rememberAdminSubjectExpansion(this, ${escapeHtml(JSON.stringify(s.id))})">
+              <summary class="flex items-center justify-between gap-2 py-2 text-xs font-bold text-slate-300 cursor-pointer" aria-label="Тесты раздела ${escapeHtml(s.title)}">
+                <span>Тесты · ${testsInSub.length}</span>
+                <span class="admin-subject-chevron">${renderInterfaceIcon('chevron-right')}</span>
+              </summary>
+              <div data-admin-order-subject="${escapeHtml(s.id)}" class="space-y-1.5 pl-2 border-l-2 border-brand-500/30">
+                ${testsListHtml}
+              </div>
+            </details>
           </div>
         `;
       }).join('');
@@ -1552,4 +1558,11 @@
       st.innerText = '✓ Сообщение отправлено!';
     });
   }
+
+const expandedAdminSubjects = new Set();
+
+function rememberAdminSubjectExpansion(details, subjectId) {
+  if (details.open) expandedAdminSubjects.add(subjectId);
+  else expandedAdminSubjects.delete(subjectId);
+}
 
