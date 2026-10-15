@@ -7,6 +7,22 @@ correct indices and test ordering are unchanged.
 
 ## Biology Module 5 Import Repairs
 
+### Superseded By Original PDF
+
+The original PDF supplied later, `918a1b9c-7fdb-4680-a284-186bf0e84c62.pdf`,
+resolves the ambiguity of the plain text. In cards 6, 13, 33, 39, 110 and 178,
+the lists are in the answer column, not choices on the question side.
+The provisional missing-answer notices described below were removed.
+Full source answers are now restored on the reverse.
+
+PDF comparison also identified broken multiline answer boundaries in cards
+14, 17, 44 and 49. Five previously reworded prompts (66, 100, 107, 289, 291)
+were restored to source wording. All 385 source question/answer pairs were
+compared after normalizing whitespace and punctuation; positions are unchanged.
+
+The remainder of this section records the earlier plain-text interpretation,
+not the current card state.
+
 Verified against the user's original text attachment
 `7235a60e-2b64-4d2c-82a1-0a03461145d2/Вставленный текст.txt`.
 

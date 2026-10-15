@@ -28,11 +28,13 @@ const partial = context.getFCQuestionText({question:'Пример\na. Alpha', op
 assert(partial.includes('Beta'));
 const biology = require('./biology_5_module.json').questions;
 assert.equal(biology.length, 385);
-assert.equal(biology[5].options[0], 'все ответы правильные');
-assert(biology[5].question.includes('Г высвободить нуклеиновую кислоту.'));
+assert(biology[5].options[0].startsWith('все ответы правильные'));
+assert(biology[5].options[0].includes('Г высвободить нуклеиновую кислоту.'));
 assert(!biology[5].question.includes('все ответы правильные'));
 for (const number of [13,33,39,110]) {
-  assert(biology[number-1].question.includes('Г.'));
-  assert.equal(biology[number-1].options[0], 'В исходном материале правильный ответ не указан. Требуется уточнение.');
+  assert(!biology[number-1].question.includes('Г.'));
+  assert(biology[number-1].options[0].includes('А.') && biology[number-1].options[0].includes('Г.'));
 }
+for (const number of [14,17,44,49,178]) assert(biology[number-1].options[0].length > 40);
+assert(biology[177].options[0].includes('1. Фекально-оральным') && biology[177].options[0].includes('4. При близком контакте'));
 console.log(`Passed: all ${count} multiple-choice cards retain choices; direct recall, existing lists, source immutability and biology repairs.`);
