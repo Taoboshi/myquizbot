@@ -10,6 +10,7 @@
       qIndex: state.currentQIndex,
       total: state.activeQuestions.length,
       userAnswers: state.userAnswers,
+      optionOrders: state.optionOrders || {},
       revealedAnswers: [...state.revealedAnswers],
       timerSeconds: state.timerSeconds,
       timestamp: Date.now()
@@ -95,6 +96,8 @@
     state.currentMode = state.activeAttempt.mode;
     state.currentQIndex = state.activeAttempt.qIndex;
     state.userAnswers = state.activeAttempt.userAnswers || {};
+    state.optionOrders = state.activeAttempt.optionOrders || {};
+    state.optionOrderAnswers = state.userAnswers;
     state.revealedAnswers = new Set(state.activeAttempt.revealedAnswers || []);
     state.timerSeconds = state.activeAttempt.timerSeconds || 0;
 
@@ -889,7 +892,31 @@
     viewStack.push('solver');
   }
 
-  // SOLVER QUESTION RENDERER (NO EXPLANATION POPUP!)
+  function canShuffleQuestionOptions(q) {
+    const text = [q.question, ...q.options].join(' ').toLocaleLowerCase().replaceAll('ё', 'е');
+    return q.options.length > 1 && !/(?:выше|ниже)(?:перечислен|указан|приведен)|(?:ответ|вариант|пункт)[а-яё\s]*(?:[1-9]|[а-еa-e][).])|(?:[1-9]\s*(?:и|,|\+)\s*[1-9])|все (?:перечислен|ответ|вариант)|оба (?:ответ|вариант)|(?:первый|последний|предыдущий|следующий) (?:ответ|вариант|пункт)|all of the above|none of the above|(?:options?|answers?)\s+[a-e1-9]\b/i.test(text);
+  }
+
+  function getSolverOptionOrder(q) {
+    if (state.optionOrderAnswers !== state.userAnswers) {
+      state.optionOrders = {};
+      state.optionOrderAnswers = state.userAnswers;
+    }
+    const original = q.options.map((_, index) => index);
+    const saved = state.optionOrders[q.id];
+    if (Array.isArray(saved) && saved.length === original.length && new Set(saved).size === original.length && saved.every(index => Number.isInteger(index) && index >= 0 && index < original.length)) return saved;
+    const order = [...original];
+    if (appPreferences.shuffleOptions && state.userAnswers[q.id] === undefined && !state.revealedAnswers.has(q.id) && canShuffleQuestionOptions(q)) {
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+    }
+    state.optionOrders[q.id] = order;
+    return order;
+  }
+
+  // Answers always use source indices; only their display order changes.
   function renderCurrentQuestion() {
     const q = state.activeQuestions[state.currentQIndex];
     const total = state.activeQuestions.length;
@@ -927,7 +954,8 @@
 
     const correctIdx = getCorrectIndex(q);
 
-    q.options.forEach((opt, idx) => {
+    getSolverOptionOrder(q).forEach((idx, displayIndex) => {
+      const opt = q.options[idx];
       const btn = document.createElement('button');
       btn.className = "w-full text-left p-3.5 rounded-2xl border text-xs sm:text-sm font-medium transition-all duration-200 flex items-center justify-between space-x-3 active:scale-[0.99] ";
 
@@ -952,7 +980,7 @@
         }
       }
 
-      const letters = ['А', 'Б', 'В', 'Г', 'Д', 'Е'][idx] || (idx + 1);
+      const letters = ['А', 'Б', 'В', 'Г', 'Д', 'Е'][displayIndex] || (displayIndex + 1);
       let badgeIcon = letters;
       let badgeStyle = "bg-app-surface border-app-border text-slate-300";
 

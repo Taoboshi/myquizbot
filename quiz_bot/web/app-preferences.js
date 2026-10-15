@@ -1,9 +1,9 @@
 const preferenceDefaults = {
-  autoNext: false, showTimer: true, trainingCount: 10,
+  autoNext: false, showTimer: true, trainingCount: 10, shuffleOptions: false,
   fcShuffle: false, fcAnswerFirst: false, fcRemember: true,
   textSize: 'normal', reduceMotion: false, haptic: true, restoreHome: true
 };
-const accountPreferenceKeys = ['autoNext', 'showTimer', 'trainingCount', 'fcShuffle', 'fcAnswerFirst', 'fcRemember'];
+const accountPreferenceKeys = ['autoNext', 'showTimer', 'trainingCount', 'shuffleOptions', 'fcShuffle', 'fcAnswerFirst', 'fcRemember'];
 let appPreferences = { ...preferenceDefaults };
 try {
   const saved = JSON.parse(localStorage.getItem('ohtest_preferences') || '{}');
@@ -67,6 +67,13 @@ function setPreference(key, value) {
     preferenceSyncTimer = setTimeout(syncPreferences, 250);
   }
   persistPreferences();
+  if (key === 'shuffleOptions' && getCurrentActiveView() === 'view-solver') {
+    const q = state.activeQuestions[state.currentQIndex];
+    if (q && state.userAnswers[q.id] === undefined && !state.revealedAnswers.has(q.id)) {
+      if (state.optionOrders) delete state.optionOrders[q.id];
+      renderCurrentQuestion();
+    }
+  }
   if (key === 'fcAnswerFirst' && getCurrentActiveView() === 'view-flashcards' && !document.getElementById('fc-active-deck').classList.contains('hidden')) renderFCCard();
   if (key === 'fcRemember') {
     if (value) saveFCProgress();
@@ -153,6 +160,7 @@ function initializeSettingsSections() {
     preferenceRow('reduceMotion', 'Меньше анимаций', 'Минимум движения при переходах') +
     settingsAction('Сбросить настройки приложения', 'Вернуть параметры к исходным значениям', 'resetAppPreferences()', true));
   page('learning').insertAdjacentHTML('beforeend',
+    preferenceRow('shuffleOptions', 'Перемешивать варианты', 'Вопросы со ссылками на номера или порядок вариантов могут отображаться некорректно. Явные случаи не перемешиваются.') +
     preferenceRow('autoNext', 'Переходить к следующему вопросу', 'После ответа, с короткой паузой') +
     preferenceRow('showTimer', 'Показывать таймер', 'Время прохождения теста') +
     preferenceRow('trainingCount', 'Вопросов в тренировке', 'Предлагаемое количество при запуске'));

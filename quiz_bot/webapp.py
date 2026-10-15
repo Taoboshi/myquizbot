@@ -321,7 +321,7 @@ def register_webapp_routes(app: Any) -> None:
     @app.route("/api/user/preferences", methods=["POST"])
     def api_save_preferences():
         payload = request.get_json(silent=True)
-        allowed = {"autoNext", "showTimer", "fcShuffle", "fcAnswerFirst", "fcSwipes", "fcRemember", "trainingCount"}
+        allowed = {"autoNext", "showTimer", "shuffleOptions", "fcShuffle", "fcAnswerFirst", "fcSwipes", "fcRemember", "trainingCount"}
         if not isinstance(payload, dict) or not payload or set(payload) - allowed:
             return jsonify({"error": "Invalid preferences"}), 400
         for key, value in payload.items():

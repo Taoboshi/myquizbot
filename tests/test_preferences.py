@@ -13,6 +13,7 @@ class PreferencesTestCase(unittest.TestCase):
         for item in (
             patch.object(storage, "DATABASE_URL", None),
             patch.object(storage, "db_connect", return_value=self.connection),
+            patch("quiz_bot.admin_users.db_connect", return_value=self.connection),
             patch("quiz_bot.webapp._verified_telegram_data", return_value={"id": 123}),
         ):
             item.start()
@@ -39,6 +40,13 @@ class PreferencesTestCase(unittest.TestCase):
         self.assertEqual(storage.get_user_preferences(456), {"showTimer": True})
         with patch("quiz_bot.webapp._verified_telegram_data", return_value=None):
             self.assertEqual(self.client.post("/api/user/preferences", json={"autoNext": True}).status_code, 401)
+
+    def test_shuffle_options_preference_is_saved(self):
+        for enabled in (True, False):
+            response = self.client.post("/api/user/preferences", json={"shuffleOptions": enabled})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(storage.get_user_preferences(123)["shuffleOptions"], enabled)
+        self.assertEqual(self.client.post("/api/user/preferences", json={"shuffleOptions": 1}).status_code, 400)
 
     def test_validation_rejects_device_settings_and_invalid_values(self):
         for data in ({}, [], {"theme": "light"}, {"autoNext": 1}, {"fcRemember": "yes"},
