@@ -674,6 +674,12 @@ const nativeFetch = window.fetch.bind(window);
 
   // Admin Access Verification
   async function checkBootstrapAndAdmin() {
+    if (state.catalogRefreshing) return;
+    state.catalogRefreshing = true;
+    state.catalogLoadFailed = false;
+    renderHomeSubjects();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
     document.getElementById('settings-admin-block').classList.add('hidden');
 
     try {
@@ -685,7 +691,7 @@ const nativeFetch = window.fetch.bind(window);
       if (tgU?.first_name) bParams.set('first_name', tgU.first_name);
       if (tgU?.last_name) bParams.set('last_name', tgU.last_name);
       const url = `/api/bootstrap?${bParams.toString()}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) {
         const failure = await res.json().catch(() => ({}));
         if (failure.blocked) showToast(failure.error);
@@ -824,12 +830,19 @@ const nativeFetch = window.fetch.bind(window);
             localStorage.setItem('ohtest_cached_subjects', JSON.stringify(adminStore.subjects));
             localStorage.setItem('ohtest_cached_tests_meta', JSON.stringify(adminStore.testsMeta));
           } catch(e) {}
+        } else {
+          state.catalogLoadFailed = true;
         }
       }
     } catch(e) {
       state.catalogLoadFailed = true;
       state.isAdmin = false;
       document.getElementById('settings-admin-block')?.classList.add('hidden');
+    } finally {
+      clearTimeout(timeout);
+      state.catalogRefreshing = false;
+      state.catalogLoaded = true;
+      renderHomeSubjects();
     }
   }
 

@@ -134,6 +134,14 @@
   function renderHomeSubjects() {
     const list = document.getElementById('home-subjects-list');
     if (!list) return;
+    const catalogStatus = document.getElementById('home-catalog-status');
+    if (catalogStatus) {
+      const refreshing = state.catalogRefreshing || (!state.catalogLoaded && !state.catalogLoadFailed);
+      catalogStatus.hidden = !refreshing && !state.catalogLoadFailed;
+      catalogStatus.innerHTML = refreshing
+        ? '<span class="catalog-refresh-dot" aria-hidden="true"></span><span>Обновляем список предметов…</span>'
+        : '<span>Не удалось обновить список</span><button type="button" onclick="checkBootstrapAndAdmin()" class="underline">Повторить</button>';
+    }
     list.innerHTML = '';
     const visibleTests = getCatalogVisibleTests();
     const countLabel = document.getElementById('home-subjects-count');
@@ -149,6 +157,10 @@
     });
 
     if (activeSubjects.length === 0) {
+      if (state.catalogLoaded && !state.catalogRefreshing) {
+        list.innerHTML = `<div class="p-4 text-sm text-slate-400">${state.catalogLoadFailed ? 'Список предметов пока недоступен.' : 'Пока нет доступных предметов.'}</div>`;
+        return;
+      }
       list.innerHTML = `
         <div class="p-5 rounded-3xl bg-app-card border border-app-border space-y-3 animate-pulse">
           <div class="flex items-center space-x-3">

@@ -1053,6 +1053,7 @@
             <span class="text-xs text-brand-400 font-medium" id="home-subjects-count">Загружаю тесты…</span>
           </div>
 
+          <div id="home-catalog-status" class="catalog-refresh-status" role="status" aria-live="polite" hidden></div>
           <div id="home-subjects-list" class="space-y-2.5">
             <!-- Rendered dynamically -->
           </div>
@@ -2575,6 +2576,12 @@
       --subject-detail: var(--subject-detail-light);
     }
     .settings-section-link > span:last-child .app-line-icon, .settings-action > span:last-child .app-line-icon { width: 18px; height: 18px; }
+    .catalog-refresh-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; color: var(--text-muted, #94a3b8); font-size: 12px; }
+    .catalog-refresh-status[hidden] { display: none; }
+    .catalog-refresh-status button { min-height: 36px; color: var(--text-main); }
+    .catalog-refresh-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; animation: catalog-refresh-pulse 1.2s ease-in-out infinite; }
+    @keyframes catalog-refresh-pulse { 50% { opacity: .25; } }
+    @media (prefers-reduced-motion: reduce) { .catalog-refresh-dot { animation: none; } }
     .subject-title { overflow-wrap: anywhere; }
     .subject-study-tag { display: inline-block; max-width: 100%; padding: 2px 6px; border-radius: 4px; font-size: 10px; line-height: 1.5; font-weight: 600; vertical-align: middle; color: #fcd34d; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.25); }
     body.light-theme .subject-study-tag { color: #854d0e; background: #fef3c7; border-color: #fde68a; }
