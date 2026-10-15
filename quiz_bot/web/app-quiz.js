@@ -1872,6 +1872,9 @@
     scheduleFCAutoplay();
     const card = document.getElementById('fc-card');
     if (card) {
+      card.classList.remove('fc-turning');
+      card.dataset.flipped = 'false';
+      updateFCFaceAccess(card, false);
       card.style.transition = 'none';
       card.style.transform = 'rotateY(0deg)';
     }
@@ -2007,6 +2010,14 @@
 
   if (typeof window !== 'undefined') window.addEventListener('resize', fitFCCardToContent);
 
+  function updateFCFaceAccess(card, flipped) {
+    [...card.children].forEach((face, index) => {
+      const inactive = (index === 0) === flipped;
+      face.inert = inactive;
+      face.setAttribute('aria-hidden', String(inactive));
+    });
+  }
+
   function flipCard(automatic = false) {
     if (!automatic) stopFCAutoplay();
     const now = Date.now();
@@ -2017,6 +2028,9 @@
     fcFlipped = !fcFlipped;
     const c = document.getElementById('fc-card');
     if (!c) return;
+    c.classList.add('fc-turning');
+    c.dataset.flipped = String(fcFlipped);
+    updateFCFaceAccess(c, fcFlipped);
     c.style.transition = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       ? 'none' : 'transform 0.52s cubic-bezier(0.45, 0, 0.2, 1)';
     c.style.transform = fcFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';

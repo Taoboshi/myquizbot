@@ -568,7 +568,7 @@
 
     /* Flashcards */
     .perspective-1000 { perspective: 1000px; }
-    .transform-style-3d { transform-style: preserve-3d; }
+    .transform-style-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
     #fc-card { will-change: transform; }
     #fc-card > div { transform: translateZ(1px); }
     #fc-card > div:last-child { transform: rotateY(180deg) translateZ(1px); }
@@ -586,6 +586,19 @@
       border: 1px solid var(--glass-border) !important;
       box-shadow: var(--glass-highlight), var(--glass-shadow) !important;
     }
+    /* Blur on rotating faces can flatten WebKit's 3D layers. */
+    #fc-card > div.backface-hidden {
+      background: color-mix(in srgb, var(--bg-canvas) 95%, var(--text-main)) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    #fc-card > div:last-child { visibility: hidden; }
+    #fc-card[data-flipped="true"] > div:first-child { visibility: hidden; }
+    #fc-card[data-flipped="true"] > div:last-child { visibility: visible; }
+    #fc-card.fc-turning > div { transition: visibility 0s linear .26s; }
+    @media (prefers-reduced-motion: reduce) { #fc-card.fc-turning > div { transition: none; } }
 
     /* Option button styles */
     .option-btn-unanswered {
