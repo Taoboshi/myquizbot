@@ -6,6 +6,10 @@ for (const q of data.questions) {
   assert(q.options.length >= 2 && q.options.every(option => option.trim()));
   assert(Number.isInteger(q.correct_index) && q.correct_index >= 0 && q.correct_index < q.options.length);
 }
-assert.equal(data.questions[71].correct_index, 2);
-assert.equal(data.questions[71].options[2], 'в приемно-сортировочном отделении');
-console.log('Passed: 99 questions and user-specified third answer for question 72.');
+const functional = data.questions.find(q => q.question.startsWith('Функциональным подразделением этапа медицинской эвакуации является'));
+const medicalCare = data.questions.find(q => q.question.startsWith('Медицинская помощь пораженным оказывается в'));
+assert.equal(functional.correct_index, 2);
+assert.equal(functional.options[2], 'приемно-сортировочное отделение');
+assert.equal(medicalCare.correct_index, 1);
+assert.equal(medicalCare.options[1], 'в перевязочной');
+console.log('Passed: 99 questions, corrected functional-unit answer and restored medical-care answer.');
