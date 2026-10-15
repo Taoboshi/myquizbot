@@ -1853,9 +1853,11 @@
 
   function getFCQuestionText(q) {
     const question = String(q.question || '');
-    if (!Array.isArray(q.options) || q.options.length < 2 ||
-        !/выбер|отметьте|из списка|из перечислен|из предложенн|кроме/i.test(question) ||
-        /^\s*[a-eа-д][.)]\s/m.test(question)) return question;
+    if (!Array.isArray(q.options) || q.options.length < 2) return question;
+    const normalize = text => String(text).replace(/\s+/g, ' ').trim();
+    const hasCompleteList = /^\s*(?:[a-zа-яё]|\d+)[.)]\s*/im.test(question) &&
+      q.options.every(option => normalize(question).includes(normalize(option)));
+    if (hasCompleteList) return question;
     return `${question}\n\n${q.options.map((option, index) => `${String.fromCharCode(97 + index)}. ${option}`).join('\n')}`;
   }
 
